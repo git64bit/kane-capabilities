@@ -41,6 +41,11 @@ AUTHORIZED = UNISSUED + ACTIVE + EXERCISED + EXPIRED
 
 See [docs/capability-model.md](docs/capability-model.md).
 
+## Capability inventories
+
+- [Kane Fabric Use-Case Inventory](docs/kane-fabric-use-case-inventory.md)
+- [RAG / Email and Ceremony Capabilities](docs/rag-email-ceremony-capabilities.md)
+
 ## Explicit non-goals for Milestone 0
 
 Milestone 0 does **not** define or implement:

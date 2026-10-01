@@ -19,7 +19,7 @@ The independent-operator rule remains: another county may place the same capabil
 | Publication / IPFS backend | new Trixie-based CT on the existing OVH Proxmox 9 host | create after contract gate; replace old node |
 | RAG state / retrieval / indexes | new isolated stateful service node on `srv-b` | create after contract gate |
 | Model inference | existing `annales` inference service/container | retain separate |
-| Firmware signing authority | `annales` LXD `firmware-authority` + hardware-backed signer | retain protected boundary |
+| Firmware signing authority | `annales` LXD `firmware-authority` software signing authority | retain protected boundary; hardware backing optional, not required |
 | ESP32-S3 management / synchronization | new isolated service node | create after transport contract gate |
 | Physical firmware build / programming | existing `fw` workstation | retain existing |
 
@@ -213,11 +213,13 @@ The orchestrator supplies authorized context and records result provenance.
 
 ### Placement
 
-Existing/planned `annales` LXD `firmware-authority`, with persistent private-key custody outside the container in the accepted hardware-backed signer.
+Existing/planned `annales` LXD `firmware-authority` using the current Kane Fabric software-signer baseline.
+
+Hardware-backed key custody may be introduced later as an implementation hardening option, but it is not a baseline architectural requirement.
 
 ### Decision
 
-Retain this protection boundary.
+Retain the independent signing-authority boundary.
 
 The Firmware Authority service may be network-reachable through a narrowly defined authenticated interface, but **direct unrestricted public Internet exposure is not required by the architecture**.
 
@@ -235,7 +237,7 @@ automatic ability to sign arbitrary firmware
 
 ### Reason
 
-Kane Fabric already defines `annales` and the Firmware Authority container as a separate trust boundary and explicitly prohibits a persistent signing-key file inside that container.
+The current Kane Fabric decision makes a software signing authority the baseline. The architectural invariant is not a particular hardware device; it is that CT105 does not possess signing authority and that the signing service can independently refuse unauthorized signing.
 
 ## 9. ESP32-S3 management / synchronization
 
@@ -336,8 +338,8 @@ srv-b
                                                  +----------------+----------------+
                                                  |                                 |
                                             inference                       firmware-authority
-                                                                                   |
-                                                                         hardware-backed signer
+                                                                               software signer
+                                                                      (hardware backing optional)
 
 fw workstation
   pinned builds / USB programming / physical device acceptance

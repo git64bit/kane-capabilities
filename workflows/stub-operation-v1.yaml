@@ -1,6 +1,7 @@
 workflow: stub-operation
 version: 1
 purpose: Prove contract validation and fail-closed routing without side effects.
+authorization_policy: stub-policy
 
 accepted_namespaces:
   - publication
@@ -18,11 +19,12 @@ accepted_namespaces:
 steps:
   - validate: request-envelope-v1
   - authorize: stub-policy
+  - transition: authorized
   - transition: accepted
+  - select: registered-service-capability
   - call: stub.not-implemented
   - transition: not-implemented
-  - record: audit-event
-  - emit: civic.operation.not-implemented
+  - record: audit-and-receipt
   - return: result-envelope-v1
 
 constraints:

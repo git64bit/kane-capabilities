@@ -9,6 +9,9 @@ from urllib.parse import unquote, urlparse
 from .runtime import CivicOrchestrator, RuntimePaths
 
 
+MAX_OPERATION_REQUEST_BYTES = 1_500_000
+
+
 class Handler(BaseHTTPRequestHandler):
     runtime: CivicOrchestrator
 
@@ -116,7 +119,7 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
-        if length <= 0 or length > 1024 * 1024:
+        if length <= 0 or length > MAX_OPERATION_REQUEST_BYTES:
             self._operation_failure(
                 400,
                 "invalid-contract",

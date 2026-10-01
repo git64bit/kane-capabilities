@@ -7,7 +7,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
-from civic_orchestrator.server import Handler
+from civic_orchestrator.server import Handler, build_runtime
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -236,6 +236,21 @@ class ServerContractTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(response["status"], "not-implemented")
         self.assertFalse(response["side_effects"])
+
+    def test_publication_base_url_builds_dormant_service_client(self):
+        runtime = build_runtime(
+            repo_root=ROOT,
+            state_db=Path(self.tmp.name) / "configured.sqlite3",
+            publication_base_url="http://10.110.0.21:8046",
+        )
+
+        self.assertIsNotNone(runtime.publication_client)
+        self.assertEqual(
+            runtime.publication_client.base_url,
+            "http://10.110.0.21:8046",
+        )
+        publication = runtime.registry.lookup("publication.publish")
+        self.assertEqual(publication["implementation"], "stub")
 
 
 if __name__ == "__main__":

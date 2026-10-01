@@ -34,7 +34,13 @@ def utc_now() -> str:
 
 
 def canonical_json(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
 
 
 class ConflictError(ValueError):
@@ -194,6 +200,17 @@ class StateStore:
                     evidence_json TEXT NOT NULL,
                     FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
                 );
+
+                CREATE TABLE IF NOT EXISTS request_diagnostics (
+                    diagnostic_id TEXT PRIMARY KEY,
+                    recorded_at TEXT NOT NULL,
+                    outcome TEXT NOT NULL,
+                    request_id TEXT,
+                    operation TEXT,
+                    caller_subject TEXT,
+                    client_id TEXT,
+                    detail TEXT
+                );
                 """
             )
 
@@ -204,6 +221,10 @@ class StateStore:
                 conn.execute("ALTER TABLE workflows ADD COLUMN request_fingerprint TEXT")
             if "result_json" not in workflow_columns:
                 conn.execute("ALTER TABLE workflows ADD COLUMN result_json TEXT")
+            if "caller_subject" not in workflow_columns:
+                conn.execute("ALTER TABLE workflows ADD COLUMN caller_subject TEXT")
+            if "client_id" not in workflow_columns:
+                conn.execute("ALTER TABLE workflows ADD COLUMN client_id TEXT")
 
             audit_columns = self._columns(conn, "audit_events")
             if "sequence" not in audit_columns:
@@ -212,12 +233,12 @@ class StateStore:
                 )
 
             conn.execute(
-                "CREATE INDEX IF NOT EXISTS workflows_request_id_idx "
-                "ON workflows(request_id)"
+                "CREATE INDEX IF NOT EXISTS workflows_request_scope_idx "
+                "ON workflows(client_id, caller_subject, request_id)"
             )
             conn.execute(
-                "CREATE INDEX IF NOT EXISTS workflows_idempotency_idx "
-                "ON workflows(idempotency_key)"
+                "CREATE INDEX IF NOT EXISTS workflows_idempotency_scope_idx "
+                "ON workflows(client_id, caller_subject, idempotency_key)"
             )
 
             workflows = conn.execute(
@@ -256,8 +277,9 @@ class StateStore:
                 INSERT INTO workflows
                     (workflow_id, request_id, operation, state,
                      created_at, updated_at, side_effects,
-                     idempotency_key, request_fingerprint, result_json)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
+                     idempotency_key, request_fingerprint, result_json,
+                     caller_subject, client_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     workflow_id,
@@ -267,6 +289,8 @@ class StateStore:
                     now,
                     now,
                     0,
+                    None,
+                    None,
                     None,
                     None,
                     None,
@@ -325,6 +349,43 @@ class StateStore:
             )
         return event_id
 
+    def record_request_diagnostic(
+        self,
+        outcome: str,
+        request_id: Any = None,
+        operation: Any = None,
+        caller_subject: Any = None,
+        client_id: Any = None,
+        detail: Any = None,
+    ) -> str:
+        diagnostic_id = f"diag:{uuid.uuid4()}"
+
+        def bounded(value: Any, limit: int = 500) -> str | None:
+            if value is None:
+                return None
+            return str(value)[:limit]
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO request_diagnostics
+                    (diagnostic_id, recorded_at, outcome, request_id,
+                     operation, caller_subject, client_id, detail)
+                VALUES (?,?,?,?,?,?,?,?)
+                """,
+                (
+                    diagnostic_id,
+                    utc_now(),
+                    bounded(outcome, 80),
+                    bounded(request_id, 160),
+                    bounded(operation, 160),
+                    bounded(caller_subject, 160),
+                    bounded(client_id, 160),
+                    bounded(detail, 500),
+                ),
+            )
+        return diagnostic_id
+
     @staticmethod
     def request_fingerprint(request: dict[str, Any]) -> str:
         semantic_request = {
@@ -349,6 +410,8 @@ class StateStore:
         operation = request["operation"]
         fingerprint = self.request_fingerprint(request)
         idempotency_key = request.get("idempotency_key")
+        caller_subject = request["caller"]["subject"]
+        client_id = request["client"]["id"]
 
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row
@@ -359,11 +422,13 @@ class StateStore:
                     """
                     SELECT request_fingerprint, result_json
                       FROM workflows
-                     WHERE idempotency_key=?
+                     WHERE client_id=?
+                       AND caller_subject=?
+                       AND idempotency_key=?
                      ORDER BY rowid DESC
                      LIMIT 1
                     """,
-                    (idempotency_key,),
+                    (client_id, caller_subject, idempotency_key),
                 ).fetchone()
                 if existing is not None:
                     if (
@@ -379,11 +444,13 @@ class StateStore:
                 """
                 SELECT request_fingerprint, result_json
                   FROM workflows
-                 WHERE request_id=?
+                 WHERE client_id=?
+                   AND caller_subject=?
+                   AND request_id=?
                  ORDER BY rowid DESC
                  LIMIT 1
                 """,
-                (request_id,),
+                (client_id, caller_subject, request_id),
             ).fetchone()
             if existing is not None:
                 if (
@@ -405,8 +472,9 @@ class StateStore:
                 INSERT INTO workflows
                     (workflow_id, request_id, operation, state,
                      created_at, updated_at, side_effects,
-                     idempotency_key, request_fingerprint, result_json)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
+                     idempotency_key, request_fingerprint, result_json,
+                     caller_subject, client_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     workflow_id,
@@ -419,6 +487,8 @@ class StateStore:
                     idempotency_key,
                     fingerprint,
                     None,
+                    caller_subject,
+                    client_id,
                 ),
             )
 
@@ -776,9 +846,28 @@ class CivicOrchestrator:
         raw_request_id = request.get("request_id") if isinstance(request, dict) else None
         raw_operation = request.get("operation") if isinstance(request, dict) else None
 
+        caller_subject = None
+        client_id = None
+        if isinstance(request, dict):
+            caller = request.get("caller")
+            client = request.get("client")
+            if isinstance(caller, dict):
+                caller_subject = caller.get("subject")
+            if isinstance(client, dict):
+                client_id = client.get("id")
+
         try:
+            canonical_json(request)
             self.contracts.validate("request-envelope-v1.schema.json", request)
-        except ValidationError as exc:
+        except (TypeError, ValueError, ValidationError) as exc:
+            self.state.record_request_diagnostic(
+                "invalid-contract",
+                raw_request_id,
+                raw_operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
             return 400, self.failure(
                 request_id=raw_request_id,
                 operation=raw_operation,
@@ -791,6 +880,14 @@ class CivicOrchestrator:
         request_id = request["request_id"]
 
         if operation in self.registry.prohibited:
+            self.state.record_request_diagnostic(
+                "unauthorized",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                "operation is explicitly prohibited",
+            )
             return 403, self.failure(
                 request_id,
                 operation,
@@ -801,6 +898,14 @@ class CivicOrchestrator:
 
         descriptor = self.registry.lookup(operation)
         if descriptor is None or not self.workflow.accepts(operation):
+            self.state.record_request_diagnostic(
+                "unknown-operation",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                "operation is not present in the bounded workflow registry",
+            )
             return 400, self.failure(
                 request_id,
                 operation,
@@ -817,6 +922,14 @@ class CivicOrchestrator:
                 self.contracts.validate,
             )
         except ConflictError as exc:
+            self.state.record_request_diagnostic(
+                "conflict",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
             return 409, self.failure(
                 request_id,
                 operation,
@@ -827,9 +940,20 @@ class CivicOrchestrator:
 
         self.contracts.validate("result-envelope-v1.schema.json", result)
         if replayed:
+            original_request_id = result["request_id"]
             result = dict(result)
+            result["request_id"] = request_id
             result["result"] = dict(result["result"])
             result["result"]["replayed"] = True
+            result["result"]["original_request_id"] = original_request_id
+            self.state.record_request_diagnostic(
+                "replay",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                f"original_request_id={original_request_id}",
+            )
 
         return 200, result
 

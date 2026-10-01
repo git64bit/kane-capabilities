@@ -13,6 +13,7 @@ from typing import Any, Callable
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
+from rfc3339_validator import validate_rfc3339
 
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,159}$")
@@ -20,6 +21,12 @@ _OPERATION_RE = re.compile(
     r"^(publication|geography|participant|repository|rag|inference|edge|firmware|"
     r"signing|audit|incident)\.[a-z][a-z0-9._-]{0,159}$"
 )
+
+CIVIC_FORMAT_CHECKER = FormatChecker()
+
+@CIVIC_FORMAT_CHECKER.checks("date-time")
+def _is_rfc3339_datetime(value: object) -> bool:
+    return isinstance(value, str) and bool(validate_rfc3339(value))
 
 
 def utc_now() -> str:
@@ -68,7 +75,7 @@ class ContractStore:
             self._validators[name] = Draft202012Validator(
                 schema,
                 registry=registry,
-                format_checker=FormatChecker(),
+                format_checker=CIVIC_FORMAT_CHECKER,
             )
 
     def validate(self, schema_name: str, instance: Any) -> None:

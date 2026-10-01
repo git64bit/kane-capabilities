@@ -6,12 +6,12 @@
   "additionalProperties":false,
   "required":["decision_id","request_id","operation","decision","decided_at","policy"],
   "properties":{
-    "decision_id":{"$ref":"common-v1.schema.json#/$defs/id"},
-    "request_id":{"$ref":"common-v1.schema.json#/$defs/id"},
-    "operation":{"$ref":"common-v1.schema.json#/$defs/operation"},
+    "decision_id":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/id"},
+    "request_id":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/id"},
+    "operation":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/operation"},
     "decision":{"type":"string","enum":["allow","deny","defer"]},
-    "decided_at":{"$ref":"common-v1.schema.json#/$defs/timestamp"},
-    "policy":{"$ref":"common-v1.schema.json#/$defs/id"},
+    "decided_at":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/timestamp"},
+    "policy":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/id"},
     "reason":{"type":"string","maxLength":1000}
   }
 }

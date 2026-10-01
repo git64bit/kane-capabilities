@@ -61,7 +61,8 @@ Initial schema families:
 - request;
 - result;
 - failure;
-- identity;
+- caller identity and authentication provenance;
+- extensible client identity;
 - authorization;
 - operation;
 - workflow;
@@ -87,6 +88,10 @@ Initial vocabulary should remain intentionally small. Candidate primitives inclu
 
 A workflow definition language is an internal orchestration contract, not a new network protocol.
 
+The Phase 1H runtime validates the operation registry and stub workflow definition against JSON Schema at startup. The stub workflow's authorization policy and accepted namespaces are runtime inputs; they are not decorative documentation.
+
+All JSON Schema cross-references use absolute Civic schema URNs. Runtime validation uses the modern `referencing` registry used by `jsonschema`, not the deprecated `RefResolver` compatibility API. Date/time formats are checked with a JSON Schema format checker.
+
 ## Scripting and mature engines
 
 General-purpose scripting is permitted behind service adapters when required by an implementation, but is not exposed as a Civic operation.
@@ -94,3 +99,44 @@ General-purpose scripting is permitted behind service adapters when required by 
 The project may later evaluate workflow/orchestration engines. Selection must not force external clients to understand the chosen engine.
 
 The initial implementation deliberately avoids making Rundeck, Temporal, Kubernetes, a message broker, or another orchestration product a platform dependency before the workflow requirements prove the need.
+
+
+## Caller and client identity
+
+The request contract separates the authenticated civic subject from the software client carrying the request.
+
+```text
+caller.subject
+caller.authority
+caller.authenticated_by
+
+client.id
+client.kind
+```
+
+`client.id` is intentionally not a fixed enum of known applications. New software that legitimately belongs to the same orchestrator domain can identify itself without revising the v1 schema merely to add another program name.
+
+Client extensibility does not imply admission to CT105. Admission remains governed by `ORCHESTRATOR_SCOPE.md`.
+
+## Replay and idempotency
+
+`request_id` identifies a logical request. An optional `idempotency_key` identifies a retry family.
+
+For the Phase 1H stub runtime:
+
+- an exact semantic replay returns the original workflow/receipt result;
+- reusing an idempotency key for different semantics returns `409 conflict`;
+- reusing a request ID for different semantics returns `409 conflict`;
+- replay does not create another workflow, audit trail, or receipt.
+
+The semantic fingerprint covers operation, caller, client, and input. Transport time and retry request ID do not change the requested civic action.
+
+## Effect scope
+
+Operation descriptors classify intended effect scope as:
+
+- `none` — read/compute behavior with no orchestrator or external state mutation;
+- `orchestrator-state` — mutation limited to orchestrator-owned workflow/incident/release state;
+- `external-bounded` — a bounded request that, when implemented, may change state in another authority/service.
+
+Phase 1H remains stub-only, so actual side effects remain false regardless of intended future effect scope.

@@ -31,6 +31,8 @@ The orchestrator is the fusebox between interaction surfaces and service/trust n
 4. **Keep edges thin but capable.** Usermin, Hubzilla, Kane Fabric, Gitea, and later clients retain their local UI, identity, storage, and domain behavior. Shared policy and cross-service workflow logic belong centrally.
 5. **Separate workflow authority from service authority.** The orchestrator may coordinate signing, publication, geographic promotion, inference, or edge updates without possessing every backend's private authority.
 6. **No implementation technology becomes civic identity.** Hostnames, ESP32 hardware identity, Git repositories, Unix accounts, service URLs, and transport endpoints are locators or implementation details unless an explicit civic contract says otherwise.
+7. **Kane County is the reference deployment, not the product boundary.** Public contracts must be implementable by an independent operator in another jurisdiction without Kane County private infrastructure.
+8. **Cryptography is evidence infrastructure, not an economy.** Hashes, signatures, capabilities, receipts, attestations, and certificates establish identity, integrity, authorization, and provenance; they do not imply currency, utility-token value, ownership, or transferable governance weight.
 
 ## Repository authority
 
@@ -41,5 +43,7 @@ Start with:
 3. [docs/CONTRACT_STACK.md](docs/CONTRACT_STACK.md)
 4. [docs/CAPABILITY_BOUNDARIES.md](docs/CAPABILITY_BOUNDARIES.md)
 5. [docs/NODE_DESIGN_GATES.md](docs/NODE_DESIGN_GATES.md)
+6. [docs/PORTABILITY_AND_TRUST.md](docs/PORTABILITY_AND_TRUST.md)
+7. [docs/REFERENCE_TOPOLOGY.md](docs/REFERENCE_TOPOLOGY.md)
 
 Implementation code is intentionally absent at this reset point. The first milestone establishes contracts and stubs before real service side effects are permitted.

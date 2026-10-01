@@ -193,3 +193,27 @@ A second cold review identified a small set of remaining Phase 1 defects. The fo
 No `federation.*` namespace, peer-orchestrator RPC, module-specific membership state, or module-admission implementation was added.
 
 The architecture rule remains: **orchestrators do not federate; evidence may.**
+
+
+## Final acceptance after second review
+
+The second-review corrections were accepted on persistent CT105 on 2026-10-01.
+
+Observed:
+
+```text
+regression suite                 30 tests, PASS
+persistent DB migration          PASS
+caller-scoped keys               PASS
+conflicting replay               PASS
+encoded workflow ID              PASS
+replay diagnostics               PASS
+HTTP failure diagnostics         PASS
+legacy audit backfill            PASS
+RFC3339 validation               PASS
+clean package install/import     PASS
+listener                         127.0.0.1:8045 only
+side_effects                     false
+```
+
+The pre-release baseline is intended for reuse by another project as an **orchestrator architectural implementation baseline**, not as a mandate to connect that project's domain to Kane CT105.

@@ -143,6 +143,23 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertEqual(result["error"], "workflow-not-found")
         self.assertFalse(result["side_effects"])
 
+    def test_invalid_workflow_transition_fails_closed(self):
+        workflow_id = self.runtime.state.create_workflow(
+            "req:transition-test",
+            "publication.publish",
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "invalid workflow transition: validated -> completed",
+        ):
+            self.runtime.state.transition(workflow_id, "completed")
+
+        status, evidence = self.runtime.workflow_evidence(workflow_id)
+        self.assertEqual(status, 200)
+        self.assertEqual(evidence["workflow"]["state"], "validated")
+        self.assertFalse(evidence["side_effects"])
+
     def test_threaded_submit_uses_safe_sqlite_connections(self):
         results = []
         errors = []

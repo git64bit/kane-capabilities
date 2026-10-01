@@ -5,6 +5,7 @@ import argparse
 import http.client
 import json
 import sqlite3
+from contextlib import closing
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -225,7 +226,7 @@ def main() -> int:
     report["http_failure_envelope"] = "pass"
 
     db_uri = f"file:{args.state_db}?mode=ro"
-    with sqlite3.connect(db_uri, uri=True) as conn:
+    with closing(sqlite3.connect(db_uri, uri=True)) as conn:
         unsequenced = conn.execute(
             "SELECT COUNT(*) FROM audit_events WHERE sequence <= 0"
         ).fetchone()[0]

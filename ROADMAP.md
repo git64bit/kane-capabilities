@@ -278,3 +278,24 @@ Complete:
 - multi-node distribution where required.
 
 The end state is a Civic Infrastructure control plane whose contracts survive replacement of individual applications, hosts, devices, or service implementations.
+
+---
+
+## Parallel Track D — Civic Infrastructure Demonstrator
+
+**Status:** ACTIVE DESIGN — implementation begins with the Phase 1 stub runtime.
+
+The Demonstrator is a grant-facing and engineering-facing deployment profile that exercises the real Civic contracts with synthetic, resettable data.
+
+It is not a second product and receives no privileged demo-only backend capabilities.
+
+Stages:
+
+- **D-001 — Stub demonstrator:** guided evaluator path, synthetic fixture, real schema validation, workflow/audit/receipt display, prohibited-operation failure, reset.
+- **D-002 — Multi-interface demonstrator:** equivalent Civic operation from at least two interaction surfaces.
+- **D-003 — Publication demonstrator:** real bounded publication, SHA-256, CID, verification, receipt, controlled failure.
+- **D-004 — Full grant demonstrator:** selected Kane Fabric, RAG/inference, and ESP32/signing evidence as those production capabilities become available.
+
+The Demonstrator doubles as an integration/conformance harness and must remain portable to an independent-jurisdiction deployment.
+
+Authority: `docs/DEMONSTRATOR.md`.

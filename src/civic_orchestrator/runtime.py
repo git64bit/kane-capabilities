@@ -149,6 +149,87 @@ class StateStore:
             )
         return receipt_id
 
+    def get_workflow_evidence(self, workflow_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+
+            workflow = conn.execute(
+                """
+                SELECT workflow_id, request_id, operation, state,
+                       created_at, updated_at, side_effects
+                  FROM workflows
+                 WHERE workflow_id=?
+                """,
+                (workflow_id,),
+            ).fetchone()
+
+            if workflow is None:
+                return None
+
+            events = conn.execute(
+                """
+                SELECT event_id, workflow_id, event_type, recorded_at, actor, data_json
+                  FROM audit_events
+                 WHERE workflow_id=?
+                 ORDER BY recorded_at, event_id
+                """,
+                (workflow_id,),
+            ).fetchall()
+
+            receipts = conn.execute(
+                """
+                SELECT receipt_id, workflow_id, operation, issued_at,
+                       outcome, side_effects, evidence_json
+                  FROM receipts
+                 WHERE workflow_id=?
+                 ORDER BY issued_at, receipt_id
+                """,
+                (workflow_id,),
+            ).fetchall()
+
+        workflow_obj = {
+            "workflow_id": workflow["workflow_id"],
+            "request_id": workflow["request_id"],
+            "operation": workflow["operation"],
+            "state": workflow["state"],
+            "created_at": workflow["created_at"],
+            "updated_at": workflow["updated_at"],
+            "side_effects": bool(workflow["side_effects"]),
+        }
+
+        event_objs = [
+            {
+                "event_id": row["event_id"],
+                "workflow_id": row["workflow_id"],
+                "event_type": row["event_type"],
+                "recorded_at": row["recorded_at"],
+                "actor": row["actor"],
+                "data": json.loads(row["data_json"]),
+            }
+            for row in events
+        ]
+
+        receipt_objs = [
+            {
+                "receipt_id": row["receipt_id"],
+                "workflow_id": row["workflow_id"],
+                "operation": row["operation"],
+                "issued_at": row["issued_at"],
+                "outcome": row["outcome"],
+                "side_effects": bool(row["side_effects"]),
+                "evidence": json.loads(row["evidence_json"]),
+            }
+            for row in receipts
+        ]
+
+        return {
+            "contract_version": 1,
+            "workflow": workflow_obj,
+            "audit_events": event_objs,
+            "receipts": receipt_objs,
+            "side_effects": False,
+        }
+
 
 class CivicOrchestrator:
     def __init__(self, paths: RuntimePaths) -> None:
@@ -243,6 +324,19 @@ class CivicOrchestrator:
         }
         self.contracts.validate("result-envelope-v1.schema.json", result)
         return 200, result
+
+    def workflow_evidence(self, workflow_id: str) -> tuple[int, dict[str, Any]]:
+        evidence = self.state.get_workflow_evidence(workflow_id)
+        if evidence is None:
+            return 404, {
+                "contract_version": 1,
+                "workflow_id": workflow_id,
+                "error": "workflow-not-found",
+                "side_effects": False,
+            }
+
+        self.contracts.validate("workflow-evidence-v1.schema.json", evidence)
+        return 200, evidence
 
     def _failure(
         self,

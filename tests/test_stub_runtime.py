@@ -74,6 +74,25 @@ class StubRuntimeTests(unittest.TestCase):
             for item in caps["capabilities"]
         ))
 
+    def test_workflow_evidence_is_read_only_and_schema_valid(self):
+        status, result = self.runtime.submit(self.request())
+        self.assertEqual(status, 200)
+
+        evidence_status, evidence = self.runtime.workflow_evidence(result["workflow_id"])
+        self.assertEqual(evidence_status, 200)
+        self.assertEqual(evidence["workflow"]["workflow_id"], result["workflow_id"])
+        self.assertEqual(evidence["workflow"]["state"], "not-implemented")
+        self.assertFalse(evidence["side_effects"])
+        self.assertEqual(len(evidence["audit_events"]), 2)
+        self.assertEqual(len(evidence["receipts"]), 1)
+        self.assertEqual(evidence["receipts"][0]["receipt_id"], result["receipt_id"])
+
+    def test_missing_workflow_evidence_fails_closed(self):
+        status, result = self.runtime.workflow_evidence("wf:does-not-exist")
+        self.assertEqual(status, 404)
+        self.assertEqual(result["error"], "workflow-not-found")
+        self.assertFalse(result["side_effects"])
+
     def test_threaded_submit_uses_safe_sqlite_connections(self):
         results = []
         errors = []

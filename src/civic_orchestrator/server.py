@@ -178,6 +178,7 @@ def build_runtime(
         )
     return runtime
 
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", required=True)

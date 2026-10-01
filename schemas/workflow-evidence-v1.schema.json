@@ -27,9 +27,9 @@
         "side_effects"
       ],
       "properties": {
-        "workflow_id": { "$ref": "common-v1.schema.json#/$defs/id" },
-        "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
-        "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
+        "workflow_id": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id" },
+        "request_id": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id" },
+        "operation": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/operation" },
         "state": {
           "type": "string",
           "enum": [
@@ -44,22 +44,22 @@
             "not-implemented"
           ]
         },
-        "created_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
-        "updated_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
+        "created_at": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/timestamp" },
+        "updated_at": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/timestamp" },
         "side_effects": { "type": "boolean" }
       }
     },
     "authorization_decisions": {
       "type": "array",
-      "items": { "$ref": "authorization-decision-v1.schema.json" }
+      "items": { "$ref": "urn:civic-orchestrator:schema:authorization-decision:v1" }
     },
     "audit_events": {
       "type": "array",
-      "items": { "$ref": "audit-event-v1.schema.json" }
+      "items": { "$ref": "urn:civic-orchestrator:schema:audit-event:v1" }
     },
     "receipts": {
       "type": "array",
-      "items": { "$ref": "receipt-v1.schema.json" }
+      "items": { "$ref": "urn:civic-orchestrator:schema:receipt:v1" }
     },
     "side_effects": { "const": false }
   }

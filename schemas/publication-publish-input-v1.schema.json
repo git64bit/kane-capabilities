@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:civic-orchestrator:schema:publication-publish-input:v1",
+  "title": "publication.publish Input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact"
+  ],
+  "properties": {
+    "artifact": {
+      "$ref": "urn:civic-orchestrator:schema:publication-artifact:v1"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  }
+}

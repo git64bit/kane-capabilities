@@ -1451,13 +1451,17 @@ class CivicOrchestrator:
                 request["input"]["artifact"],
             )
         except PublicationServiceFailure as exc:
+            side_effects = exc.failure_class in {
+                "publication-failed",
+                "verification-failed",
+            }
             result = self.state.finish_external_operation(
                 request=request,
                 descriptor=descriptor,
                 workflow_id=workflow_id,
                 receipt_id=receipt_id,
                 outcome="failed",
-                side_effects=True,
+                side_effects=side_effects,
                 detail={
                     "failure_class": exc.failure_class,
                     "message": exc.message,

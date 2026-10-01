@@ -12,7 +12,7 @@
     },
     "operation": {
       "type": "string",
-      "pattern": "^(publication|geography|participant|repository|rag|inference|edge|firmware|signing|audit)\\.[a-z][a-z0-9._-]*$",
+      "pattern": "^(publication|geography|participant|repository|rag|inference|edge|firmware|signing|audit|incident)\\.[a-z][a-z0-9._-]*$",
       "maxLength": 160
     },
     "sha256": {

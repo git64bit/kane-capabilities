@@ -29,7 +29,15 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/healthz":
             self._send_json(200, {"status": "ok", "phase": 1, "side_effects": False})
             return
-        self._send_json(404, {"error": "not found"})
+        if path.startswith("/v1/workflows/"):
+            workflow_id = path[len("/v1/workflows/"):]
+            if not workflow_id:
+                self._send_json(404, {"error": "not found", "side_effects": False})
+                return
+            status, payload = self.runtime.workflow_evidence(workflow_id)
+            self._send_json(status, payload)
+            return
+        self._send_json(404, {"error": "not found", "side_effects": False})
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path

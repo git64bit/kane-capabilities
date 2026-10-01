@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civic.example/schema/common-v1.schema.json",
+  "title": "Civic Orchestrator Common Types v1",
+  "type": "object",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@-]*$"
+    },
+    "operation": {
+      "type": "string",
+      "pattern": "^(publication|geography|participant|repository|rag|inference|edge|firmware|signing|audit)\\.[a-z][a-z0-9._-]*$",
+      "maxLength": 160
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "interface": {
+      "type": "string",
+      "enum": [
+        "usermin",
+        "hubzilla",
+        "kane-fabric",
+        "gitea",
+        "mail-adapter",
+        "service",
+        "test"
+      ]
+    }
+  }
+}

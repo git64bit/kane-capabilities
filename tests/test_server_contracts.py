@@ -50,6 +50,38 @@ class ServerContractTests(unittest.TestCase):
         conn.close()
         return status, payload
 
+    def test_health_reflects_stub_registry(self):
+        status, payload = self.request("GET", "/healthz")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            payload,
+            {
+                "status": "ok",
+                "phase": "1H",
+                "side_effects": False,
+            },
+        )
+
+    def test_health_reflects_available_side_effect_capability(self):
+        publication = self.runtime.registry.lookup("publication.publish")
+        original = publication["implementation"]
+        publication["implementation"] = "available"
+        try:
+            status, payload = self.request("GET", "/healthz")
+        finally:
+            publication["implementation"] = original
+
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            payload,
+            {
+                "status": "ok",
+                "phase": "2",
+                "side_effects": True,
+            },
+        )
+
     def test_bad_json_returns_failure_envelope(self):
         status, payload = self.request(
             "POST",

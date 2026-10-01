@@ -479,6 +479,23 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertIn("referencing", dependencies)
         self.assertIn("rfc3339-validator", dependencies)
 
+    def test_workflow_evidence_reports_persisted_side_effects(self):
+        workflow_id = self.runtime.state.create_workflow(
+            "req:side-effect-projection",
+            "publication.publish",
+        )
+        with self.runtime.state._connect() as conn:
+            conn.execute(
+                "UPDATE workflows SET side_effects=1 WHERE workflow_id=?",
+                (workflow_id,),
+            )
+
+        status, evidence = self.runtime.workflow_evidence(workflow_id)
+
+        self.assertEqual(status, 200)
+        self.assertTrue(evidence["workflow"]["side_effects"])
+        self.assertTrue(evidence["side_effects"])
+
 
 if __name__ == "__main__":
     unittest.main()

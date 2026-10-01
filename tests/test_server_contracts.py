@@ -67,6 +67,15 @@ class ServerContractTests(unittest.TestCase):
         )
         self.assertEqual(payload["failure_class"], "invalid-contract")
 
+        with self.runtime.state._connect() as conn:
+            outcomes = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT outcome FROM request_diagnostics"
+                ).fetchall()
+            }
+        self.assertIn("http-invalid-contract", outcomes)
+
     def test_wrong_post_path_returns_failure_envelope(self):
         status, payload = self.request(
             "POST",

@@ -85,7 +85,7 @@ The first implementation may use Kubo internally, but Kubo remains behind the se
 
 ## Initial deployment decision
 
-Create a **new Debian Trixie unprivileged CT** on the existing OVH Proxmox 9 host.
+Create a **new Debian Trixie unprivileged CT on the OVH Proxmox 9 host**. This node is explicitly **not** placed on `srv-b`.
 
 The retired historical IPFS node is not part of the target architecture and should not become an authority source.
 
@@ -268,4 +268,4 @@ The required design questions are now frozen:
 
 No additional capability namespace is introduced by this node.
 
-The next step may assign the new Trixie CT identity and deploy the publication service without revisiting these decisions unless testing exposes a concrete defect.
+The next step may assign the new Trixie CT identity **on the OVH Proxmox 9 host** and deploy the publication service there without revisiting these decisions unless testing exposes a concrete defect. Do not provision this publication/IPFS CT on `srv-b`.

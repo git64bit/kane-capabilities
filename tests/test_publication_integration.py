@@ -164,7 +164,7 @@ class PublicationIntegrationTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(result["status"], "failed")
-        self.assertTrue(result["side_effects"])
+        self.assertFalse(result["side_effects"])
         self.assertEqual(
             result["result"]["failure_class"],
             "service-unavailable",

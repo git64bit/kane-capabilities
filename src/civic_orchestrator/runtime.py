@@ -817,7 +817,7 @@ class StateStore:
             "authorization_decisions": decision_objs,
             "audit_events": event_objs,
             "receipts": receipt_objs,
-            "side_effects": False,
+            "side_effects": bool(workflow["side_effects"]),
         }
 
 

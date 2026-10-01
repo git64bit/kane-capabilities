@@ -1502,6 +1502,24 @@ class CivicOrchestrator:
                 validate_contract=self.contracts.validate,
             )
             return 200, result
+        except Exception as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": "internal",
+                    "message": (
+                        f"unexpected publication adapter failure: {exc}"
+                    )[:1000],
+                    "retryable": False,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
 
         result = self.state.finish_external_operation(
             request=request,

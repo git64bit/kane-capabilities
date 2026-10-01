@@ -188,7 +188,8 @@ def main() -> int:
     require(malformed.get("side_effects") is False, "malformed JSON side effects")
     report["http_failure_envelope"] = "pass"
 
-    with sqlite3.connect(args.state_db) as conn:
+    db_uri = f"file:{args.state_db}?mode=ro"
+    with sqlite3.connect(db_uri, uri=True) as conn:
         unsequenced = conn.execute(
             "SELECT COUNT(*) FROM audit_events WHERE sequence <= 0"
         ).fetchone()[0]

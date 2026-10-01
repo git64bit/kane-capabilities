@@ -470,5 +470,15 @@ class StubRuntimeTests(unittest.TestCase):
             self.assertEqual(schema["$id"], entry["id"])
 
 
+    def test_pyproject_declares_runtime_dependencies(self):
+        import tomllib
+        project = tomllib.loads(
+            (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        )["project"]
+        dependencies = "\n".join(project["dependencies"])
+        self.assertIn("referencing", dependencies)
+        self.assertIn("rfc3339-validator", dependencies)
+
+
 if __name__ == "__main__":
     unittest.main()

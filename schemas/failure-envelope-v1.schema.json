@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civic.example/schema/failure-envelope-v1.schema.json",
+  "title": "Civic Orchestrator Failure Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "operation",
+    "failure_class",
+    "message",
+    "retryable",
+    "side_effects"
+  ],
+  "properties": {
+    "contract_version": { "const": 1 },
+    "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
+    "failure_class": {
+      "type": "string",
+      "enum": [
+        "invalid-contract",
+        "unknown-operation",
+        "unauthorized",
+        "invalid-transition",
+        "backend-unavailable",
+        "not-implemented",
+        "conflict",
+        "internal"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "retryable": { "type": "boolean" },
+    "side_effects": { "const": false },
+    "detail": { "type": "object" }
+  }
+}

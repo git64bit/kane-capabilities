@@ -143,6 +143,29 @@ The schema change was additive and initialized successfully against the existing
 
 Result: **PASS**
 
+## Service-selection evidence acceptance
+
+On the persistent CT105 state store, a registered `publication.publish` request produced the ordered audit sequence:
+
+```text
+civic.authorization.allowed
+civic.operation.accepted
+civic.service.selected
+civic.operation.not-implemented
+```
+
+The `civic.service.selected` event preserved:
+
+```text
+service_capability = publication.publish
+implementation     = stub
+side_effects       = false
+```
+
+The workflow retained one authorization decision, four audit events, one receipt, and `side_effects=false`.
+
+Result: **PASS**
+
 ## Acceptance conclusion
 
 The Phase 1 runtime has now proven:
@@ -154,6 +177,7 @@ The Phase 1 runtime has now proven:
 - workflow ID issuance;
 - explicit authorization-decision persistence;
 - authorization audit evidence;
+- explicit service-capability selection evidence;
 - receipt issuance;
 - local SQLite state;
 - threaded request safety;

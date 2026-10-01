@@ -23,17 +23,11 @@
       "type": "string",
       "format": "date-time"
     },
-    "interface": {
+    "client_kind": {
       "type": "string",
-      "enum": [
-        "usermin",
-        "hubzilla",
-        "kane-fabric",
-        "gitea",
-        "mail-adapter",
-        "service",
-        "test"
-      ]
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9._-]*$"
     }
   }
 }

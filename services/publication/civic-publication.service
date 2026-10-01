@@ -1,0 +1,27 @@
+[Unit]
+Description=Civic Publication Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=civic-publication
+Group=civic-publication
+ExecStart=/usr/bin/python3 /opt/civic-publication/publication_service.py
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6
+ReadWritePaths=/var/lib/civic-publication /var/log/civic-publication
+
+[Install]
+WantedBy=multi-user.target

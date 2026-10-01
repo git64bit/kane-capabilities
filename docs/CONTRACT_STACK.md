@@ -140,3 +140,12 @@ Operation descriptors classify intended effect scope as:
 - `external-bounded` — a bounded request that, when implemented, may change state in another authority/service.
 
 Phase 1H remains stub-only, so actual side effects remain false regardless of intended future effect scope.
+
+
+## Schema catalog
+
+`schemas/catalog-v1.json` publishes the mapping from each absolute Civic schema URN to its repository-relative JSON Schema file.
+
+An independent validator may load the catalog, register each listed schema by its `$id`, and then validate the public contracts without relying on the Python runtime's private loading behavior.
+
+The catalog is transport metadata only; it does not add Civic semantics.

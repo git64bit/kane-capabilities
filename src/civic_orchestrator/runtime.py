@@ -91,6 +91,18 @@ class StateStore:
                     side_effects INTEGER NOT NULL CHECK(side_effects IN (0,1))
                 );
 
+                CREATE TABLE IF NOT EXISTS authorization_decisions (
+                    decision_id TEXT PRIMARY KEY,
+                    workflow_id TEXT NOT NULL,
+                    request_id TEXT NOT NULL,
+                    operation TEXT NOT NULL,
+                    decision TEXT NOT NULL,
+                    decided_at TEXT NOT NULL,
+                    policy TEXT NOT NULL,
+                    reason TEXT,
+                    FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
+                );
+
                 CREATE TABLE IF NOT EXISTS audit_events (
                     event_id TEXT PRIMARY KEY,
                     workflow_id TEXT NOT NULL,
@@ -120,7 +132,7 @@ class StateStore:
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO workflows VALUES (?,?,?,?,?,?,?)",
-                (workflow_id, request_id, operation, "accepted", now, now, 0),
+                (workflow_id, request_id, operation, "validated", now, now, 0),
             )
         return workflow_id
 
@@ -130,6 +142,47 @@ class StateStore:
                 "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
                 (state, utc_now(), workflow_id),
             )
+
+    def authorization_decision(
+        self,
+        workflow_id: str,
+        request_id: str,
+        operation: str,
+        decision: str,
+        policy: str,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        record = {
+            "decision_id": f"authz:{uuid.uuid4()}",
+            "request_id": request_id,
+            "operation": operation,
+            "decision": decision,
+            "decided_at": utc_now(),
+            "policy": policy,
+        }
+        if reason is not None:
+            record["reason"] = reason
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO authorization_decisions
+                    (decision_id, workflow_id, request_id, operation,
+                     decision, decided_at, policy, reason)
+                VALUES (?,?,?,?,?,?,?,?)
+                """,
+                (
+                    record["decision_id"],
+                    workflow_id,
+                    request_id,
+                    operation,
+                    decision,
+                    record["decided_at"],
+                    policy,
+                    reason,
+                ),
+            )
+        return record
 
     def audit(self, workflow_id: str, event_type: str, actor: str, data: dict[str, Any]) -> str:
         event_id = f"evt:{uuid.uuid4()}"
@@ -166,6 +219,17 @@ class StateStore:
             if workflow is None:
                 return None
 
+            decisions = conn.execute(
+                """
+                SELECT decision_id, request_id, operation, decision,
+                       decided_at, policy, reason
+                  FROM authorization_decisions
+                 WHERE workflow_id=?
+                 ORDER BY decided_at, decision_id
+                """,
+                (workflow_id,),
+            ).fetchall()
+
             events = conn.execute(
                 """
                 SELECT event_id, workflow_id, event_type, recorded_at, actor, data_json
@@ -197,6 +261,20 @@ class StateStore:
             "side_effects": bool(workflow["side_effects"]),
         }
 
+        decision_objs = []
+        for row in decisions:
+            item = {
+                "decision_id": row["decision_id"],
+                "request_id": row["request_id"],
+                "operation": row["operation"],
+                "decision": row["decision"],
+                "decided_at": row["decided_at"],
+                "policy": row["policy"],
+            }
+            if row["reason"] is not None:
+                item["reason"] = row["reason"]
+            decision_objs.append(item)
+
         event_objs = [
             {
                 "event_id": row["event_id"],
@@ -225,6 +303,7 @@ class StateStore:
         return {
             "contract_version": 1,
             "workflow": workflow_obj,
+            "authorization_decisions": decision_objs,
             "audit_events": event_objs,
             "receipts": receipt_objs,
             "side_effects": False,
@@ -282,6 +361,29 @@ class CivicOrchestrator:
 
         workflow_id = self.state.create_workflow(request_id, operation)
         actor = request["caller"]["subject"]
+
+        decision = self.state.authorization_decision(
+            workflow_id,
+            request_id,
+            operation,
+            "allow",
+            "stub-policy",
+            "Phase 1 permits registered operations only as non-side-effect stubs.",
+        )
+        self.contracts.validate("authorization-decision-v1.schema.json", decision)
+        self.state.transition(workflow_id, "authorized")
+        self.state.audit(
+            workflow_id,
+            "civic.authorization.allowed",
+            "civic-orchestrator",
+            {
+                "decision_id": decision["decision_id"],
+                "policy": decision["policy"],
+                "side_effects": False,
+            },
+        )
+
+        self.state.transition(workflow_id, "accepted")
         self.state.audit(
             workflow_id,
             "civic.operation.accepted",

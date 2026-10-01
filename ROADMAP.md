@@ -416,3 +416,38 @@ Stages:
 The Demonstrator doubles as an integration/conformance harness and must remain portable to an independent-jurisdiction deployment.
 
 Authority: `docs/DEMONSTRATOR.md`.
+
+
+## Post-Phase-1 maintenance
+
+### v0.1.0-alpha.2 SQLite lifecycle correction
+
+**Status:** ACCEPTED on persistent CT105 on 2026-10-01.
+
+The Phase 1 baseline inherited a Python `sqlite3` lifecycle defect: the connection context manager committed or rolled back transactions but did not close the connection object.
+
+The maintenance correction:
+
+- makes `StateStore._connect()` an explicit closing context manager;
+- preserves existing transaction and `BEGIN IMMEDIATE` semantics;
+- closes the acceptance harness read-only SQLite connection explicitly;
+- adds connection-lifecycle regression coverage.
+
+Accepted evidence:
+
+```text
+33 regression tests                  PASS
+persistent CT105 acceptance          PASS
+listener 127.0.0.1:8045 only         PASS
+side_effects=false                    PASS
+```
+
+This correction does not change Civic contracts or Phase 1 architecture.
+
+## Phase 2 — Service and trust node architecture
+
+**Status:** ACTIVE.
+
+Phase 2 begins with the publication/IPFS service boundary because `publication.publish` remains the preferred first real end-to-end operation.
+
+The first Phase 2 task is architecture only: define authority, state ownership, failure domain, transport, and acceptance gates for the new publication node before assigning a CT number or installing Kubo.

@@ -16,6 +16,10 @@ from referencing import Registry, Resource
 
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,159}$")
+_OPERATION_RE = re.compile(
+    r"^(publication|geography|participant|repository|rag|inference|edge|firmware|"
+    r"signing|audit|incident)\.[a-z][a-z0-9._-]{0,159}$"
+)
 
 
 def utc_now() -> str:
@@ -806,8 +810,7 @@ class CivicOrchestrator:
 
         normalized_operation = (
             operation
-            if isinstance(operation, str)
-            and self.registry.lookup(operation) is not None
+            if isinstance(operation, str) and _OPERATION_RE.fullmatch(operation)
             else "audit.invalid_request"
         )
 

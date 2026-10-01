@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://civic.example/schema/common-v1.schema.json",
+  "$id": "urn:civic-orchestrator:schema:common:v1",
   "title": "Civic Orchestrator Common Types v1",
   "type": "object",
   "$defs": {

@@ -57,7 +57,7 @@ client.id
 client.kind
 ```
 
-Authentication provenance is required.
+`authenticated_by` is required as an adapter-supplied provenance assertion. Phase 1 records the assertion but does not independently verify the subject or bind the declared client identity to a transport credential.
 
 Client IDs are extensible and do not require a schema revision for each legitimate future program.
 
@@ -150,7 +150,7 @@ The persistent CT105 deployment passed all Phase 1H gates:
 unit/regression suite       21 tests, PASS
 persistent DB migration     PASS
 legacy audit backfill       PASS
-caller authenticated_by     PASS
+caller authenticated_by field recorded  PASS
 extensible client identity  PASS
 exact replay                PASS
 conflicting replay          409 conflict, PASS
@@ -172,3 +172,24 @@ The acceptance harness completed with:
 ```
 
 Phase 1H is closed. Phase 2 may proceed after external review.
+
+
+## Second external-review corrections
+
+A second cold review identified a small set of remaining Phase 1 defects. The following corrections were accepted without introducing another architectural phase:
+
+- rejected, conflicting, replayed, and HTTP-level failed requests now leave minimal local diagnostic evidence;
+- request IDs and idempotency keys are scoped by `(client.id, caller.subject)`;
+- an idempotent retry echoes the current request ID while retaining the original workflow/receipt identity;
+- legacy unscoped workflows do not collide with newly scoped requests;
+- package metadata declares all runtime dependencies required by `pip install .`;
+- percent-encoded workflow IDs are decoded by the HTTP server;
+- `schemas/catalog-v1.json` publishes URN-to-file mappings for independent validators;
+- non-standard JSON numbers such as `NaN` and `Infinity` are rejected;
+- the demonstrator machine-readable profile uses client identity terminology;
+- the acceptance harness opens the production database read-only;
+- the prohibited-operation list is documented as defense-in-depth where schema rejection occurs first.
+
+No `federation.*` namespace, peer-orchestrator RPC, module-specific membership state, or module-admission implementation was added.
+
+The architecture rule remains: **orchestrators do not federate; evidence may.**

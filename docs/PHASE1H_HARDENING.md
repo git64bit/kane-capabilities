@@ -2,7 +2,7 @@
 
 ## Status
 
-**ACTIVE** — implementation committed; CT105 acceptance pending.
+**ACCEPTED** on 2026-10-01.
 
 This pass follows an independent cold review by a prospective consumer of the Civic Orchestrator architectural pattern.
 
@@ -142,18 +142,33 @@ It proves that declared client identity does not alter Civic operation semantics
 
 It does not prove real Usermin, Hubzilla, and Kane Fabric adapters behave equivalently. That remains Phase 3 work.
 
-## CT105 acceptance still required
+## CT105 acceptance
 
-Before Phase 1H closes, CT105 must prove:
+The persistent CT105 deployment passed all Phase 1H gates:
 
-1. the full test suite passes;
-2. the existing persistent SQLite database migrates additively;
-3. legacy audit events receive valid sequence numbers;
-4. a fresh request records caller authentication/client identity;
-5. exact replay returns the original workflow and receipt;
-6. conflicting replay returns `409`;
-7. malformed timestamp is rejected;
-8. HTTP malformed JSON returns a valid failure envelope;
-9. service remains loopback-only and side-effect-free.
+```text
+unit/regression suite       21 tests, PASS
+persistent DB migration     PASS
+legacy audit backfill       PASS
+caller authenticated_by     PASS
+extensible client identity  PASS
+exact replay                PASS
+conflicting replay          409 conflict, PASS
+RFC3339 timestamp rejection PASS
+malformed JSON envelope     PASS
+listener                    127.0.0.1:8045 only
+side_effects                false
+```
 
-Phase 2 does not begin until these gates pass.
+A pre-Phase-1H SQLite backup was taken before migration.
+
+The acceptance harness completed with:
+
+```json
+{
+  "phase": "1H",
+  "status": "pass"
+}
+```
+
+Phase 1H is closed. Phase 2 may proceed after external review.

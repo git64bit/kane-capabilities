@@ -34,7 +34,7 @@ Acceptance:
 
 ## Phase 1 — Contract-bearing orchestrator skeleton
 
-**Status:** ACTIVE — contract definitions in progress; no production side effects.
+**Status:** COMPLETE — contract-bearing stub runtime accepted on CT105; no production side effects.
 
 Build CT105 as a deliberately limited service that can validate and route requests but cannot yet perform production civic actions.
 
@@ -99,7 +99,28 @@ Do not introduce arbitrary command execution.
 
 ### Phase 1 acceptance
 
-A Usermin command, Hubzilla test client, and Kane Fabric development client can submit equivalent test operations and receive equivalent contract-valid responses without any backend side effect.
+**Accepted on 2026-10-01.**
+
+The Phase 1 development acceptance harness exercised equivalent `usermin`, `hubzilla`, and `kane-fabric` interface identities against the same bounded Civic operation and produced equivalent contract-valid semantics without backend side effects.
+
+The runtime also proved:
+
+- schema-valid request/result/failure handling;
+- bounded capability registry;
+- schema-level rejection of prohibited generic operations;
+- explicit authorization-decision persistence;
+- deterministic workflow identifiers and state;
+- fail-closed workflow transition validation;
+- explicit service-capability selection evidence;
+- audit-event persistence;
+- receipt issuance;
+- read-only workflow evidence retrieval;
+- threaded SQLite safety;
+- hardened persistent systemd service;
+- loopback-only listener;
+- `side_effects=false` throughout Phase 1.
+
+Production Usermin, Hubzilla, and Kane Fabric adapters remain Phase 3 work.
 
 ---
 

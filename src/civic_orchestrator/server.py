@@ -159,6 +159,25 @@ class Handler(BaseHTTPRequestHandler):
         return
 
 
+
+def build_runtime(
+    repo_root: Path,
+    state_db: Path,
+    publication_base_url: str | None = None,
+) -> CivicOrchestrator:
+    runtime = CivicOrchestrator(
+        RuntimePaths(
+            repo_root=repo_root,
+            state_db=state_db,
+        )
+    )
+    if publication_base_url:
+        runtime.publication_client = PublicationServiceClient(
+            publication_base_url,
+            runtime.contracts.validate,
+        )
+    return runtime
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", required=True)
@@ -168,17 +187,11 @@ def main() -> None:
     parser.add_argument("--publication-base-url")
     args = parser.parse_args()
 
-    runtime = CivicOrchestrator(
-        RuntimePaths(
-            repo_root=Path(args.repo_root),
-            state_db=Path(args.state_db),
-        )
+    runtime = build_runtime(
+        repo_root=Path(args.repo_root),
+        state_db=Path(args.state_db),
+        publication_base_url=args.publication_base_url,
     )
-    if args.publication_base_url:
-        runtime.publication_client = PublicationServiceClient(
-            args.publication_base_url,
-            runtime.contracts.validate,
-        )
     Handler.runtime = runtime
     server = ThreadingHTTPServer((args.listen, args.port), Handler)
     server.serve_forever()

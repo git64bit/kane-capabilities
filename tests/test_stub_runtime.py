@@ -74,6 +74,23 @@ class StubRuntimeTests(unittest.TestCase):
             for item in caps["capabilities"]
         ))
 
+    def test_incident_operations_are_bounded_stubs(self):
+        caps = self.runtime.capabilities()
+        operations = {item["operation"] for item in caps["capabilities"]}
+        self.assertIn("incident.report", operations)
+        self.assertIn("incident.get", operations)
+        self.assertIn("incident.acknowledge", operations)
+        self.assertIn("incident.resolve", operations)
+
+        status, result = self.runtime.submit(self.request("incident.report"))
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "not-implemented")
+        self.assertFalse(result["side_effects"])
+        self.assertEqual(
+            result["result"]["service_capability"],
+            "incident.report",
+        )
+
     def test_workflow_evidence_is_read_only_and_schema_valid(self):
         status, result = self.runtime.submit(self.request())
         self.assertEqual(status, 200)

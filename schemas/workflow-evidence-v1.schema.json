@@ -61,6 +61,6 @@
       "type": "array",
       "items": { "$ref": "urn:civic-orchestrator:schema:receipt:v1" }
     },
-    "side_effects": { "const": false }
+    "side_effects": { "type": "boolean" }
   }
 }

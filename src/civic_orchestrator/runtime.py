@@ -67,82 +67,86 @@ class OperationRegistry:
 
 class StateStore:
     def __init__(self, db_path: Path) -> None:
+        self.db_path = db_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(db_path)
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA foreign_keys=ON")
         self._init_schema()
 
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        return conn
+
     def _init_schema(self) -> None:
-        self.conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS workflows (
-                workflow_id TEXT PRIMARY KEY,
-                request_id TEXT NOT NULL,
-                operation TEXT NOT NULL,
-                state TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                side_effects INTEGER NOT NULL CHECK(side_effects IN (0,1))
-            );
+        with self._connect() as conn:
+            conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS workflows (
+                    workflow_id TEXT PRIMARY KEY,
+                    request_id TEXT NOT NULL,
+                    operation TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    side_effects INTEGER NOT NULL CHECK(side_effects IN (0,1))
+                );
 
-            CREATE TABLE IF NOT EXISTS audit_events (
-                event_id TEXT PRIMARY KEY,
-                workflow_id TEXT NOT NULL,
-                event_type TEXT NOT NULL,
-                recorded_at TEXT NOT NULL,
-                actor TEXT NOT NULL,
-                data_json TEXT NOT NULL,
-                FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
-            );
+                CREATE TABLE IF NOT EXISTS audit_events (
+                    event_id TEXT PRIMARY KEY,
+                    workflow_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL,
+                    actor TEXT NOT NULL,
+                    data_json TEXT NOT NULL,
+                    FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
+                );
 
-            CREATE TABLE IF NOT EXISTS receipts (
-                receipt_id TEXT PRIMARY KEY,
-                workflow_id TEXT NOT NULL,
-                operation TEXT NOT NULL,
-                issued_at TEXT NOT NULL,
-                outcome TEXT NOT NULL,
-                side_effects INTEGER NOT NULL CHECK(side_effects IN (0,1)),
-                evidence_json TEXT NOT NULL,
-                FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
-            );
-            """
-        )
-        self.conn.commit()
+                CREATE TABLE IF NOT EXISTS receipts (
+                    receipt_id TEXT PRIMARY KEY,
+                    workflow_id TEXT NOT NULL,
+                    operation TEXT NOT NULL,
+                    issued_at TEXT NOT NULL,
+                    outcome TEXT NOT NULL,
+                    side_effects INTEGER NOT NULL CHECK(side_effects IN (0,1)),
+                    evidence_json TEXT NOT NULL,
+                    FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
+                );
+                """
+            )
 
     def create_workflow(self, request_id: str, operation: str) -> str:
         workflow_id = f"wf:{uuid.uuid4()}"
         now = utc_now()
-        self.conn.execute(
-            "INSERT INTO workflows VALUES (?,?,?,?,?,?,?)",
-            (workflow_id, request_id, operation, "accepted", now, now, 0),
-        )
-        self.conn.commit()
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO workflows VALUES (?,?,?,?,?,?,?)",
+                (workflow_id, request_id, operation, "accepted", now, now, 0),
+            )
         return workflow_id
 
     def transition(self, workflow_id: str, state: str) -> None:
-        self.conn.execute(
-            "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
-            (state, utc_now(), workflow_id),
-        )
-        self.conn.commit()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
+                (state, utc_now(), workflow_id),
+            )
 
     def audit(self, workflow_id: str, event_type: str, actor: str, data: dict[str, Any]) -> str:
         event_id = f"evt:{uuid.uuid4()}"
-        self.conn.execute(
-            "INSERT INTO audit_events VALUES (?,?,?,?,?,?)",
-            (event_id, workflow_id, event_type, utc_now(), actor, json.dumps(data, sort_keys=True)),
-        )
-        self.conn.commit()
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO audit_events VALUES (?,?,?,?,?,?)",
+                (event_id, workflow_id, event_type, utc_now(), actor, json.dumps(data, sort_keys=True)),
+            )
         return event_id
 
     def receipt(self, workflow_id: str, operation: str, outcome: str, evidence: dict[str, Any]) -> str:
         receipt_id = f"rcpt:{uuid.uuid4()}"
-        self.conn.execute(
-            "INSERT INTO receipts VALUES (?,?,?,?,?,?,?)",
-            (receipt_id, workflow_id, operation, utc_now(), outcome, 0, json.dumps(evidence, sort_keys=True)),
-        )
-        self.conn.commit()
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO receipts VALUES (?,?,?,?,?,?,?)",
+                (receipt_id, workflow_id, operation, utc_now(), outcome, 0, json.dumps(evidence, sort_keys=True)),
+            )
         return receipt_id
 
 

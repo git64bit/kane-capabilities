@@ -6,8 +6,8 @@
   "additionalProperties":false,
   "required":["service_id","capability","status","contract_version"],
   "properties":{
-    "service_id":{"$ref":"common-v1.schema.json#/$defs/id"},
-    "capability":{"$ref":"common-v1.schema.json#/$defs/operation"},
+    "service_id":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/id"},
+    "capability":{"$ref":"urn:civic-orchestrator:schema:common:v1#/$defs/operation"},
     "status":{"type":"string","enum":["stub","available","unavailable","disabled"]},
     "contract_version":{"type":"integer","minimum":1},
     "endpoint_class":{"type":"string","enum":["local","service-network","protected","external"]},

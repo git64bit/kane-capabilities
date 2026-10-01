@@ -16,6 +16,12 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
 from rfc3339_validator import validate_rfc3339
 
+from .publication import (
+    PublicationServiceFailure,
+    PublicationServiceProtocolError,
+    PublicationServiceUnavailable,
+)
+
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,159}$")
 _OPERATION_RE = re.compile(
@@ -410,6 +416,357 @@ class StateStore:
         return hashlib.sha256(
             canonical_json(semantic_request).encode("utf-8")
         ).hexdigest()
+
+    def begin_external_operation(
+        self,
+        request: dict[str, Any],
+        descriptor: dict[str, Any],
+        authorization_policy: str,
+        authorization_reason: str,
+        validate_contract: Callable[[str, Any], None],
+    ) -> tuple[dict[str, Any], bool]:
+        request_id = request["request_id"]
+        operation = request["operation"]
+        fingerprint = self.request_fingerprint(request)
+        idempotency_key = request.get("idempotency_key")
+        caller_subject = request["caller"]["subject"]
+        client_id = request["client"]["id"]
+
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute("BEGIN IMMEDIATE")
+
+            if idempotency_key is not None:
+                existing = conn.execute(
+                    """
+                    SELECT request_fingerprint, result_json
+                      FROM workflows
+                     WHERE client_id=?
+                       AND caller_subject=?
+                       AND idempotency_key=?
+                     ORDER BY rowid DESC
+                     LIMIT 1
+                    """,
+                    (client_id, caller_subject, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if (
+                        existing["request_fingerprint"] == fingerprint
+                        and existing["result_json"]
+                    ):
+                        return json.loads(existing["result_json"]), True
+                    raise ConflictError(
+                        "idempotency key was already used for a different or "
+                        "in-progress request"
+                    )
+
+            existing = conn.execute(
+                """
+                SELECT request_fingerprint, result_json
+                  FROM workflows
+                 WHERE client_id=?
+                   AND caller_subject=?
+                   AND request_id=?
+                 ORDER BY rowid DESC
+                 LIMIT 1
+                """,
+                (client_id, caller_subject, request_id),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    existing["request_fingerprint"] == fingerprint
+                    and existing["result_json"]
+                ):
+                    return json.loads(existing["result_json"]), True
+                raise ConflictError(
+                    "request_id was already used for a different or "
+                    "in-progress request"
+                )
+
+            workflow_id = f"wf:{uuid.uuid4()}"
+            decision_id = f"authz:{uuid.uuid4()}"
+            receipt_id = f"rcpt:{uuid.uuid4()}"
+            created_at = utc_now()
+
+            conn.execute(
+                """
+                INSERT INTO workflows
+                    (workflow_id, request_id, operation, state,
+                     created_at, updated_at, side_effects,
+                     idempotency_key, request_fingerprint, result_json,
+                     caller_subject, client_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    workflow_id,
+                    request_id,
+                    operation,
+                    "validated",
+                    created_at,
+                    created_at,
+                    0,
+                    idempotency_key,
+                    fingerprint,
+                    None,
+                    caller_subject,
+                    client_id,
+                ),
+            )
+
+            decision_record = {
+                "decision_id": decision_id,
+                "request_id": request_id,
+                "operation": operation,
+                "decision": "allow",
+                "decided_at": utc_now(),
+                "policy": authorization_policy,
+                "reason": authorization_reason,
+            }
+            validate_contract(
+                "authorization-decision-v1.schema.json",
+                decision_record,
+            )
+            conn.execute(
+                """
+                INSERT INTO authorization_decisions
+                    (decision_id, workflow_id, request_id, operation,
+                     decision, decided_at, policy, reason)
+                VALUES (?,?,?,?,?,?,?,?)
+                """,
+                (
+                    decision_record["decision_id"],
+                    workflow_id,
+                    decision_record["request_id"],
+                    decision_record["operation"],
+                    decision_record["decision"],
+                    decision_record["decided_at"],
+                    decision_record["policy"],
+                    decision_record["reason"],
+                ),
+            )
+
+            self._assert_transition("validated", "authorized")
+            conn.execute(
+                "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
+                ("authorized", utc_now(), workflow_id),
+            )
+            self._assert_transition("authorized", "accepted")
+            conn.execute(
+                "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
+                ("accepted", utc_now(), workflow_id),
+            )
+
+            events = [
+                (
+                    1,
+                    "civic.authorization.allowed",
+                    "civic-orchestrator",
+                    {
+                        "decision_id": decision_id,
+                        "policy": authorization_policy,
+                        "side_effects": False,
+                    },
+                ),
+                (
+                    2,
+                    "civic.operation.accepted",
+                    caller_subject,
+                    {
+                        "operation": operation,
+                        "client_id": request["client"]["id"],
+                        "client_kind": request["client"]["kind"],
+                        "authenticated_by": request["caller"]["authenticated_by"],
+                        "side_effects": False,
+                    },
+                ),
+                (
+                    3,
+                    "civic.service.selected",
+                    "civic-orchestrator",
+                    {
+                        "service_capability": descriptor["service_capability"],
+                        "implementation": descriptor["implementation"],
+                        "effect_scope": descriptor["effect_scope"],
+                        "side_effects": False,
+                    },
+                ),
+            ]
+
+            for sequence, event_type, actor, data in events:
+                event_record = {
+                    "event_id": f"evt:{uuid.uuid4()}",
+                    "workflow_id": workflow_id,
+                    "sequence": sequence,
+                    "event_type": event_type,
+                    "recorded_at": utc_now(),
+                    "actor": actor,
+                    "data": data,
+                }
+                validate_contract(
+                    "audit-event-v1.schema.json",
+                    event_record,
+                )
+                conn.execute(
+                    """
+                    INSERT INTO audit_events
+                        (event_id, workflow_id, sequence, event_type,
+                         recorded_at, actor, data_json)
+                    VALUES (?,?,?,?,?,?,?)
+                    """,
+                    (
+                        event_record["event_id"],
+                        workflow_id,
+                        sequence,
+                        event_type,
+                        event_record["recorded_at"],
+                        actor,
+                        canonical_json(data),
+                    ),
+                )
+
+            return {
+                "workflow_id": workflow_id,
+                "receipt_id": receipt_id,
+            }, False
+
+    def finish_external_operation(
+        self,
+        request: dict[str, Any],
+        descriptor: dict[str, Any],
+        workflow_id: str,
+        receipt_id: str,
+        outcome: str,
+        side_effects: bool,
+        detail: dict[str, Any],
+        validate_contract: Callable[[str, Any], None],
+    ) -> dict[str, Any]:
+        if outcome not in {"completed", "failed"}:
+            raise ValueError(f"invalid external operation outcome: {outcome}")
+
+        completed_at = utc_now()
+        evidence = {
+            "implementation": descriptor["implementation"],
+            "service_capability": descriptor["service_capability"],
+            "effect_scope": descriptor["effect_scope"],
+            "side_effects": bool(side_effects),
+            **detail,
+        }
+
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT state FROM workflows WHERE workflow_id=?",
+                (workflow_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"unknown workflow: {workflow_id}")
+
+            self._assert_transition(row["state"], outcome)
+            conn.execute(
+                """
+                UPDATE workflows
+                   SET state=?, updated_at=?, side_effects=?
+                 WHERE workflow_id=?
+                """,
+                (
+                    outcome,
+                    completed_at,
+                    1 if side_effects else 0,
+                    workflow_id,
+                ),
+            )
+
+            sequence = int(
+                conn.execute(
+                    "SELECT COALESCE(MAX(sequence),0)+1 "
+                    "FROM audit_events WHERE workflow_id=?",
+                    (workflow_id,),
+                ).fetchone()[0]
+            )
+            event_record = {
+                "event_id": f"evt:{uuid.uuid4()}",
+                "workflow_id": workflow_id,
+                "sequence": sequence,
+                "event_type": f"civic.operation.{outcome}",
+                "recorded_at": utc_now(),
+                "actor": "civic-orchestrator",
+                "data": evidence,
+            }
+            validate_contract(
+                "audit-event-v1.schema.json",
+                event_record,
+            )
+            conn.execute(
+                """
+                INSERT INTO audit_events
+                    (event_id, workflow_id, sequence, event_type,
+                     recorded_at, actor, data_json)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                (
+                    event_record["event_id"],
+                    workflow_id,
+                    sequence,
+                    event_record["event_type"],
+                    event_record["recorded_at"],
+                    event_record["actor"],
+                    canonical_json(evidence),
+                ),
+            )
+
+            receipt_record = {
+                "receipt_id": receipt_id,
+                "workflow_id": workflow_id,
+                "operation": request["operation"],
+                "issued_at": utc_now(),
+                "outcome": outcome,
+                "side_effects": bool(side_effects),
+                "evidence": evidence,
+            }
+            validate_contract(
+                "receipt-v1.schema.json",
+                receipt_record,
+            )
+            conn.execute(
+                """
+                INSERT INTO receipts
+                    (receipt_id, workflow_id, operation, issued_at,
+                     outcome, side_effects, evidence_json)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                (
+                    receipt_id,
+                    workflow_id,
+                    request["operation"],
+                    receipt_record["issued_at"],
+                    outcome,
+                    1 if side_effects else 0,
+                    canonical_json(evidence),
+                ),
+            )
+
+            result = {
+                "contract_version": 1,
+                "request_id": request["request_id"],
+                "workflow_id": workflow_id,
+                "operation": request["operation"],
+                "status": outcome,
+                "completed_at": completed_at,
+                "side_effects": bool(side_effects),
+                "result": evidence,
+                "receipt_id": receipt_id,
+            }
+            validate_contract(
+                "result-envelope-v1.schema.json",
+                result,
+            )
+            conn.execute(
+                "UPDATE workflows SET result_json=? WHERE workflow_id=?",
+                (canonical_json(result), workflow_id),
+            )
+
+        return result
 
     def record_stub_operation(
         self,
@@ -817,12 +1174,16 @@ class StateStore:
             "authorization_decisions": decision_objs,
             "audit_events": event_objs,
             "receipts": receipt_objs,
-            "side_effects": False,
+            "side_effects": bool(workflow["side_effects"]),
         }
 
 
 class CivicOrchestrator:
-    def __init__(self, paths: RuntimePaths) -> None:
+    def __init__(
+        self,
+        paths: RuntimePaths,
+        publication_client: Any | None = None,
+    ) -> None:
         self.contracts = ContractStore(paths.repo_root)
         self.registry = OperationRegistry(
             paths.repo_root / "contracts" / "operation-registry-v1.yaml",
@@ -840,6 +1201,7 @@ class CivicOrchestrator:
                 )
 
         self.state = StateStore(paths.state_db)
+        self.publication_client = publication_client
 
     def capabilities(self) -> dict[str, Any]:
         return {
@@ -926,6 +1288,17 @@ class CivicOrchestrator:
                 False,
             )
 
+        if (
+            operation == "publication.publish"
+            and descriptor["implementation"] == "available"
+        ):
+            return self._submit_publication(
+                request,
+                descriptor,
+                caller_subject,
+                client_id,
+            )
+
         try:
             result, replayed = self.state.record_stub_operation(
                 request,
@@ -968,6 +1341,202 @@ class CivicOrchestrator:
             )
             self.contracts.validate("result-envelope-v1.schema.json", result)
 
+        return 200, result
+
+    def _submit_publication(
+        self,
+        request: dict[str, Any],
+        descriptor: dict[str, Any],
+        caller_subject: str,
+        client_id: str,
+    ) -> tuple[int, dict[str, Any]]:
+        request_id = request["request_id"]
+        operation = request["operation"]
+
+        try:
+            self.contracts.validate(
+                "publication-publish-input-v1.schema.json",
+                request["input"],
+            )
+        except ValidationError as exc:
+            self.state.record_request_diagnostic(
+                "invalid-contract",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
+            return 400, self.failure(
+                request_id,
+                operation,
+                "invalid-contract",
+                str(exc),
+                False,
+            )
+
+        if self.publication_client is None:
+            message = "publication service client is not configured"
+            self.state.record_request_diagnostic(
+                "backend-unavailable",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                message,
+            )
+            return 500, self.failure(
+                request_id,
+                operation,
+                "backend-unavailable",
+                message,
+                True,
+            )
+
+        try:
+            start, replayed = self.state.begin_external_operation(
+                request,
+                descriptor,
+                "publication-policy-v1",
+                (
+                    "Bounded publication operation accepted for the "
+                    "configured publication service."
+                ),
+                self.contracts.validate,
+            )
+        except ConflictError as exc:
+            self.state.record_request_diagnostic(
+                "conflict",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
+            return 409, self.failure(
+                request_id,
+                operation,
+                "conflict",
+                str(exc),
+                False,
+            )
+
+        if replayed:
+            original_request_id = start["request_id"]
+            result = dict(start)
+            result["request_id"] = request_id
+            result["result"] = dict(result["result"])
+            result["result"]["replayed"] = True
+            result["result"]["original_request_id"] = original_request_id
+            self.state.record_request_diagnostic(
+                "replay",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                f"original_request_id={original_request_id}",
+            )
+            self.contracts.validate(
+                "result-envelope-v1.schema.json",
+                result,
+            )
+            return 200, result
+
+        workflow_id = start["workflow_id"]
+        receipt_id = start["receipt_id"]
+
+        try:
+            service_result = self.publication_client.publish(
+                workflow_id,
+                request["input"]["artifact"],
+            )
+        except PublicationServiceFailure as exc:
+            side_effects = exc.failure_class in {
+                "publication-failed",
+                "verification-failed",
+            }
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=side_effects,
+                detail={
+                    "failure_class": exc.failure_class,
+                    "message": exc.message,
+                    "retryable": exc.retryable,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+        except PublicationServiceUnavailable as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": "backend-unavailable",
+                    "message": str(exc)[:1000],
+                    "retryable": True,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+        except PublicationServiceProtocolError as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": "internal",
+                    "message": str(exc)[:1000],
+                    "retryable": False,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+        except Exception as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": "internal",
+                    "message": (
+                        f"unexpected publication adapter failure: {exc}"
+                    )[:1000],
+                    "retryable": False,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+
+        result = self.state.finish_external_operation(
+            request=request,
+            descriptor=descriptor,
+            workflow_id=workflow_id,
+            receipt_id=receipt_id,
+            outcome="completed",
+            side_effects=True,
+            detail={
+                "sha256": service_result["sha256"],
+                "size_bytes": service_result["size_bytes"],
+                "cid": service_result["cid"],
+                "pinned": service_result["pinned"],
+                "verified": service_result["verified"],
+            },
+            validate_contract=self.contracts.validate,
+        )
         return 200, result
 
     def workflow_evidence(

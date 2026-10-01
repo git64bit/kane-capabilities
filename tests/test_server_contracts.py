@@ -189,6 +189,54 @@ class ServerContractTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(payload["failure_class"], "invalid-contract")
 
+    def test_publication_envelope_larger_than_one_mib_reaches_runtime(self):
+        import base64
+        import hashlib
+
+        payload = b"x" * 800_000
+        artifact = {
+            "media_type": "application/octet-stream",
+            "size_bytes": len(payload),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "encoding": "base64",
+            "content": base64.b64encode(payload).decode("ascii"),
+        }
+        request = {
+            "contract_version": 1,
+            "request_id": "req:http-large-publication",
+            "operation": "publication.publish",
+            "caller": {
+                "subject": "participant:test",
+                "authenticated_by": "test-auth",
+            },
+            "client": {
+                "id": "test-client",
+                "kind": "test",
+            },
+            "submitted_at": "2026-10-01T17:10:00Z",
+            "input": {
+                "artifact": artifact,
+            },
+        }
+        body = json.dumps(request, separators=(",", ":"))
+        body_bytes = body.encode("utf-8")
+        self.assertGreater(len(body_bytes), 1024 * 1024)
+        self.assertLess(len(body_bytes), 1_500_000)
+
+        status, response = self.request(
+            "POST",
+            "/v1/operations",
+            body=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body_bytes)),
+            },
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(response["status"], "not-implemented")
+        self.assertFalse(response["side_effects"])
+
 
 if __name__ == "__main__":
     unittest.main()

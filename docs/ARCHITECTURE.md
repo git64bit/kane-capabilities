@@ -111,3 +111,28 @@ Phase 1 uses a small deterministic state machine and fail-closed service stubs.
 No general-purpose arbitrary scripting facility is exposed through the public operation contract.
 
 A mature workflow engine may later execute internal workflow definitions if measured complexity justifies it, but the external Civic contracts must not depend on that engine.
+
+
+## Portability principle
+
+Kane County is the reference deployment. The orchestrator architecture is not Kane County-specific.
+
+A conforming independent operator may replace jurisdiction data sources, hostnames, accounts, trust roots, source adapters, physical hosts, and service placement while preserving the public Civic contracts and capability boundaries.
+
+Reference deployment locators such as CT numbers, `srv-b`, and `annales` must not become durable protocol identity.
+
+See `PORTABILITY_AND_TRUST.md`.
+
+## Non-monetary cryptographic trust
+
+Cryptographic mechanisms in Civic Infrastructure establish evidence, integrity, authorization, provenance, or software trust.
+
+They do not create currency, utility-token value, ownership interest, or transferable governance weight.
+
+A blockchain or token system is not part of the required architecture. Any future proposal for one must demonstrate a concrete Civic requirement that cannot be met adequately by simpler signed records, append-only logs, content addressing, WORM storage, replication, or independent witnesses.
+
+## Appliance direction
+
+The long-term deployment model should remain compatible with a network-bootstrapped appliance that can discover deployment configuration, verify trust roots, obtain public contracts and jurisdiction adapters, configure services, and prove conformance.
+
+This is a portability target, not a requirement to design the appliance during the initial orchestrator milestones.

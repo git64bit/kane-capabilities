@@ -1,5 +1,6 @@
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -72,6 +73,31 @@ class StubRuntimeTests(unittest.TestCase):
             item["operation"] == "publication.publish" and item["implementation"] == "stub"
             for item in caps["capabilities"]
         ))
+
+    def test_threaded_submit_uses_safe_sqlite_connections(self):
+        results = []
+        errors = []
+
+        def worker(index):
+            try:
+                request = self.request()
+                request["request_id"] = f"req:thread-{index}"
+                results.append(self.runtime.submit(request))
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        self.assertEqual(errors, [])
+        self.assertEqual(len(results), 4)
+        for status, result in results:
+            self.assertEqual(status, 200)
+            self.assertEqual(result["status"], "not-implemented")
+            self.assertFalse(result["side_effects"])
 
 
 if __name__ == "__main__":

@@ -45,7 +45,7 @@ Define versioned schemas for:
 - request envelope;
 - result envelope;
 - error/failure envelope;
-- caller/interface identity;
+- caller identity, authentication provenance, and extensible client identity;
 - operation descriptor;
 - authorization decision;
 - workflow instance and transition;

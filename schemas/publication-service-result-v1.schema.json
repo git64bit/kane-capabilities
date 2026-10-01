@@ -35,7 +35,8 @@
     "cid": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 200
+      "maxLength": 200,
+      "pattern": "^b[a-z2-7]+$"
     },
     "pinned": {
       "const": true

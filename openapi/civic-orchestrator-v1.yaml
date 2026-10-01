@@ -44,8 +44,8 @@ paths:
             application/json:
               schema:
                 $ref: ../schemas/failure-envelope-v1.schema.json
-        "503":
-          description: Required backend unavailable
+        "500":
+          description: Internal processing failure
           content:
             application/json:
               schema:
@@ -71,13 +71,16 @@ paths:
                     items:
                       type: object
                       additionalProperties: false
-                      required: [operation, implementation]
+                      required: [operation, implementation, effect_scope]
                       properties:
                         operation:
                           $ref: ../schemas/common-v1.schema.json#/$defs/operation
                         implementation:
                           type: string
                           enum: [stub, available, unavailable, disabled]
+                        effect_scope:
+                          type: string
+                          enum: [none, orchestrator-state, external-bounded]
 
   /v1/workflows/{workflow_id}:
     get:

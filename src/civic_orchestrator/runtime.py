@@ -1179,7 +1179,11 @@ class StateStore:
 
 
 class CivicOrchestrator:
-    def __init__(self, paths: RuntimePaths) -> None:
+    def __init__(
+        self,
+        paths: RuntimePaths,
+        publication_client: Any | None = None,
+    ) -> None:
         self.contracts = ContractStore(paths.repo_root)
         self.registry = OperationRegistry(
             paths.repo_root / "contracts" / "operation-registry-v1.yaml",
@@ -1197,6 +1201,7 @@ class CivicOrchestrator:
                 )
 
         self.state = StateStore(paths.state_db)
+        self.publication_client = publication_client
 
     def capabilities(self) -> dict[str, Any]:
         return {
@@ -1283,6 +1288,17 @@ class CivicOrchestrator:
                 False,
             )
 
+        if (
+            operation == "publication.publish"
+            and descriptor["implementation"] == "available"
+        ):
+            return self._submit_publication(
+                request,
+                descriptor,
+                caller_subject,
+                client_id,
+            )
+
         try:
             result, replayed = self.state.record_stub_operation(
                 request,
@@ -1325,6 +1341,180 @@ class CivicOrchestrator:
             )
             self.contracts.validate("result-envelope-v1.schema.json", result)
 
+        return 200, result
+
+    def _submit_publication(
+        self,
+        request: dict[str, Any],
+        descriptor: dict[str, Any],
+        caller_subject: str,
+        client_id: str,
+    ) -> tuple[int, dict[str, Any]]:
+        request_id = request["request_id"]
+        operation = request["operation"]
+
+        try:
+            self.contracts.validate(
+                "publication-publish-input-v1.schema.json",
+                request["input"],
+            )
+        except ValidationError as exc:
+            self.state.record_request_diagnostic(
+                "invalid-contract",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
+            return 400, self.failure(
+                request_id,
+                operation,
+                "invalid-contract",
+                str(exc),
+                False,
+            )
+
+        if self.publication_client is None:
+            message = "publication service client is not configured"
+            self.state.record_request_diagnostic(
+                "backend-unavailable",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                message,
+            )
+            return 500, self.failure(
+                request_id,
+                operation,
+                "backend-unavailable",
+                message,
+                True,
+            )
+
+        try:
+            start, replayed = self.state.begin_external_operation(
+                request,
+                descriptor,
+                "publication-policy-v1",
+                (
+                    "Bounded publication operation accepted for the "
+                    "configured publication service."
+                ),
+                self.contracts.validate,
+            )
+        except ConflictError as exc:
+            self.state.record_request_diagnostic(
+                "conflict",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
+            return 409, self.failure(
+                request_id,
+                operation,
+                "conflict",
+                str(exc),
+                False,
+            )
+
+        if replayed:
+            original_request_id = start["request_id"]
+            result = dict(start)
+            result["request_id"] = request_id
+            result["result"] = dict(result["result"])
+            result["result"]["replayed"] = True
+            result["result"]["original_request_id"] = original_request_id
+            self.state.record_request_diagnostic(
+                "replay",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                f"original_request_id={original_request_id}",
+            )
+            self.contracts.validate(
+                "result-envelope-v1.schema.json",
+                result,
+            )
+            return 200, result
+
+        workflow_id = start["workflow_id"]
+        receipt_id = start["receipt_id"]
+
+        try:
+            service_result = self.publication_client.publish(
+                workflow_id,
+                request["input"]["artifact"],
+            )
+        except PublicationServiceFailure as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": exc.failure_class,
+                    "message": exc.message,
+                    "retryable": exc.retryable,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+        except PublicationServiceUnavailable as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": "backend-unavailable",
+                    "message": str(exc)[:1000],
+                    "retryable": True,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+        except PublicationServiceProtocolError as exc:
+            result = self.state.finish_external_operation(
+                request=request,
+                descriptor=descriptor,
+                workflow_id=workflow_id,
+                receipt_id=receipt_id,
+                outcome="failed",
+                side_effects=True,
+                detail={
+                    "failure_class": "internal",
+                    "message": str(exc)[:1000],
+                    "retryable": False,
+                },
+                validate_contract=self.contracts.validate,
+            )
+            return 200, result
+
+        result = self.state.finish_external_operation(
+            request=request,
+            descriptor=descriptor,
+            workflow_id=workflow_id,
+            receipt_id=receipt_id,
+            outcome="completed",
+            side_effects=True,
+            detail={
+                "sha256": service_result["sha256"],
+                "size_bytes": service_result["size_bytes"],
+                "cid": service_result["cid"],
+                "pinned": service_result["pinned"],
+                "verified": service_result["verified"],
+            },
+            validate_contract=self.contracts.validate,
+        )
         return 200, result
 
     def workflow_evidence(

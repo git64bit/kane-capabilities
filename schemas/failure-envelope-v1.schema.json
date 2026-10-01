@@ -15,8 +15,8 @@
   ],
   "properties": {
     "contract_version": { "const": 1 },
-    "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
-    "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
+    "request_id": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id" },
+    "operation": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/operation" },
     "failure_class": {
       "type": "string",
       "enum": [

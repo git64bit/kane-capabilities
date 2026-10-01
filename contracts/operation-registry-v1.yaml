@@ -79,6 +79,26 @@ operations:
     service_capability: audit.get_workflow
     side_effect_class: none
 
+  - operation: incident.report
+    implementation: stub
+    service_capability: incident.report
+    side_effect_class: none
+
+  - operation: incident.get
+    implementation: stub
+    service_capability: incident.get
+    side_effect_class: none
+
+  - operation: incident.acknowledge
+    implementation: stub
+    service_capability: incident.acknowledge
+    side_effect_class: none
+
+  - operation: incident.resolve
+    implementation: stub
+    service_capability: incident.resolve
+    side_effect_class: none
+
 prohibited_generic_operations:
   - shell.exec
   - ssh.run

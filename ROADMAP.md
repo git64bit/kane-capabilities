@@ -104,7 +104,7 @@ A Usermin command, Hubzilla test client, and Kane Fabric development client can 
 
 Do not begin broad backend integration until Phase 1 contracts are stable enough to reveal actual capability boundaries.
 
-Inventory each required service using the node-design gates in `docs/NODE_DESIGN_GATES.md`.
+Inventory each required service using the node-design gates in `docs/NODE_DESIGN_GATES.md`. The current Kane reference placement is recorded in `docs/KANE_NODE_PLACEMENT.md`.
 
 For every capability determine:
 

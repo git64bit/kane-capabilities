@@ -7,6 +7,7 @@
   "required": [
     "contract_version",
     "workflow",
+    "authorization_decisions",
     "audit_events",
     "receipts",
     "side_effects"
@@ -47,6 +48,10 @@
         "updated_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
         "side_effects": { "type": "boolean" }
       }
+    },
+    "authorization_decisions": {
+      "type": "array",
+      "items": { "$ref": "authorization-decision-v1.schema.json" }
     },
     "audit_events": {
       "type": "array",

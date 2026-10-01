@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from .publication import PublicationServiceClient
 from .runtime import CivicOrchestrator, RuntimePaths
 
 
@@ -164,6 +165,7 @@ def main() -> None:
     parser.add_argument("--state-db", required=True)
     parser.add_argument("--listen", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8045)
+    parser.add_argument("--publication-base-url")
     args = parser.parse_args()
 
     runtime = CivicOrchestrator(
@@ -172,6 +174,11 @@ def main() -> None:
             state_db=Path(args.state_db),
         )
     )
+    if args.publication_base_url:
+        runtime.publication_client = PublicationServiceClient(
+            args.publication_base_url,
+            runtime.contracts.validate,
+        )
     Handler.runtime = runtime
     server = ThreadingHTTPServer((args.listen, args.port), Handler)
     server.serve_forever()

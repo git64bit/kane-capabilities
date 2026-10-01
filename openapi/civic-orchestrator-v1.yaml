@@ -78,3 +78,39 @@ paths:
                         implementation:
                           type: string
                           enum: [stub, available, unavailable, disabled]
+
+  /v1/workflows/{workflow_id}:
+    get:
+      operationId: getWorkflowEvidence
+      summary: Retrieve read-only local workflow, audit, and receipt evidence
+      parameters:
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Workflow evidence
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/workflow-evidence-v1.schema.json
+        "404":
+          description: Workflow not found
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [contract_version, workflow_id, error, side_effects]
+                properties:
+                  contract_version:
+                    const: 1
+                  workflow_id:
+                    type: string
+                  error:
+                    const: workflow-not-found
+                  side_effects:
+                    const: false

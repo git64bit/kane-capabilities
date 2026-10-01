@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
@@ -336,6 +336,7 @@ class StateStore:
         request: dict[str, Any],
         descriptor: dict[str, Any],
         authorization_policy: str,
+        validate_contract: Callable[[str, Any], None],
     ) -> tuple[dict[str, Any], bool]:
         request_id = request["request_id"]
         operation = request["operation"]
@@ -415,6 +416,22 @@ class StateStore:
             )
 
             decided_at = utc_now()
+            decision_record = {
+                "decision_id": decision_id,
+                "request_id": request_id,
+                "operation": operation,
+                "decision": "allow",
+                "decided_at": decided_at,
+                "policy": authorization_policy,
+                "reason": (
+                    "Phase 1H permits registered operations only as "
+                    "non-side-effect stubs."
+                ),
+            }
+            validate_contract(
+                "authorization-decision-v1.schema.json",
+                decision_record,
+            )
             conn.execute(
                 """
                 INSERT INTO authorization_decisions
@@ -423,14 +440,14 @@ class StateStore:
                 VALUES (?,?,?,?,?,?,?,?)
                 """,
                 (
-                    decision_id,
+                    decision_record["decision_id"],
                     workflow_id,
-                    request_id,
-                    operation,
-                    "allow",
-                    decided_at,
-                    authorization_policy,
-                    "Phase 1H permits registered operations only as non-side-effect stubs.",
+                    decision_record["request_id"],
+                    decision_record["operation"],
+                    decision_record["decision"],
+                    decision_record["decided_at"],
+                    decision_record["policy"],
+                    decision_record["reason"],
                 ),
             )
 
@@ -505,6 +522,19 @@ class StateStore:
             )
 
             for sequence, event_type, actor, data in events:
+                event_record = {
+                    "event_id": f"evt:{uuid.uuid4()}",
+                    "workflow_id": workflow_id,
+                    "sequence": sequence,
+                    "event_type": event_type,
+                    "recorded_at": utc_now(),
+                    "actor": actor,
+                    "data": data,
+                }
+                validate_contract(
+                    "audit-event-v1.schema.json",
+                    event_record,
+                )
                 conn.execute(
                     """
                     INSERT INTO audit_events
@@ -513,11 +543,11 @@ class StateStore:
                     VALUES (?,?,?,?,?,?,?)
                     """,
                     (
-                        f"evt:{uuid.uuid4()}",
+                        event_record["event_id"],
                         workflow_id,
                         sequence,
                         event_type,
-                        utc_now(),
+                        event_record["recorded_at"],
                         actor,
                         canonical_json(data),
                     ),
@@ -529,6 +559,19 @@ class StateStore:
                 "effect_scope": descriptor["effect_scope"],
                 "side_effects": False,
             }
+            receipt_record = {
+                "receipt_id": receipt_id,
+                "workflow_id": workflow_id,
+                "operation": operation,
+                "issued_at": utc_now(),
+                "outcome": "not-implemented",
+                "side_effects": False,
+                "evidence": receipt_evidence,
+            }
+            validate_contract(
+                "receipt-v1.schema.json",
+                receipt_record,
+            )
             conn.execute(
                 """
                 INSERT INTO receipts
@@ -540,7 +583,7 @@ class StateStore:
                     receipt_id,
                     workflow_id,
                     operation,
-                    utc_now(),
+                    receipt_record["issued_at"],
                     "not-implemented",
                     0,
                     canonical_json(receipt_evidence),
@@ -566,6 +609,10 @@ class StateStore:
                 },
                 "receipt_id": receipt_id,
             }
+            validate_contract(
+                "result-envelope-v1.schema.json",
+                result,
+            )
             conn.execute(
                 "UPDATE workflows SET result_json=? WHERE workflow_id=?",
                 (canonical_json(result), workflow_id),
@@ -760,6 +807,7 @@ class CivicOrchestrator:
                 request,
                 descriptor,
                 self.workflow.authorization_policy,
+                self.contracts.validate,
             )
         except ConflictError as exc:
             return 409, self.failure(

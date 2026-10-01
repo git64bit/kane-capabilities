@@ -16,7 +16,7 @@ The independent-operator rule remains: another county may place the same capabil
 | Kane Fabric geographic authority | `srv-b` CT102 `kane-fabric` | retain existing |
 | Secure browser origin / Wiregate | `srv-b` CT103 `kane-wiregate` | retain existing |
 | Gitea source/revision authority | `srv-b` CT104 `civic-gitea` | retain existing |
-| Publication / IPFS backend | new isolated service node | create after contract gate |
+| Publication / IPFS backend | new Trixie-based CT on the existing OVH Proxmox 9 host | create after contract gate; replace old node |
 | RAG state / retrieval / indexes | new isolated stateful service node on `srv-b` | create after contract gate |
 | Model inference | existing `annales` inference service/container | retain separate |
 | Firmware signing authority | `annales` LXD `firmware-authority` + hardware-backed signer | retain protected boundary |
@@ -120,7 +120,9 @@ Git authority and workflow authority are different concerns. Gitea also has its 
 
 ### Placement
 
-Create a **new isolated service node** after the Phase 1 publication contract is frozen.
+Create a **new isolated Trixie-based CT on the existing OVH Proxmox 9 host** after the Phase 1 publication contract is frozen.
+
+This placement is a Kane reference-deployment decision. Proxmox 9, Debian Trixie, OVH, the eventual CT number, and the eventual hostname are not part of the portable Civic Infrastructure contract.
 
 Reference placeholder only:
 
@@ -145,11 +147,19 @@ Kubo owns:
 
 ### Existing `witness-ipfs`
 
-The Kane Fabric environment records an existing `witness-ipfs` container as a workload-specific WireGuard exception. It must **not** automatically become the shared Civic publication backend.
+The existing `witness-ipfs` node is **retired from the target architecture**. It served its earlier purpose and will not be reused as the shared Civic publication backend.
 
-Before reuse it would require an explicit audit proving that its ownership, persistence, network exposure, lifecycle, and trust assumptions match the new `publication.*` contract.
+Migration rule:
 
-Default decision: new isolated publication service unless that audit proves reuse is cleaner.
+1. build the new OVH publication/IPFS CT;
+2. initialize new publication state under the frozen `publication.*` contract;
+3. replicate or re-pin only the content that is explicitly required;
+4. verify required CIDs/content identities from the new node;
+5. switch orchestrated publication to the new service;
+6. shut down the old `witness-ipfs` node;
+7. retain only the evidence needed to reconstruct the migration decision.
+
+The old node must not remain an accidental parallel authority after cutover.
 
 ## 6. RAG state / retrieval / indexes
 
@@ -290,7 +300,7 @@ Separating build execution from protected release signing is a valuable supply-c
 
 The current architecture requires **three new service nodes beyond CT105**, unless later audits justify safe reuse:
 
-1. publication / IPFS service;
+1. publication / IPFS service — new Trixie CT on the existing OVH Proxmox 9 host;
 2. RAG state / retrieval service;
 3. ESP32-S3 management / synchronization service.
 
@@ -314,7 +324,8 @@ srv-b
        +---- CT102 kane-fabric -------- geographic authority
        +---- CT103 kane-wiregate ------ secure browser origin
        +---- CT104 civic-gitea -------- source/revision authority
-       +---- NEW publication ---------- IPFS/Kubo state
+       +---- publication client path ---+---------------------------> OVH Proxmox 9
+       |                                  `-- NEW Trixie CT: publication/IPFS
        +---- NEW retrieval ------------ RAG/index/private state
        +---- NEW edge-management ------ ESP32 lifecycle/sync
        |

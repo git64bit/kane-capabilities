@@ -6,6 +6,7 @@ import json
 import sys
 import urllib.error
 import urllib.request
+import uuid
 
 
 CLIENTS = ("usermin", "hubzilla", "kane-fabric")
@@ -51,11 +52,12 @@ def main() -> int:
 
     semantic = {}
     observations = {}
+    run_id = uuid.uuid4().hex[:12]
 
     for client in CLIENTS:
         payload = {
             "contract_version": 1,
-            "request_id": f"req:equivalence-{client}",
+            "request_id": f"req:equivalence-{run_id}-{client}",
             "operation": "publication.publish",
             "caller": {
                 "subject": f"participant:equivalence-{client}",

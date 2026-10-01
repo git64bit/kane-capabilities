@@ -2,7 +2,9 @@
 
 ## Status
 
-**ACCEPTED** on 2026-10-01.
+**ACCEPTED** on 2026-10-01 as the Phase 1 historical baseline.
+
+Phase 1H subsequently tightened the public contract and supersedes this document for current caller/client identity, replay, audit ordering, transactional persistence, and schema-resolution behavior.
 
 The Civic Orchestrator Phase 1 stub runtime passed unit and loopback HTTP acceptance on CT105 `civic-orchestrator`.
 
@@ -166,9 +168,9 @@ The workflow retained one authorization decision, four audit events, one receipt
 
 Result: **PASS**
 
-## Interface-equivalence acceptance
+## Client-semantics-equivalence acceptance
 
-The Phase 1 development acceptance harness submitted the same bounded `publication.publish` operation using the interface identities:
+The Phase 1 development acceptance harness submitted the same bounded `publication.publish` operation using the client identities:
 
 ```text
 usermin
@@ -191,9 +193,9 @@ receipt_side_effects       = false
 side_effects               = false
 ```
 
-Request IDs, workflow IDs, receipt IDs, caller subjects, timestamps, and recorded interface identity remained request-specific as intended.
+Request IDs, workflow IDs, receipt IDs, caller subjects, timestamps, and recorded client identity remained request-specific as intended.
 
-This gate proves contract-level interface equivalence only. It does not claim that production Usermin, Hubzilla, or Kane Fabric adapters have been implemented.
+This gate proved only that declared client identity did not alter stub Civic semantics. It did not test real Usermin, Hubzilla, or Kane Fabric adapters.
 
 Result: **PASS**
 
@@ -247,4 +249,4 @@ No production service adapter is enabled.
 
 The contract-bearing CT105 stub runtime now satisfies the Phase 1 architecture and acceptance requirements without enabling a production backend adapter or external service-network listener.
 
-The next roadmap phase is Phase 2: service and trust node architecture. Phase 2 begins with architecture/inventory work, not broad backend integration.
+The next gate is Phase 1H external-review hardening. Phase 2 begins only after Phase 1H acceptance.

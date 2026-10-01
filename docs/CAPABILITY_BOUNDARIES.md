@@ -66,6 +66,14 @@ Intended for audit queries, receipt verification, workflow history, and conforma
 
 Audit access remains subject to classification and authorization.
 
+### `incident.*`
+
+Intended for bounded operational incident reporting, retrieval, acknowledgement, and resolution.
+
+An incident is an operational object, not the immutable evidence record itself. Audit evidence, observed signals, incident workflow, and enforcement policy remain distinct.
+
+The namespace must not imply that a failed delivery, authentication failure, malformed request, or other signal proves abuse. Automated blocking, banning, punishment, or arbitrary log ingestion are not granted by this namespace.
+
 ## Explicitly prohibited generic capabilities
 
 The public orchestrator contract must not contain general operations equivalent to:

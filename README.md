@@ -1,65 +1,45 @@
-# kane-capabilities
+# Kane Capabilities
 
-Finite, cryptographically controlled capabilities for Kane Fabric, representing bounded rights, attestations, opportunities, and responsibilities with verifiable issuance, exercise, expiration, and evidence binding.
+Kane Capabilities defines the **Civic Orchestrator contract and capability boundary** for the Civic Infrastructure stack.
 
-## Milestone 0 — Capability Semantics
+The repository is not a collection of application use cases and it is not the implementation repository for Kane Fabric, Hubzilla, Usermin, Gitea, IPFS, RAG/LLM, ESP32-S3 firmware, or the signing authority.
 
-The first milestone defines the abstract Kane Capability and its lifecycle before any implementation work begins.
+Its purpose is narrower:
 
-The project starts from one principle:
+> define how independent Civic Infrastructure surfaces request bounded civic operations, how those operations are authorized and advanced through workflows, and how specialized services are reached without exposing their implementation details to callers.
 
-> A capability represents a bounded right, opportunity, or responsibility. It is not money.
+The reference orchestrator is CT105 `civic-orchestrator` on `srv-b`.
 
-The initial model defines only:
-
-- issuer
-- holder
-- purpose
-- validity interval
-- quantity
-- state
-- evidence reference
-- signatures
-
-The initial lifecycle is:
+## Architectural position
 
 ```text
-AUTHORIZED
-    |
-  ISSUED
-    |
-  ACTIVE
-   /   \
-EXERCISED EXPIRED
+Usermin shell / TUI ----+
+Hubzilla addon ---------+
+Kane Fabric browser ----+----> Civic Orchestrator ----> specialized services
+Gitea ------------------+
+mail-driven adapters ---+
+future interfaces ------+
 ```
 
-The initial conservation invariant is:
+The orchestrator is the fusebox between interaction surfaces and service/trust nodes. It owns cross-cutting workflow semantics, not the local responsibilities of those systems.
 
-```text
-AUTHORIZED = UNISSUED + ACTIVE + EXERCISED + EXPIRED
-```
+## Core rules
 
-See [docs/capability-model.md](docs/capability-model.md).
+1. **Civic operations, not remote commands.** Callers request operations such as publication, verification, promotion, retrieval, signing, or edge lifecycle actions. They do not request arbitrary shell commands, SSH sessions, Kubo RPC methods, SQL statements, or backend-specific procedures.
+2. **Reuse mature protocols.** The project does not invent a new network protocol merely to serialize JSON. HTTP, OpenAPI, JSON Schema, and CloudEvents are the initial standards baseline.
+3. **Fail closed.** Unknown operations, unavailable backends, missing authority, invalid state transitions, and unimplemented adapters must not produce side effects.
+4. **Keep edges thin but capable.** Usermin, Hubzilla, Kane Fabric, Gitea, and later clients retain their local UI, identity, storage, and domain behavior. Shared policy and cross-service workflow logic belong centrally.
+5. **Separate workflow authority from service authority.** The orchestrator may coordinate signing, publication, geographic promotion, inference, or edge updates without possessing every backend's private authority.
+6. **No implementation technology becomes civic identity.** Hostnames, ESP32 hardware identity, Git repositories, Unix accounts, service URLs, and transport endpoints are locators or implementation details unless an explicit civic contract says otherwise.
 
-## Capability inventories
+## Repository authority
 
-- [Kane Fabric Use-Case Inventory](docs/kane-fabric-use-case-inventory.md)
-- [RAG / Email and Ceremony Capabilities](docs/rag-email-ceremony-capabilities.md)
+Start with:
 
-## Explicit non-goals for Milestone 0
+1. [ROADMAP.md](ROADMAP.md)
+2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+3. [docs/CONTRACT_STACK.md](docs/CONTRACT_STACK.md)
+4. [docs/CAPABILITY_BOUNDARIES.md](docs/CAPABILITY_BOUNDARIES.md)
+5. [docs/NODE_DESIGN_GATES.md](docs/NODE_DESIGN_GATES.md)
 
-Milestone 0 does **not** define or implement:
-
-- Pi integration
-- Stellar integration
-- IPFS publishing or pinning mechanics
-- smart contracts
-- wallets
-- voting logic
-- witness-attestation logic
-- user interfaces
-- Annales integration
-- production serialization
-- network protocols
-
-These are intentionally deferred until the capability semantics are stable.
+Implementation code is intentionally absent at this reset point. The first milestone establishes contracts and stubs before real service side effects are permitted.

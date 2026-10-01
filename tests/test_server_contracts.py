@@ -50,7 +50,7 @@ class ServerContractTests(unittest.TestCase):
         conn.close()
         return status, payload
 
-    def test_health_reflects_stub_registry(self):
+    def test_health_reflects_current_available_registry(self):
         status, payload = self.request("GET", "/healthz")
 
         self.assertEqual(status, 200)
@@ -58,15 +58,15 @@ class ServerContractTests(unittest.TestCase):
             payload,
             {
                 "status": "ok",
-                "phase": "1H",
-                "side_effects": False,
+                "phase": "2",
+                "side_effects": True,
             },
         )
 
-    def test_health_reflects_available_side_effect_capability(self):
+    def test_health_reflects_all_stub_registry(self):
         publication = self.runtime.registry.lookup("publication.publish")
         original = publication["implementation"]
-        publication["implementation"] = "available"
+        publication["implementation"] = "stub"
         try:
             status, payload = self.request("GET", "/healthz")
         finally:
@@ -77,8 +77,8 @@ class ServerContractTests(unittest.TestCase):
             payload,
             {
                 "status": "ok",
-                "phase": "2",
-                "side_effects": True,
+                "phase": "1H",
+                "side_effects": False,
             },
         )
 
@@ -173,7 +173,7 @@ class ServerContractTests(unittest.TestCase):
         request = {
             "contract_version": 1,
             "request_id": "req:encoded-workflow",
-            "operation": "publication.publish",
+            "operation": "repository.fetch_exact",
             "caller": {
                 "subject": "participant:test",
                 "authenticated_by": "test-auth",
@@ -265,11 +265,11 @@ class ServerContractTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(status, 200)
-        self.assertEqual(response["status"], "not-implemented")
+        self.assertEqual(status, 500)
+        self.assertEqual(response["failure_class"], "backend-unavailable")
         self.assertFalse(response["side_effects"])
 
-    def test_publication_base_url_builds_dormant_service_client(self):
+    def test_publication_base_url_builds_available_service_client(self):
         runtime = build_runtime(
             repo_root=ROOT,
             state_db=Path(self.tmp.name) / "configured.sqlite3",
@@ -282,7 +282,7 @@ class ServerContractTests(unittest.TestCase):
             "http://10.110.0.21:8046",
         )
         publication = runtime.registry.lookup("publication.publish")
-        self.assertEqual(publication["implementation"], "stub")
+        self.assertEqual(publication["implementation"], "available")
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ default_side_effects: false
 
 operations:
   - operation: publication.publish
-    implementation: stub
+    implementation: available
     service_capability: publication.publish
     effect_scope: external-bounded
 

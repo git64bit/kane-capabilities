@@ -104,7 +104,7 @@ class StubRuntimeTests(unittest.TestCase):
         decision = evidence["authorization_decisions"][0]
         self.assertEqual(decision["decision"], "allow")
         self.assertEqual(decision["policy"], "stub-policy")
-        self.assertEqual(len(evidence["audit_events"]), 3)
+        self.assertEqual(len(evidence["audit_events"]), 4)
         self.assertEqual(len(evidence["receipts"]), 1)
         self.assertEqual(evidence["receipts"][0]["receipt_id"], result["receipt_id"])
 
@@ -122,6 +122,18 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertEqual(
             evidence["authorization_decisions"][0]["request_id"],
             result["request_id"],
+        )
+        self.assertEqual(
+            evidence["audit_events"][2]["event_type"],
+            "civic.service.selected",
+        )
+        self.assertEqual(
+            evidence["audit_events"][2]["data"]["implementation"],
+            "stub",
+        )
+        self.assertEqual(
+            evidence["audit_events"][2]["data"]["service_capability"],
+            "publication.publish",
         )
         self.assertFalse(evidence["side_effects"])
 

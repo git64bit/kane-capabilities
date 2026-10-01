@@ -12,19 +12,20 @@ A new application or service does not join an existing orchestrator merely becau
 
 A component belongs behind or in front of an existing orchestrator only when it participates in the same bounded civic authority, workflow, authorization, and evidence domain.
 
-A component should use its own orchestrator when it owns materially different:
+A component should use a separate orchestrator when it belongs to a materially different authority/workflow domain, including different:
 
 - domain-authoritative state;
-- membership or qualification state;
 - policy authority;
 - workflow semantics;
 - trust roots;
 - service lifecycle;
 - failure domain.
 
+Identity, standing, membership, or qualification state remains with the authority that owns it; CT105 may consume an authenticated assertion for authorization without becoming its authoritative store.
+
 Technology is not the admission criterion.
 
-For example, a cjdns-based component may legitimately integrate with the Kane Civic Orchestrator when it serves the same Kane civic workflow domain. A mechanically oriented application with its own membership, domain state, and workflow authority should use its own orchestrator even if it adopts the same Civic Orchestrator architecture.
+A cjdns-based component may legitimately integrate with the Kane Civic Orchestrator when it serves the same bounded Kane civic workflow domain. A utility or module may exchange data with Civic Infrastructure without becoming part of CT105's business logic.
 
 ## Shared architectural pattern
 
@@ -91,3 +92,16 @@ Before admitting a new client or service, answer:
 4. Would integration avoid importing unrelated membership, policy, or domain state into CT105?
 
 If the answer to the first or fourth question is unfavorable, use a separate orchestrator.
+
+
+## Inter-domain evidence exchange
+
+Orchestrators do not federate through remote operation calls, shared workflow state, distributed authorization, or knowledge of another domain's business rules.
+
+**Orchestrators do not federate. Evidence may.**
+
+Autonomous domains may publish and consume self-describing, schema-versioned, signed claims through ordinary publication and verification mechanisms. The receiving domain verifies the evidence locally and applies its own policy locally.
+
+If a receiver must know the sender's internal rules to interpret a record, business logic has leaked across the domain boundary.
+
+This rule does not create a `federation.*` capability namespace.

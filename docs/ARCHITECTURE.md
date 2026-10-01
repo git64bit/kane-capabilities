@@ -20,6 +20,16 @@ future clients ------------+        routing                        -> annales in
                                     receipts                       -> other bounded services
 ```
 
+## Orchestrator scope
+
+CT105 is not the universal control plane for every Civic Infrastructure application.
+
+It coordinates one bounded Kane civic authority/workflow domain. Another application may instantiate its own orchestrator using the same architectural pattern when it owns materially different domain state, membership, policy, trust roots, or workflow authority.
+
+A new client or service is admitted by domain fit, not by implementation technology. A cjdns-based component with matching Kane civic semantics may fit CT105; an unrelated application with its own domain authority does not.
+
+Authority: `ORCHESTRATOR_SCOPE.md`.
+
 ## Ownership rule
 
 ### Interaction surfaces retain

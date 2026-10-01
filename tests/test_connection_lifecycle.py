@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def request(
-    operation="publication.publish",
+    operation="repository.fetch_exact",
     request_id="req:life-001",
     input_=None,
     subject="participant:test",

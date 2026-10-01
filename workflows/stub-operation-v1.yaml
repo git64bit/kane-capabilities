@@ -13,6 +13,7 @@ accepted_namespaces:
   - firmware
   - signing
   - audit
+  - incident
 
 steps:
   - validate: request-envelope-v1

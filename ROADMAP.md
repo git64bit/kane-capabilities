@@ -109,7 +109,7 @@ The runtime also proved:
 - bounded capability registry;
 - schema-level rejection of prohibited generic operations;
 - explicit authorization-decision persistence;
-- deterministic workflow identifiers and state;
+- opaque workflow identifiers and deterministic workflow-state rules;
 - fail-closed workflow transition validation;
 - explicit service-capability selection evidence;
 - audit-event persistence;
@@ -277,7 +277,9 @@ Usermin, Hubzilla, Kane Fabric, and later clients must use the same orchestratio
 
 ---
 
-## Phase 7 — ESP32-S3 lifecycle and signing
+## Phase 7 — ESP32-S3 lifecycle and signing integration
+
+This phase governs **Orchestrator integration** of edge lifecycle and signing. It does not delay independent construction or testing of the signing authority.
 
 Treat publication custody and firmware trust as separate planes.
 

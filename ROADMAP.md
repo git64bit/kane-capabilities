@@ -20,12 +20,17 @@ Deliverables:
 - standards/protocol decision;
 - capability boundary;
 - node-design gates;
+- portability and independent-operator rules;
+- non-monetary cryptographic trust boundary;
+- portable reference topology;
 - no production side effects.
 
 Acceptance:
 
 - this repository can explain what the orchestrator is and is not without relying on implementation code;
-- every future service must enter through a named capability and contract.
+- every future service must enter through a named capability and contract;
+- the architecture can be described without assuming Kane County private infrastructure;
+- no cryptographic mechanism is required to carry monetary or transferable token semantics.
 
 ## Phase 1 — Contract-bearing orchestrator skeleton
 
@@ -253,7 +258,7 @@ Rundeck-class tooling may be used behind adapters for infrastructure execution. 
 
 ---
 
-## Phase 9 — Conformance, replication, and operator portability
+## Phase 9 — Conformance, replication, appliance bootstrap, and operator portability
 
 Complete:
 
@@ -265,6 +270,9 @@ Complete:
 - backup/restore gates;
 - node replacement tests;
 - independent operator implementation guidance;
+- second-jurisdiction conformance exercise using public contracts alone;
+- bootstrap manifest/trust-root model suitable for later appliance deployment;
+- network-bootstrap/reprovisioning proof when the appliance workstream becomes active;
 - multi-node distribution where required.
 
 The end state is a Civic Infrastructure control plane whose contracts survive replacement of individual applications, hosts, devices, or service implementations.

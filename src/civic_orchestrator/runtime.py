@@ -1216,6 +1216,21 @@ class CivicOrchestrator:
             ],
         }
 
+    def health(self) -> dict[str, Any]:
+        available = [
+            item
+            for item in self.registry.operations.values()
+            if item["implementation"] == "available"
+        ]
+        return {
+            "status": "ok",
+            "phase": "2" if available else "1H",
+            "side_effects": any(
+                item["effect_scope"] != "none"
+                for item in available
+            ),
+        }
+
     def submit(self, request: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         raw_request_id = request.get("request_id") if isinstance(request, dict) else None
         raw_operation = request.get("operation") if isinstance(request, dict) else None

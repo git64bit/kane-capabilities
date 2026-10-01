@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://civic.example/schema/request-envelope-v1.schema.json",
+  "$id": "urn:civic-orchestrator:schema:request-envelope:v1",
   "title": "Civic Orchestrator Request Envelope v1",
   "type": "object",
   "additionalProperties": false,

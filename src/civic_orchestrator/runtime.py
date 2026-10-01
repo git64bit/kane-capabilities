@@ -417,6 +417,357 @@ class StateStore:
             canonical_json(semantic_request).encode("utf-8")
         ).hexdigest()
 
+    def begin_external_operation(
+        self,
+        request: dict[str, Any],
+        descriptor: dict[str, Any],
+        authorization_policy: str,
+        authorization_reason: str,
+        validate_contract: Callable[[str, Any], None],
+    ) -> tuple[dict[str, Any], bool]:
+        request_id = request["request_id"]
+        operation = request["operation"]
+        fingerprint = self.request_fingerprint(request)
+        idempotency_key = request.get("idempotency_key")
+        caller_subject = request["caller"]["subject"]
+        client_id = request["client"]["id"]
+
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute("BEGIN IMMEDIATE")
+
+            if idempotency_key is not None:
+                existing = conn.execute(
+                    """
+                    SELECT request_fingerprint, result_json
+                      FROM workflows
+                     WHERE client_id=?
+                       AND caller_subject=?
+                       AND idempotency_key=?
+                     ORDER BY rowid DESC
+                     LIMIT 1
+                    """,
+                    (client_id, caller_subject, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if (
+                        existing["request_fingerprint"] == fingerprint
+                        and existing["result_json"]
+                    ):
+                        return json.loads(existing["result_json"]), True
+                    raise ConflictError(
+                        "idempotency key was already used for a different or "
+                        "in-progress request"
+                    )
+
+            existing = conn.execute(
+                """
+                SELECT request_fingerprint, result_json
+                  FROM workflows
+                 WHERE client_id=?
+                   AND caller_subject=?
+                   AND request_id=?
+                 ORDER BY rowid DESC
+                 LIMIT 1
+                """,
+                (client_id, caller_subject, request_id),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    existing["request_fingerprint"] == fingerprint
+                    and existing["result_json"]
+                ):
+                    return json.loads(existing["result_json"]), True
+                raise ConflictError(
+                    "request_id was already used for a different or "
+                    "in-progress request"
+                )
+
+            workflow_id = f"wf:{uuid.uuid4()}"
+            decision_id = f"authz:{uuid.uuid4()}"
+            receipt_id = f"rcpt:{uuid.uuid4()}"
+            created_at = utc_now()
+
+            conn.execute(
+                """
+                INSERT INTO workflows
+                    (workflow_id, request_id, operation, state,
+                     created_at, updated_at, side_effects,
+                     idempotency_key, request_fingerprint, result_json,
+                     caller_subject, client_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    workflow_id,
+                    request_id,
+                    operation,
+                    "validated",
+                    created_at,
+                    created_at,
+                    0,
+                    idempotency_key,
+                    fingerprint,
+                    None,
+                    caller_subject,
+                    client_id,
+                ),
+            )
+
+            decision_record = {
+                "decision_id": decision_id,
+                "request_id": request_id,
+                "operation": operation,
+                "decision": "allow",
+                "decided_at": utc_now(),
+                "policy": authorization_policy,
+                "reason": authorization_reason,
+            }
+            validate_contract(
+                "authorization-decision-v1.schema.json",
+                decision_record,
+            )
+            conn.execute(
+                """
+                INSERT INTO authorization_decisions
+                    (decision_id, workflow_id, request_id, operation,
+                     decision, decided_at, policy, reason)
+                VALUES (?,?,?,?,?,?,?,?)
+                """,
+                (
+                    decision_record["decision_id"],
+                    workflow_id,
+                    decision_record["request_id"],
+                    decision_record["operation"],
+                    decision_record["decision"],
+                    decision_record["decided_at"],
+                    decision_record["policy"],
+                    decision_record["reason"],
+                ),
+            )
+
+            self._assert_transition("validated", "authorized")
+            conn.execute(
+                "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
+                ("authorized", utc_now(), workflow_id),
+            )
+            self._assert_transition("authorized", "accepted")
+            conn.execute(
+                "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
+                ("accepted", utc_now(), workflow_id),
+            )
+
+            events = [
+                (
+                    1,
+                    "civic.authorization.allowed",
+                    "civic-orchestrator",
+                    {
+                        "decision_id": decision_id,
+                        "policy": authorization_policy,
+                        "side_effects": False,
+                    },
+                ),
+                (
+                    2,
+                    "civic.operation.accepted",
+                    caller_subject,
+                    {
+                        "operation": operation,
+                        "client_id": request["client"]["id"],
+                        "client_kind": request["client"]["kind"],
+                        "authenticated_by": request["caller"]["authenticated_by"],
+                        "side_effects": False,
+                    },
+                ),
+                (
+                    3,
+                    "civic.service.selected",
+                    "civic-orchestrator",
+                    {
+                        "service_capability": descriptor["service_capability"],
+                        "implementation": descriptor["implementation"],
+                        "effect_scope": descriptor["effect_scope"],
+                        "side_effects": False,
+                    },
+                ),
+            ]
+
+            for sequence, event_type, actor, data in events:
+                event_record = {
+                    "event_id": f"evt:{uuid.uuid4()}",
+                    "workflow_id": workflow_id,
+                    "sequence": sequence,
+                    "event_type": event_type,
+                    "recorded_at": utc_now(),
+                    "actor": actor,
+                    "data": data,
+                }
+                validate_contract(
+                    "audit-event-v1.schema.json",
+                    event_record,
+                )
+                conn.execute(
+                    """
+                    INSERT INTO audit_events
+                        (event_id, workflow_id, sequence, event_type,
+                         recorded_at, actor, data_json)
+                    VALUES (?,?,?,?,?,?,?)
+                    """,
+                    (
+                        event_record["event_id"],
+                        workflow_id,
+                        sequence,
+                        event_type,
+                        event_record["recorded_at"],
+                        actor,
+                        canonical_json(data),
+                    ),
+                )
+
+            return {
+                "workflow_id": workflow_id,
+                "receipt_id": receipt_id,
+            }, False
+
+    def finish_external_operation(
+        self,
+        request: dict[str, Any],
+        descriptor: dict[str, Any],
+        workflow_id: str,
+        receipt_id: str,
+        outcome: str,
+        side_effects: bool,
+        detail: dict[str, Any],
+        validate_contract: Callable[[str, Any], None],
+    ) -> dict[str, Any]:
+        if outcome not in {"completed", "failed"}:
+            raise ValueError(f"invalid external operation outcome: {outcome}")
+
+        completed_at = utc_now()
+        evidence = {
+            "implementation": descriptor["implementation"],
+            "service_capability": descriptor["service_capability"],
+            "effect_scope": descriptor["effect_scope"],
+            "side_effects": bool(side_effects),
+            **detail,
+        }
+
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT state FROM workflows WHERE workflow_id=?",
+                (workflow_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"unknown workflow: {workflow_id}")
+
+            self._assert_transition(row["state"], outcome)
+            conn.execute(
+                """
+                UPDATE workflows
+                   SET state=?, updated_at=?, side_effects=?
+                 WHERE workflow_id=?
+                """,
+                (
+                    outcome,
+                    completed_at,
+                    1 if side_effects else 0,
+                    workflow_id,
+                ),
+            )
+
+            sequence = int(
+                conn.execute(
+                    "SELECT COALESCE(MAX(sequence),0)+1 "
+                    "FROM audit_events WHERE workflow_id=?",
+                    (workflow_id,),
+                ).fetchone()[0]
+            )
+            event_record = {
+                "event_id": f"evt:{uuid.uuid4()}",
+                "workflow_id": workflow_id,
+                "sequence": sequence,
+                "event_type": f"civic.operation.{outcome}",
+                "recorded_at": utc_now(),
+                "actor": "civic-orchestrator",
+                "data": evidence,
+            }
+            validate_contract(
+                "audit-event-v1.schema.json",
+                event_record,
+            )
+            conn.execute(
+                """
+                INSERT INTO audit_events
+                    (event_id, workflow_id, sequence, event_type,
+                     recorded_at, actor, data_json)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                (
+                    event_record["event_id"],
+                    workflow_id,
+                    sequence,
+                    event_record["event_type"],
+                    event_record["recorded_at"],
+                    event_record["actor"],
+                    canonical_json(evidence),
+                ),
+            )
+
+            receipt_record = {
+                "receipt_id": receipt_id,
+                "workflow_id": workflow_id,
+                "operation": request["operation"],
+                "issued_at": utc_now(),
+                "outcome": outcome,
+                "side_effects": bool(side_effects),
+                "evidence": evidence,
+            }
+            validate_contract(
+                "receipt-v1.schema.json",
+                receipt_record,
+            )
+            conn.execute(
+                """
+                INSERT INTO receipts
+                    (receipt_id, workflow_id, operation, issued_at,
+                     outcome, side_effects, evidence_json)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                (
+                    receipt_id,
+                    workflow_id,
+                    request["operation"],
+                    receipt_record["issued_at"],
+                    outcome,
+                    1 if side_effects else 0,
+                    canonical_json(evidence),
+                ),
+            )
+
+            result = {
+                "contract_version": 1,
+                "request_id": request["request_id"],
+                "workflow_id": workflow_id,
+                "operation": request["operation"],
+                "status": outcome,
+                "completed_at": completed_at,
+                "side_effects": bool(side_effects),
+                "result": evidence,
+                "receipt_id": receipt_id,
+            }
+            validate_contract(
+                "result-envelope-v1.schema.json",
+                result,
+            )
+            conn.execute(
+                "UPDATE workflows SET result_json=? WHERE workflow_id=?",
+                (canonical_json(result), workflow_id),
+            )
+
+        return result
+
     def record_stub_operation(
         self,
         request: dict[str, Any],

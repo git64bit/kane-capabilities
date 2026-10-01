@@ -79,6 +79,7 @@ Create fail-closed stubs for at least:
 - `firmware.*`
 - `signing.*`
 - `audit.*`
+- `incident.*`
 
 Each stub must accept only schema-valid operations and return an explicit non-side-effect result.
 
@@ -278,6 +279,32 @@ Complete:
 - multi-node distribution where required.
 
 The end state is a Civic Infrastructure control plane whose contracts survive replacement of individual applications, hosts, devices, or service implementations.
+
+---
+
+## Cross-cutting Track I — Operational incidents and abuse signals
+
+**Status:** CONTRACT STUB — no automatic ingestion or enforcement.
+
+Purpose:
+
+- preserve important core, transport, delivery, security, and participant-facing failures as stateful operational incidents when warranted;
+- keep immutable audit evidence distinct from observed signals, mutable incident workflow, and enforcement policy;
+- allow deployments to classify incident domain, severity, visibility, and source without embedding local policy into the core transport;
+- provide a future path for adapters such as systemd/sudo, Hubzilla delivery reporting, SMTP, publication, edge, and other bounded services.
+
+Initial Phase 1 contract surface:
+
+- `incident.report`
+- `incident.get`
+- `incident.acknowledge`
+- `incident.resolve`
+
+All are stubs with `side_effects=false`.
+
+Later phases may add bounded signal ingestion, aggregation, notifications, throttling, quarantine, or escalation only after explicit policy and authorization contracts exist. A signal must not itself be treated as proof of abuse.
+
+Authority: `docs/INCIDENT_MODEL.md`.
 
 ---
 

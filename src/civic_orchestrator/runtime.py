@@ -469,6 +469,17 @@ class CivicOrchestrator:
             {"operation": operation, "interface": request["interface"], "side_effects": False},
         )
 
+        self.state.audit(
+            workflow_id,
+            "civic.service.selected",
+            "civic-orchestrator",
+            {
+                "service_capability": descriptor["service_capability"],
+                "implementation": descriptor["implementation"],
+                "side_effects": False,
+            },
+        )
+
         self.state.transition(workflow_id, "not-implemented")
         self.state.audit(
             workflow_id,

@@ -89,3 +89,6 @@ The public orchestrator contract must not contain general operations equivalent 
 - arbitrary LLM tool execution.
 
 If a legitimate Civic workflow requires an implementation-specific action, that action belongs inside a bounded service adapter behind a named Civic capability.
+
+
+The registry's `prohibited_generic_operations` list is a defense-in-depth policy declaration. Several listed examples are intentionally unrepresentable by the request schema because their namespaces are not Civic namespaces; in those cases schema rejection occurs before registry lookup. The list must not be interpreted as evidence that each entry reaches a separate runtime prohibition branch.

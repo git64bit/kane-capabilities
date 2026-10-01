@@ -11,7 +11,7 @@ The sequence is intended to prevent two failure modes:
 
 ## Phase 0 — Repository and architecture reset
 
-**Status:** active baseline.
+**Status:** COMPLETE — architecture baseline frozen.
 
 Deliverables:
 
@@ -33,6 +33,8 @@ Acceptance:
 - no cryptographic mechanism is required to carry monetary or transferable token semantics.
 
 ## Phase 1 — Contract-bearing orchestrator skeleton
+
+**Status:** ACTIVE — contract definitions in progress; no production side effects.
 
 Build CT105 as a deliberately limited service that can validate and route requests but cannot yet perform production civic actions.
 

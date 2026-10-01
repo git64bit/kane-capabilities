@@ -197,6 +197,27 @@ This gate proves contract-level interface equivalence only. It does not claim th
 
 Result: **PASS**
 
+## Workflow-transition acceptance
+
+The persistent CT105 state store was exercised directly against the bounded transition graph.
+
+Observed:
+
+```text
+initial state                         = validated
+validated -> completed               = rejected
+state after rejected transition      = validated
+validated -> authorized              = accepted
+authorized -> accepted               = accepted
+accepted -> not-implemented          = accepted
+final state                           = not-implemented
+side_effects                          = false
+```
+
+The rejected transition did not mutate stored workflow state.
+
+Result: **PASS**
+
 ## Acceptance conclusion
 
 The Phase 1 runtime has now proven:
@@ -212,6 +233,7 @@ The Phase 1 runtime has now proven:
 - interface-independent Civic operation semantics across Usermin, Hubzilla, and Kane Fabric development identities;
 - receipt issuance;
 - local SQLite state;
+- bounded workflow-transition validation with fail-closed rejection;
 - threaded request safety;
 - loopback HTTP operation;
 - no production backend invocation;
@@ -219,8 +241,10 @@ The Phase 1 runtime has now proven:
 
 No production service adapter is enabled.
 
-## Next gate
+## Phase 1 closure
 
-Enforce and test the bounded Phase 1 workflow transition graph so invalid state transitions fail closed.
+**Phase 1 is COMPLETE.**
 
-No inbound CT105 service-network exposure or production backend adapter is permitted yet.
+The contract-bearing CT105 stub runtime now satisfies the Phase 1 architecture and acceptance requirements without enabling a production backend adapter or external service-network listener.
+
+The next roadmap phase is Phase 2: service and trust node architecture. Phase 2 begins with architecture/inventory work, not broad backend integration.

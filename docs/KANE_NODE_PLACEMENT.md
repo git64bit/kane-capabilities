@@ -16,7 +16,7 @@ The independent-operator rule remains: another county may place the same capabil
 | Kane Fabric geographic authority | `srv-b` CT102 `kane-fabric` | retain existing |
 | Secure browser origin / Wiregate | `srv-b` CT103 `kane-wiregate` | retain existing |
 | Gitea source/revision authority | `srv-b` CT104 `civic-gitea` | retain existing |
-| Publication / IPFS backend | new Trixie-based CT on the existing OVH Proxmox 9 host | create after contract gate; replace old node |
+| Publication / IPFS backend | new Trixie-based CT on the OVH Proxmox 9 host, **not `srv-b`** | create after contract gate; replace old node |
 | RAG state / retrieval / indexes | new isolated stateful service node on `srv-b` | create after contract gate |
 | Model inference | existing `annales` inference service/container | retain separate |
 | Firmware signing authority | `annales` LXD `firmware-authority` software signing authority | retain protected boundary; hardware backing optional, not required |
@@ -120,7 +120,7 @@ Git authority and workflow authority are different concerns. Gitea also has its 
 
 ### Placement
 
-Create a **new isolated Trixie-based CT on the existing OVH Proxmox 9 host** after the Phase 1 publication contract is frozen.
+Create a **new isolated Trixie-based CT on the OVH Proxmox 9 host** after the publication contract gate is frozen. The publication/IPFS backend is explicitly **not hosted on `srv-b`**.
 
 This placement is a Kane reference-deployment decision. Proxmox 9, Debian Trixie, OVH, the eventual CT number, and the eventual hostname are not part of the portable Civic Infrastructure contract.
 
@@ -302,7 +302,7 @@ Separating build execution from protected release signing is a valuable supply-c
 
 The current architecture requires **three new service nodes beyond CT105**, unless later audits justify safe reuse:
 
-1. publication / IPFS service — new Trixie CT on the existing OVH Proxmox 9 host;
+1. publication / IPFS service — new Trixie CT on the OVH Proxmox 9 host, not `srv-b`;
 2. RAG state / retrieval service;
 3. ESP32-S3 management / synchronization service.
 

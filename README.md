@@ -45,5 +45,6 @@ Start with:
 5. [docs/NODE_DESIGN_GATES.md](docs/NODE_DESIGN_GATES.md)
 6. [docs/PORTABILITY_AND_TRUST.md](docs/PORTABILITY_AND_TRUST.md)
 7. [docs/REFERENCE_TOPOLOGY.md](docs/REFERENCE_TOPOLOGY.md)
+8. [docs/KANE_NODE_PLACEMENT.md](docs/KANE_NODE_PLACEMENT.md)
 
 Implementation code is intentionally absent at this reset point. The first milestone establishes contracts and stubs before real service side effects are permitted.

@@ -50,6 +50,7 @@ Start with:
 9. [docs/DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
 10. [docs/ORCHESTRATOR_SCOPE.md](docs/ORCHESTRATOR_SCOPE.md)
 11. [docs/PHASE1H_HARDENING.md](docs/PHASE1H_HARDENING.md)
+12. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
 
 The repository now contains the accepted Phase 1 contract-bearing stub runtime. Production service adapters and production side effects remain disabled until their later acceptance gates.
 

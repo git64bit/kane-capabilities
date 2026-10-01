@@ -126,7 +126,7 @@ Production Usermin, Hubzilla, and Kane Fabric adapters remain Phase 3 work.
 
 ## Phase 1H — Contract hardening and external-review closure
 
-**Status:** FINAL REVIEW CORRECTIONS IMPLEMENTED — CT105 acceptance pending.
+**Status:** COMPLETE — final Phase 1 review corrections accepted on persistent CT105 on 2026-10-01.
 
 Phase 1H closes defects found by an independent consumer review before additional orchestrators or production adapters begin depending on the v1 contracts.
 
@@ -170,6 +170,24 @@ Verified:
 - `side_effects=false` throughout.
 
 The public contract remains intentionally free of Mechanical Compiler-specific membership, group, or domain semantics.
+
+### Final Phase 1 closure
+
+The second external-review corrections were accepted on persistent CT105.
+
+Verified after the final review pass:
+
+- 30 regression tests pass;
+- additive migration against the persistent database succeeds;
+- caller-scoped request and idempotency keys work;
+- replay diagnostics and failure diagnostics persist;
+- percent-encoded workflow IDs resolve;
+- clean `pip install .` imports the runtime successfully;
+- schema catalog is present for independent validators;
+- listener remains loopback-only;
+- all Phase 1 execution remains `side_effects=false`.
+
+Phase 1 is now closed. Further work should prioritize one real bounded operation rather than another stub-hardening cycle.
 
 ---
 

@@ -22,7 +22,7 @@ class StubRuntimeTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def request(self, operation="publication.publish"):
+    def request(self, operation="repository.fetch_exact"):
         return {
             "contract_version": 1,
             "request_id": "req:test-001",
@@ -107,18 +107,24 @@ class StubRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(accepted["data"]["client_kind"], "service")
 
-    def test_capability_advertisement_contains_effect_scope(self):
+    def test_capability_advertisement_contains_activation_and_effect_scope(self):
         caps = self.runtime.capabilities()
         publication = next(
             item
             for item in caps["capabilities"]
             if item["operation"] == "publication.publish"
         )
-        self.assertEqual(publication["implementation"], "stub")
+        self.assertEqual(publication["implementation"], "available")
         self.assertEqual(
             publication["effect_scope"],
             "external-bounded",
         )
+        available = {
+            item["operation"]
+            for item in caps["capabilities"]
+            if item["implementation"] == "available"
+        }
+        self.assertEqual(available, {"publication.publish"})
 
     def test_incident_operations_are_bounded_stubs(self):
         caps = self.runtime.capabilities()
@@ -196,12 +202,12 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertEqual(selected["event_type"], "civic.service.selected")
         self.assertEqual(
             selected["data"]["service_capability"],
-            "publication.publish",
+            "repository.fetch_exact",
         )
         self.assertEqual(selected["data"]["implementation"], "stub")
         self.assertEqual(
             selected["data"]["effect_scope"],
-            "external-bounded",
+            "none",
         )
 
     def test_idempotency_key_replays_original_result(self):

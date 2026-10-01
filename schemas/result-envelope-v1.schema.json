@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civic.example/schema/result-envelope-v1.schema.json",
+  "title": "Civic Orchestrator Result Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "workflow_id",
+    "operation",
+    "status",
+    "completed_at",
+    "side_effects",
+    "result"
+  ],
+  "properties": {
+    "contract_version": { "const": 1 },
+    "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "workflow_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
+    "status": {
+      "type": "string",
+      "enum": ["accepted", "completed", "rejected", "failed", "not-implemented"]
+    },
+    "completed_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
+    "side_effects": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": "object"
+    },
+    "receipt_id": { "$ref": "common-v1.schema.json#/$defs/id" }
+  }
+}

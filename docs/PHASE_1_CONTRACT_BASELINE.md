@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 1 is active. This baseline defines contracts only. No production backend side effects are permitted.
+**HISTORICAL PHASE 1 BASELINE.** Phase 1 was accepted on 2026-10-01. Phase 1H is now hardening these contracts before Phase 2. No production backend side effects are permitted.
 
 ## Current artifacts
 
@@ -19,6 +19,10 @@ Phase 1 is active. This baseline defines contracts only. No production backend s
 - `audit-event-v1.schema.json`
 - `receipt-v1.schema.json`
 - `service-capability-v1.schema.json`
+- `operation-registry-v1.schema.json`
+- `stub-workflow-definition-v1.schema.json`
+- `workflow-evidence-v1.schema.json`
+- `incident-v1.schema.json`
 
 ### API
 
@@ -47,16 +51,10 @@ Until explicitly advanced by a later acceptance gate:
 - every accepted request must terminate with a contract-valid fail-closed result;
 - the same operation semantics must remain independent of Usermin, Hubzilla, Kane Fabric, Gitea, or another caller surface.
 
-## Next implementation gate
+## Superseding gate
 
-The first CT105 daemon may:
+Phase 1H hardening is authoritative for the current pre-Phase-2 work.
 
-1. load the operation registry;
-2. validate request envelopes;
-3. reject unknown/prohibited operations;
-4. create workflow identifiers;
-5. execute the stub workflow only;
-6. record local audit state;
-7. return a result/failure envelope.
+See `PHASE1H_HARDENING.md`.
 
-It may not yet contain real service adapters.
+Production service adapters remain prohibited.

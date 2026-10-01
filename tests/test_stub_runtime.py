@@ -1,0 +1,78 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class StubRuntimeTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.runtime = CivicOrchestrator(
+            RuntimePaths(
+                repo_root=ROOT,
+                state_db=Path(self.tmp.name) / "state.sqlite3",
+            )
+        )
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def request(self, operation="publication.publish"):
+        return {
+            "contract_version": 1,
+            "request_id": "req:test-001",
+            "operation": operation,
+            "caller": {
+                "subject": "participant:test",
+                "authority": "test-authority"
+            },
+            "interface": "test",
+            "submitted_at": "2026-10-01T06:00:00Z",
+            "input": {}
+        }
+
+    def test_known_operation_is_stubbed_without_side_effects(self):
+        status, result = self.runtime.submit(self.request())
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "not-implemented")
+        self.assertFalse(result["side_effects"])
+        self.assertTrue(result["workflow_id"].startswith("wf:"))
+        self.assertTrue(result["receipt_id"].startswith("rcpt:"))
+
+    def test_unknown_operation_fails_closed(self):
+        status, result = self.runtime.submit(self.request("publication.unknown"))
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "unknown-operation")
+        self.assertFalse(result["side_effects"])
+
+    def test_prohibited_operation_fails_closed(self):
+        request = self.request()
+        request["operation"] = "shell.exec"
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "invalid-contract")
+        self.assertFalse(result["side_effects"])
+
+    def test_invalid_contract_fails_closed(self):
+        request = self.request()
+        del request["caller"]
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "invalid-contract")
+        self.assertFalse(result["side_effects"])
+
+    def test_capability_advertisement_contains_stub(self):
+        caps = self.runtime.capabilities()
+        self.assertTrue(any(
+            item["operation"] == "publication.publish" and item["implementation"] == "stub"
+            for item in caps["capabilities"]
+        ))
+
+
+if __name__ == "__main__":
+    unittest.main()

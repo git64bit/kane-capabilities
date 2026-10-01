@@ -153,6 +153,19 @@ Examples:
 
 The failure must be visible and understandable to the evaluator.
 
+After the operational incident facility advances beyond its Phase 1 stub, the controlled failure may also demonstrate the real evidence-to-incident path:
+
+```text
+failure
+  -> audit evidence
+  -> signal
+  -> incident
+  -> acknowledgement
+  -> resolution
+```
+
+The demonstrator must not equate a signal with abuse and must not introduce a demo-only enforcement path.
+
 ## Under-the-hood view
 
 The demonstrator should have an optional technical panel showing the evidence chain without requiring shell access:

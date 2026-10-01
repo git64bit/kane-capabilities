@@ -95,11 +95,34 @@ Only explicitly required content may later be re-pinned after verification.
 
 ## Network posture
 
-Initial service exposure should remain private to the Civic service network.
+Initial service exposure remains private to the Civic service network.
 
 No public gateway or unrestricted Kubo API is required for the first acceptance gate.
 
-Exact network placement and firewall rules are assigned only after the service contract is frozen.
+The publication/IPFS CT has no public `vmbr0` interface.
+
+## Swarm posture
+
+The first `publication.publish` implementation does **not** require IPFS swarm participation.
+
+Kubo is initially used only for:
+
+- deterministic content addressing;
+- local repository storage;
+- local pinning;
+- read-back verification by CID.
+
+Initial deployment therefore disables or avoids:
+
+- public swarm listeners;
+- DHT participation;
+- mDNS/local peer discovery;
+- relay/autonat/hole-punch behavior;
+- public gateway exposure.
+
+The Kubo RPC/API is bound only to loopback inside the publication CT and is accessed only by the bounded publication service.
+
+If later Civic distribution requires peer replication, swarm participation is a separate architecture/network gate. It must be justified by a concrete distribution requirement rather than enabled merely because Kubo supports it.
 
 ## Frozen first-operation contract
 
@@ -250,7 +273,7 @@ GET  /healthz
 POST /v1/publications
 ```
 
-The service binds only to its private CT address. The initial network rule permits CT105 to reach the publication endpoint and does not expose the Kubo API or service endpoint publicly.
+The bounded publication service binds only to its private CT address. The initial network rule permits Kane CT105 to reach that service endpoint and does not expose the Kubo API publicly. Kubo itself remains loopback-only inside the publication CT.
 
 TLS, service credentials, or stronger adapter authentication may be added when the production trust boundary requires them. They are not prerequisites for proving the first bounded operation on the isolated service network.
 

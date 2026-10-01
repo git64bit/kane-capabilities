@@ -810,7 +810,9 @@ class CivicOrchestrator:
 
         normalized_operation = (
             operation
-            if isinstance(operation, str) and _OPERATION_RE.fullmatch(operation)
+            if isinstance(operation, str)
+            and len(operation) <= 160
+            and _OPERATION_RE.fullmatch(operation)
             else "audit.invalid_request"
         )
 

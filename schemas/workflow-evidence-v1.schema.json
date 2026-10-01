@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:civic-orchestrator:schema:workflow-evidence:v1",
+  "title": "Civic Workflow Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "workflow",
+    "audit_events",
+    "receipts",
+    "side_effects"
+  ],
+  "properties": {
+    "contract_version": { "const": 1 },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_id",
+        "request_id",
+        "operation",
+        "state",
+        "created_at",
+        "updated_at",
+        "side_effects"
+      ],
+      "properties": {
+        "workflow_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+        "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+        "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
+        "state": {
+          "type": "string",
+          "enum": [
+            "received",
+            "validated",
+            "authorized",
+            "accepted",
+            "waiting",
+            "completed",
+            "rejected",
+            "failed",
+            "not-implemented"
+          ]
+        },
+        "created_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
+        "updated_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
+        "side_effects": { "type": "boolean" }
+      }
+    },
+    "audit_events": {
+      "type": "array",
+      "items": { "$ref": "audit-event-v1.schema.json" }
+    },
+    "receipts": {
+      "type": "array",
+      "items": { "$ref": "receipt-v1.schema.json" }
+    },
+    "side_effects": { "const": false }
+  }
+}

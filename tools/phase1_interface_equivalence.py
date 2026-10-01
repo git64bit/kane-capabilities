@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 
 
-INTERFACES = ("usermin", "hubzilla", "kane-fabric")
+CLIENTS = ("usermin", "hubzilla", "kane-fabric")
 EXPECTED_EVENTS = (
     "civic.authorization.allowed",
     "civic.operation.accepted",
@@ -52,19 +52,23 @@ def main() -> int:
     semantic = {}
     observations = {}
 
-    for interface in INTERFACES:
+    for client in CLIENTS:
         payload = {
             "contract_version": 1,
-            "request_id": f"req:equivalence-{interface}",
+            "request_id": f"req:equivalence-{client}",
             "operation": "publication.publish",
             "caller": {
-                "subject": f"participant:equivalence-{interface}",
+                "subject": f"participant:equivalence-{client}",
                 "authority": "phase1-equivalence",
+                "authenticated_by": f"{client}-auth",
             },
-            "interface": interface,
+            "client": {
+                "id": client,
+                "kind": "test",
+            },
             "submitted_at": "2026-10-01T08:00:00Z",
             "input": {
-                "fixture": "phase1-interface-equivalence",
+                "fixture": "phase1-client-equivalence",
             },
         }
 
@@ -81,7 +85,7 @@ def main() -> int:
         event_types = [item["event_type"] for item in evidence["audit_events"]]
         if tuple(event_types) != EXPECTED_EVENTS:
             raise RuntimeError(
-                f"{interface}: unexpected event sequence: {event_types}"
+                f"{client}: unexpected event sequence: {event_types}"
             )
 
         accepted = next(
@@ -89,29 +93,29 @@ def main() -> int:
             for item in evidence["audit_events"]
             if item["event_type"] == "civic.operation.accepted"
         )
-        if accepted["data"]["interface"] != interface:
+        if accepted["data"]["client_id"] != client:
             raise RuntimeError(
-                f"{interface}: interface evidence mismatch: "
-                f"{accepted['data']['interface']}"
+                f"{client}: client evidence mismatch: "
+                f"{accepted['data']['client_id']}"
             )
 
-        semantic[interface] = semantic_result(result, evidence)
-        observations[interface] = {
+        semantic[client] = semantic_result(result, evidence)
+        observations[client] = {
             "request_id": result["request_id"],
             "workflow_id": result["workflow_id"],
             "receipt_id": result["receipt_id"],
-            "semantic": semantic[interface],
+            "semantic": semantic[client],
         }
 
-    baseline = semantic[INTERFACES[0]]
-    for interface in INTERFACES[1:]:
-        if semantic[interface] != baseline:
+    baseline = semantic[CLIENTS[0]]
+    for client in CLIENTS[1:]:
+        if semantic[client] != baseline:
             raise RuntimeError(
-                f"semantic mismatch: {INTERFACES[0]} != {interface}\n"
+                f"semantic mismatch: {CLIENTS[0]} != {client}\n"
                 + json.dumps(
                     {
-                        INTERFACES[0]: baseline,
-                        interface: semantic[interface],
+                        CLIENTS[0]: baseline,
+                        client: semantic[client],
                     },
                     indent=2,
                     sort_keys=True,
@@ -120,7 +124,7 @@ def main() -> int:
 
     print(json.dumps({
         "status": "pass",
-        "interfaces": observations,
+        "clients": observations,
         "equivalent_semantics": baseline,
     }, indent=2, sort_keys=True))
     return 0

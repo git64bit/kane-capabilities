@@ -163,7 +163,7 @@ class PublicationRuntimeTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(result["status"], "failed")
-        self.assertTrue(result["side_effects"])
+        self.assertFalse(result["side_effects"])
         self.assertEqual(
             result["result"]["failure_class"],
             "service-unavailable",
@@ -177,6 +177,35 @@ class PublicationRuntimeTests(unittest.TestCase):
             "civic.operation.failed",
         )
         self.assertEqual(evidence["receipts"][0]["outcome"], "failed")
+
+    def test_verification_failure_is_conservatively_side_effecting(self):
+        def fail_after_publication(workflow_id, artifact):
+            raise PublicationServiceFailure(
+                status_code=500,
+                failure_class="verification-failed",
+                message="read-back verification failed",
+                retryable=False,
+                response={
+                    "contract_version": 1,
+                    "workflow_id": workflow_id,
+                    "operation": "publication.publish",
+                    "failure_class": "verification-failed",
+                    "message": "read-back verification failed",
+                    "retryable": False,
+                },
+            )
+
+        self.client.publish = fail_after_publication
+
+        status, result = self.runtime.submit(self.request())
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["side_effects"])
+        self.assertEqual(
+            result["result"]["failure_class"],
+            "verification-failed",
+        )
 
     def test_transport_failure_becomes_backend_unavailable_workflow(self):
         self.client.mode = "transport-failure"

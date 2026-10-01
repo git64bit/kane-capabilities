@@ -126,7 +126,7 @@ Production Usermin, Hubzilla, and Kane Fabric adapters remain Phase 3 work.
 
 ## Phase 1H — Contract hardening and external-review closure
 
-**Status:** ACTIVE — bounded hardening pass before Phase 2.
+**Status:** COMPLETE — hardened contracts and persistent CT105 migration accepted on 2026-10-01.
 
 Phase 1H closes defects found by an independent consumer review before additional orchestrators or production adapters begin depending on the v1 contracts.
 
@@ -151,7 +151,25 @@ Authority: `docs/ORCHESTRATOR_SCOPE.md`.
 
 ### Phase 1H acceptance
 
-The existing Phase 1 behavior remains fail-closed and side-effect-free, while the public contract is demonstrably suitable for independent consumers that were not involved in its design.
+**Accepted on 2026-10-01.**
+
+The hardened runtime passed the 21-test regression suite and the persistent CT105 acceptance harness.
+
+Verified:
+
+- additive SQLite migration against the existing state database;
+- legacy audit-event sequence backfill;
+- explicit caller authentication provenance;
+- extensible client identity;
+- atomic stub-request persistence;
+- exact replay returning the original workflow and receipt;
+- conflicting replay returning `409 conflict`;
+- RFC 3339 timestamp rejection;
+- contract-valid malformed-JSON HTTP failure handling;
+- loopback-only service exposure;
+- `side_effects=false` throughout.
+
+The public contract remains intentionally free of Mechanical Compiler-specific membership, group, or domain semantics.
 
 ---
 

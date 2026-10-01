@@ -1,0 +1,43 @@
+profile: civic-infrastructure-demonstrator
+version: 1
+status: design
+purpose: grant-evaluation-and-conformance
+
+constraints:
+  production_secrets: prohibited
+  production_private_data: prohibited
+  demo_only_backend_bypass: prohibited
+  reset_may_touch_production_state: false
+  synthetic_data_required: true
+
+initial_operation:
+  operation: publication.publish
+  implementation_phase: stub-until-phase-4
+
+required_failure_cases:
+  - prohibited-operation
+  - invalid-contract
+
+target_interfaces:
+  - usermin
+  - kane-fabric
+  - hubzilla
+
+evidence_fields:
+  - request_id
+  - workflow_id
+  - operation
+  - caller
+  - interface
+  - authorization_decision
+  - workflow_state
+  - receipt_id
+  - audit_events
+  - content_sha256
+  - cid
+
+stages:
+  D-001: stub-demonstrator
+  D-002: multi-interface-demonstrator
+  D-003: publication-demonstrator
+  D-004: full-grant-demonstrator

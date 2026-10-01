@@ -9,26 +9,32 @@
     "request_id",
     "operation",
     "caller",
-    "interface",
+    "client",
     "submitted_at",
     "input"
   ],
   "properties": {
-    "contract_version": { "const": 1 },
-    "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
-    "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
-    "caller": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["subject"],
-      "properties": {
-        "subject": { "$ref": "common-v1.schema.json#/$defs/id" },
-        "authority": { "$ref": "common-v1.schema.json#/$defs/id" }
-      }
+    "contract_version": {
+      "const": 1
     },
-    "interface": { "$ref": "common-v1.schema.json#/$defs/interface" },
-    "submitted_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
-    "idempotency_key": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "request_id": {
+      "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id"
+    },
+    "operation": {
+      "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/operation"
+    },
+    "caller": {
+      "$ref": "urn:civic-orchestrator:schema:caller-identity:v1"
+    },
+    "client": {
+      "$ref": "urn:civic-orchestrator:schema:client-identity:v1"
+    },
+    "submitted_at": {
+      "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/timestamp"
+    },
+    "idempotency_key": {
+      "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id"
+    },
     "input": {
       "type": "object"
     }

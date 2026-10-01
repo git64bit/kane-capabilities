@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"urn:civic-orchestrator:schema:audit-event:v1",
+  "title":"Civic Audit Event v1",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["event_id","workflow_id","event_type","recorded_at","actor","data"],
+  "properties":{
+    "event_id":{"$ref":"common-v1.schema.json#/$defs/id"},
+    "workflow_id":{"$ref":"common-v1.schema.json#/$defs/id"},
+    "event_type":{"type":"string","pattern":"^civic\\.[a-z0-9._-]+$","maxLength":200},
+    "recorded_at":{"$ref":"common-v1.schema.json#/$defs/timestamp"},
+    "actor":{"$ref":"common-v1.schema.json#/$defs/id"},
+    "data":{"type":"object"}
+  }
+}

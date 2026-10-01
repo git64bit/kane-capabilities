@@ -140,7 +140,12 @@ def main() -> int:
     require(status == 200, f"replay status {status}")
     require(replay["workflow_id"] == first["workflow_id"], "replay workflow changed")
     require(replay["receipt_id"] == first["receipt_id"], "replay receipt changed")
+    require(replay["request_id"] == retry["request_id"], "replay did not echo request_id")
     require(replay["result"].get("replayed") is True, "replay marker missing")
+    require(
+        replay["result"].get("original_request_id") == request_id,
+        "replay original_request_id missing",
+    )
     report["replay"] = "pass"
 
     conflict = dict(retry)
@@ -157,6 +162,37 @@ def main() -> int:
         "conflict failure envelope missing",
     )
     report["conflicting_replay"] = "pass"
+
+    other_subject = dict(payload)
+    other_subject["request_id"] = request_id
+    other_subject["caller"] = {
+        "subject": "participant:phase1h-other",
+        "authority": "phase1h-acceptance",
+        "authenticated_by": "phase1h-local-auth",
+    }
+    status, other_result = request_json(
+        "POST",
+        f"{args.base_url}/v1/operations",
+        other_subject,
+    )
+    require(status == 200, f"caller-scoped request status {status}")
+    require(
+        other_result["workflow_id"] != first["workflow_id"],
+        "caller-scoped request collided with another subject",
+    )
+    report["caller_scoped_keys"] = "pass"
+
+    encoded_workflow = urllib.parse.quote(first["workflow_id"], safe="")
+    status, encoded_evidence = request_json(
+        "GET",
+        f"{args.base_url}/v1/workflows/{encoded_workflow}",
+    )
+    require(status == 200, f"encoded workflow status {status}")
+    require(
+        encoded_evidence["workflow"]["workflow_id"] == first["workflow_id"],
+        "encoded workflow ID did not resolve",
+    )
+    report["encoded_workflow_id"] = "pass"
 
     invalid_time = dict(payload)
     invalid_time["request_id"] = f"{request_id}-bad-time"
@@ -193,8 +229,26 @@ def main() -> int:
         unsequenced = conn.execute(
             "SELECT COUNT(*) FROM audit_events WHERE sequence <= 0"
         ).fetchone()[0]
+        diagnostic_outcomes = {
+            row[0]
+            for row in conn.execute(
+                "SELECT outcome FROM request_diagnostics"
+            ).fetchall()
+        }
     require(unsequenced == 0, f"{unsequenced} unsequenced legacy audit events")
     report["legacy_audit_backfill"] = "pass"
+
+    for required_outcome in {
+        "replay",
+        "conflict",
+        "invalid-contract",
+        "http-invalid-contract",
+    }:
+        require(
+            required_outcome in diagnostic_outcomes,
+            f"missing request diagnostic: {required_outcome}",
+        )
+    report["request_diagnostics"] = "pass"
 
     print(json.dumps({
         "status": "pass",

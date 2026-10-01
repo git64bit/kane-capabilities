@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civic.example/schema/request-envelope-v1.schema.json",
+  "title": "Civic Orchestrator Request Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "operation",
+    "caller",
+    "interface",
+    "submitted_at",
+    "input"
+  ],
+  "properties": {
+    "contract_version": { "const": 1 },
+    "request_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "operation": { "$ref": "common-v1.schema.json#/$defs/operation" },
+    "caller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject"],
+      "properties": {
+        "subject": { "$ref": "common-v1.schema.json#/$defs/id" },
+        "authority": { "$ref": "common-v1.schema.json#/$defs/id" }
+      }
+    },
+    "interface": { "$ref": "common-v1.schema.json#/$defs/interface" },
+    "submitted_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
+    "idempotency_key": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "input": {
+      "type": "object"
+    }
+  }
+}

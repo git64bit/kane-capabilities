@@ -326,5 +326,149 @@ class StubRuntimeTests(unittest.TestCase):
             self.assertFalse(result["side_effects"])
 
 
+    def test_rejections_conflicts_and_replays_leave_diagnostics(self):
+        unknown = self.request("publication.unknown")
+        unknown["request_id"] = "req:diag-unknown"
+        self.runtime.submit(unknown)
+
+        prohibited = self.request()
+        prohibited["request_id"] = "req:diag-prohibited"
+        prohibited["operation"] = "shell.exec"
+        self.runtime.submit(prohibited)
+
+        initial = self.request()
+        initial["request_id"] = "req:diag-replay"
+        initial["idempotency_key"] = "idem:diag"
+        self.runtime.submit(initial)
+
+        replay = self.request()
+        replay["request_id"] = "req:diag-replay-2"
+        replay["idempotency_key"] = "idem:diag"
+        replay["submitted_at"] = "2026-10-01T06:03:00Z"
+        self.runtime.submit(replay)
+
+        conflict = self.request()
+        conflict["request_id"] = "req:diag-conflict"
+        conflict["idempotency_key"] = "idem:diag"
+        conflict["input"] = {"different": True}
+        self.runtime.submit(conflict)
+
+        with self.runtime.state._connect() as conn:
+            outcomes = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT outcome FROM request_diagnostics ORDER BY rowid"
+                ).fetchall()
+            ]
+
+        self.assertIn("unknown-operation", outcomes)
+        self.assertIn("invalid-contract", outcomes)
+        self.assertIn("replay", outcomes)
+        self.assertIn("conflict", outcomes)
+
+    def test_request_and_idempotency_keys_are_scoped_to_caller_and_client(self):
+        alice = self.request()
+        alice["request_id"] = "req:shared"
+        alice["idempotency_key"] = "idem:shared"
+        status, first = self.runtime.submit(alice)
+        self.assertEqual(status, 200)
+
+        bob = self.request()
+        bob["caller"] = {
+            "subject": "participant:bob",
+            "authority": "test-authority",
+            "authenticated_by": "test-authenticator",
+        }
+        bob["request_id"] = "req:shared"
+        bob["idempotency_key"] = "idem:shared"
+        status, second = self.runtime.submit(bob)
+        self.assertEqual(status, 200)
+        self.assertNotEqual(second["workflow_id"], first["workflow_id"])
+
+        other_client = self.request()
+        other_client["client"] = {
+            "id": "other-client",
+            "kind": "test",
+        }
+        other_client["request_id"] = "req:shared"
+        other_client["idempotency_key"] = "idem:shared"
+        status, third = self.runtime.submit(other_client)
+        self.assertEqual(status, 200)
+        self.assertNotEqual(third["workflow_id"], first["workflow_id"])
+
+    def test_idempotent_replay_echoes_current_request_id(self):
+        original = self.request()
+        original["request_id"] = "req:original"
+        original["idempotency_key"] = "idem:echo"
+        status, first = self.runtime.submit(original)
+        self.assertEqual(status, 200)
+
+        retry = self.request()
+        retry["request_id"] = "req:retry"
+        retry["idempotency_key"] = "idem:echo"
+        retry["submitted_at"] = "2026-10-01T06:04:00Z"
+        status, second = self.runtime.submit(retry)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(second["request_id"], "req:retry")
+        self.assertEqual(
+            second["result"]["original_request_id"],
+            "req:original",
+        )
+        self.assertEqual(second["workflow_id"], first["workflow_id"])
+
+    def test_legacy_unscoped_request_does_not_collide(self):
+        with self.runtime.state._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO workflows
+                    (workflow_id, request_id, operation, state,
+                     created_at, updated_at, side_effects,
+                     idempotency_key, request_fingerprint, result_json,
+                     caller_subject, client_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    "wf:legacy",
+                    "req:legacy",
+                    "publication.publish",
+                    "not-implemented",
+                    "2026-09-30T00:00:00Z",
+                    "2026-09-30T00:00:00Z",
+                    0,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+            )
+
+        request = self.request()
+        request["request_id"] = "req:legacy"
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 200)
+        self.assertNotEqual(result["workflow_id"], "wf:legacy")
+
+    def test_nonstandard_json_number_is_rejected(self):
+        request = self.request()
+        request["request_id"] = "req:nan"
+        request["input"] = {"value": float("nan")}
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "invalid-contract")
+
+    def test_schema_catalog_maps_every_listed_urn_to_matching_file(self):
+        catalog_path = ROOT / "schemas" / "catalog-v1.json"
+        import json
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+
+        for entry in catalog["schemas"]:
+            schema_path = ROOT / "schemas" / entry["path"]
+            self.assertTrue(schema_path.exists(), entry["path"])
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            self.assertEqual(schema["$id"], entry["id"])
+
+
 if __name__ == "__main__":
     unittest.main()

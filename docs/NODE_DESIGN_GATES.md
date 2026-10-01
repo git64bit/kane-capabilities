@@ -57,7 +57,22 @@ Before adding or co-locating a service, answer each gate.
 - timeout/retry behavior;
 - audit/receipt requirements.
 
-## 8. Co-location decision
+## 8. Independent-operator portability
+
+- Does the service contract depend on Kane County hostnames, accounts, private keys, filesystem paths, or private database internals?
+- Can another county supply a different source adapter or trust root without changing Civic semantics?
+- Is any hardware/product identity being mistaken for civic identity?
+- Does the design depend on a cryptocurrency, utility token, blockchain, or specialized consensus mechanism?
+- If unusual infrastructure is proposed, what requirement cannot be satisfied by a more conventional implementation?
+
+## 9. Appliance/bootstrap compatibility
+
+- Could the service eventually be provisioned from a signed bootstrap/configuration description?
+- Which trust roots must exist before network bootstrap?
+- Which deployment-specific values can be discovered or supplied rather than compiled in?
+- Can the service be replaced and rejoined without changing Civic object identity?
+
+## 10. Co-location decision
 
 Only after the previous gates are answered decide whether the service:
 

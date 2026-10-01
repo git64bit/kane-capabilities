@@ -122,6 +122,27 @@ The request is rejected by the request schema before operation-registry lookup b
 
 Result: **PASS**
 
+## Authorization evidence acceptance
+
+On the persistent CT105 state store, a registered `publication.publish` request produced:
+
+```text
+workflow.state              = not-implemented
+authorization decisions     = 1
+decision                    = allow
+policy                      = stub-policy
+first audit event           = civic.authorization.allowed
+audit events                = 3
+receipts                    = 1
+side_effects                = false
+```
+
+The authorization decision was persisted separately from the audit events and was returned through the read-only workflow evidence endpoint.
+
+The schema change was additive and initialized successfully against the existing persistent SQLite database.
+
+Result: **PASS**
+
 ## Acceptance conclusion
 
 The Phase 1 runtime has now proven:
@@ -131,6 +152,8 @@ The Phase 1 runtime has now proven:
 - fail-closed unknown operation handling;
 - schema-level rejection of prohibited generic capabilities;
 - workflow ID issuance;
+- explicit authorization-decision persistence;
+- authorization audit evidence;
 - receipt issuance;
 - local SQLite state;
 - threaded request safety;
@@ -142,6 +165,6 @@ No production service adapter is enabled.
 
 ## Next gate
 
-Install and enable the hardened systemd unit while keeping the service bound to `127.0.0.1:8045`.
+Preserve explicit service-adapter selection evidence in the stub workflow, then exercise equivalent contract-valid requests from the Phase 1 Usermin, Hubzilla, and Kane Fabric development-client surfaces.
 
-No inbound CT105 service-network exposure is permitted yet.
+No inbound CT105 service-network exposure or production backend adapter is permitted yet.

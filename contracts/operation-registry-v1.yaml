@@ -7,97 +7,97 @@ operations:
   - operation: publication.publish
     implementation: stub
     service_capability: publication.publish
-    side_effect_class: bounded
+    effect_scope: external-bounded
 
   - operation: geography.acquire_candidate
     implementation: stub
     service_capability: geography.acquire_candidate
-    side_effect_class: bounded
+    effect_scope: external-bounded
 
   - operation: geography.compare_candidate
     implementation: stub
     service_capability: geography.compare_candidate
-    side_effect_class: none
+    effect_scope: none
 
   - operation: geography.request_promotion
     implementation: stub
     service_capability: geography.request_promotion
-    side_effect_class: none
+    effect_scope: orchestrator-state
 
   - operation: geography.promote
     implementation: stub
     service_capability: geography.promote
-    side_effect_class: bounded
+    effect_scope: external-bounded
 
   - operation: geography.compile_publication
     implementation: stub
     service_capability: geography.compile_publication
-    side_effect_class: bounded
+    effect_scope: external-bounded
 
   - operation: participant.validate_publication
     implementation: stub
     service_capability: participant.validate_publication
-    side_effect_class: none
+    effect_scope: none
 
   - operation: repository.fetch_exact
     implementation: stub
     service_capability: repository.fetch_exact
-    side_effect_class: none
+    effect_scope: none
 
   - operation: rag.retrieve
     implementation: stub
     service_capability: rag.retrieve
-    side_effect_class: none
+    effect_scope: none
 
   - operation: inference.generate
     implementation: stub
     service_capability: inference.generate
-    side_effect_class: none
+    effect_scope: none
 
   - operation: edge.observe
     implementation: stub
     service_capability: edge.observe
-    side_effect_class: none
+    effect_scope: none
 
   - operation: edge.request_sync
     implementation: stub
     service_capability: edge.request_sync
-    side_effect_class: bounded
+    effect_scope: external-bounded
 
   - operation: firmware.prepare_release
     implementation: stub
     service_capability: firmware.prepare_release
-    side_effect_class: none
+    effect_scope: orchestrator-state
 
   - operation: signing.request_signature
     implementation: stub
     service_capability: signing.request_signature
-    side_effect_class: bounded
+    effect_scope: external-bounded
 
   - operation: audit.get_workflow
     implementation: stub
     service_capability: audit.get_workflow
-    side_effect_class: none
+    effect_scope: none
 
   - operation: incident.report
     implementation: stub
     service_capability: incident.report
-    side_effect_class: none
+    effect_scope: orchestrator-state
 
   - operation: incident.get
     implementation: stub
     service_capability: incident.get
-    side_effect_class: none
+    effect_scope: none
 
   - operation: incident.acknowledge
     implementation: stub
     service_capability: incident.acknowledge
-    side_effect_class: none
+    effect_scope: orchestrator-state
 
   - operation: incident.resolve
     implementation: stub
     service_capability: incident.resolve
-    side_effect_class: none
+    effect_scope: orchestrator-state
 
 prohibited_generic_operations:
   - shell.exec

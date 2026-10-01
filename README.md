@@ -53,3 +53,10 @@ Start with:
 The repository now contains the accepted Phase 1 contract-bearing stub runtime. Production service adapters and production side effects remain disabled until their later acceptance gates.
 
 The Civic Infrastructure Demonstrator is a parallel deployment profile for grant evaluation and conformance. It uses synthetic/resettable data but the same public contracts as the production architecture.
+
+
+## Repository history
+
+The pre-reset Kane Fabric capability inventory remains available in Git history for provenance and archaeology, but it is not current contract authority. The files listed above define the active architecture and contracts.
+
+The repository name `kane-capabilities` is retained during the current Kane reference deployment. Whether it should later be renamed to reflect the portable Civic Orchestrator product boundary remains an explicit naming decision, not a contract change.

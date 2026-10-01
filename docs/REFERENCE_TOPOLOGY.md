@@ -63,7 +63,7 @@ It does not become workflow authority.
 The orchestrator owns:
 
 - contract validation;
-- caller/interface identification;
+- caller/authentication provenance and extensible client identification;
 - cross-service authorization decision points;
 - workflow instances and transitions;
 - routing to named Civic capabilities;

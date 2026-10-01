@@ -4,7 +4,7 @@ import argparse
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from .runtime import CivicOrchestrator, RuntimePaths
 
@@ -60,7 +60,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path.startswith("/v1/workflows/"):
-            workflow_id = path[len("/v1/workflows/"):]
+            workflow_id = unquote(path[len("/v1/workflows/"):])
             if not workflow_id:
                 self._send_json(
                     404,

@@ -124,6 +124,37 @@ Production Usermin, Hubzilla, and Kane Fabric adapters remain Phase 3 work.
 
 ---
 
+## Phase 1H — Contract hardening and external-review closure
+
+**Status:** ACTIVE — bounded hardening pass before Phase 2.
+
+Phase 1H closes defects found by an independent consumer review before additional orchestrators or production adapters begin depending on the v1 contracts.
+
+Scope is intentionally finite:
+
+- formal orchestrator scope/admission rule;
+- extensible caller/client identity and authentication provenance;
+- request replay/idempotency behavior;
+- contract-valid HTTP failure handling;
+- timestamp format enforcement;
+- registry/workflow definition validation;
+- ordered audit sequencing;
+- transactional request persistence;
+- meaningful side-effect classification;
+- portable JSON Schema reference resolution;
+- current Kane signing-authority correction;
+- documentation and repository housekeeping.
+
+Phase 1H does **not** add Mechanical Compiler-specific groups, membership state, or operations to CT105. Other Civic Infrastructure applications may instantiate their own orchestrators using this architecture.
+
+Authority: `docs/ORCHESTRATOR_SCOPE.md`.
+
+### Phase 1H acceptance
+
+The existing Phase 1 behavior remains fail-closed and side-effect-free, while the public contract is demonstrably suitable for independent consumers that were not involved in its design.
+
+---
+
 ## Phase 2 — Service and trust node architecture
 
 Do not begin broad backend integration until Phase 1 contracts are stable enough to reveal actual capability boundaries.

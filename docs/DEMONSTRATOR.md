@@ -105,7 +105,7 @@ Expose:
 
 - request ID;
 - workflow ID;
-- caller/interface;
+- caller/client;
 - operation;
 - authorization decision;
 - workflow states;
@@ -137,7 +137,7 @@ Kane Fabric browser -> publication.publish
 Hubzilla addon     -> publication.publish
 ```
 
-The caller/interface metadata differs. The Civic operation and result contract do not.
+The caller/client metadata differs. The Civic operation and result contract do not.
 
 ### Step 7 — Controlled failure
 
@@ -175,7 +175,9 @@ request_id
 workflow_id
 operation
 caller subject
-interface
+authenticated_by
+client id
+client kind
 authorization decision
 current/final workflow state
 service capability
@@ -297,7 +299,7 @@ Available during Phase 3.
 Required:
 
 - equivalent operation from at least two interfaces;
-- caller/interface distinction visible;
+- caller/client distinction visible;
 - shared workflow/result semantics.
 
 ### D-003 — Publication demonstrator

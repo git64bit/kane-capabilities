@@ -1,0 +1,31 @@
+workflow: stub-operation
+version: 1
+purpose: Prove contract validation and fail-closed routing without side effects.
+
+accepted_namespaces:
+  - publication
+  - geography
+  - participant
+  - repository
+  - rag
+  - inference
+  - edge
+  - firmware
+  - signing
+  - audit
+
+steps:
+  - validate: request-envelope-v1
+  - authorize: stub-policy
+  - transition: accepted
+  - call: stub.not-implemented
+  - transition: not-implemented
+  - record: audit-event
+  - emit: civic.operation.not-implemented
+  - return: result-envelope-v1
+
+constraints:
+  side_effects: false
+  arbitrary_command_execution: false
+  backend_network_calls: false
+  filesystem_mutation_outside_orchestrator_state: false

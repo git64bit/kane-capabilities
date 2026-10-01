@@ -32,7 +32,7 @@ The independent-operator rule remains: another county may place the same capabil
 ### Owns
 
 - public operation-contract validation;
-- caller/interface identification;
+- caller/authentication provenance and extensible client identification;
 - workflow state and transitions;
 - adapter selection;
 - authorization decision records;

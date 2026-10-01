@@ -128,5 +128,58 @@ class ServerContractTests(unittest.TestCase):
         self.assertFalse(payload["side_effects"])
 
 
+    def test_percent_encoded_workflow_id_is_resolved(self):
+        request = {
+            "contract_version": 1,
+            "request_id": "req:encoded-workflow",
+            "operation": "publication.publish",
+            "caller": {
+                "subject": "participant:test",
+                "authenticated_by": "test-auth",
+            },
+            "client": {
+                "id": "test-client",
+                "kind": "test",
+            },
+            "submitted_at": "2026-10-01T08:10:00Z",
+            "input": {},
+        }
+        _, result = self.runtime.submit(request)
+        encoded = result["workflow_id"].replace(":", "%3A")
+
+        status, payload = self.request(
+            "GET",
+            f"/v1/workflows/{encoded}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            payload["workflow"]["workflow_id"],
+            result["workflow_id"],
+        )
+
+    def test_nonstandard_json_nan_is_rejected_over_http(self):
+        body = (
+            '{"contract_version":1,'
+            '"request_id":"req:http-nan",'
+            '"operation":"publication.publish",'
+            '"caller":{"subject":"participant:test",'
+            '"authenticated_by":"test-auth"},'
+            '"client":{"id":"test-client","kind":"test"},'
+            '"submitted_at":"2026-10-01T08:00:00Z",'
+            '"input":{"value":NaN}}'
+        )
+        status, payload = self.request(
+            "POST",
+            "/v1/operations",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body.encode("utf-8"))),
+            },
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["failure_class"], "invalid-contract")
+
+
 if __name__ == "__main__":
     unittest.main()

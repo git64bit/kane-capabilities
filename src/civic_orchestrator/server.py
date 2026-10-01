@@ -63,10 +63,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/healthz":
-            self._send_json(
-                200,
-                {"status": "ok", "phase": "1H", "side_effects": False},
-            )
+            self._send_json(200, self.runtime.health())
             return
 
         if path.startswith("/v1/workflows/"):

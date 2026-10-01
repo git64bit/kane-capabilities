@@ -66,6 +66,18 @@ class OperationRegistry:
 
 
 class StateStore:
+    ALLOWED_TRANSITIONS = {
+        "received": {"validated", "rejected", "failed"},
+        "validated": {"authorized", "rejected", "failed"},
+        "authorized": {"accepted", "rejected", "failed"},
+        "accepted": {"waiting", "completed", "failed", "not-implemented"},
+        "waiting": {"accepted", "completed", "rejected", "failed"},
+        "completed": set(),
+        "rejected": set(),
+        "failed": set(),
+        "not-implemented": set(),
+    }
+
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,18 +101,6 @@ class StateStore:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     side_effects INTEGER NOT NULL CHECK(side_effects IN (0,1))
-                );
-
-                CREATE TABLE IF NOT EXISTS authorization_decisions (
-                    decision_id TEXT PRIMARY KEY,
-                    workflow_id TEXT NOT NULL,
-                    request_id TEXT NOT NULL,
-                    operation TEXT NOT NULL,
-                    decision TEXT NOT NULL,
-                    decided_at TEXT NOT NULL,
-                    policy TEXT NOT NULL,
-                    reason TEXT,
-                    FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
                 );
 
                 CREATE TABLE IF NOT EXISTS authorization_decisions (
@@ -150,51 +150,24 @@ class StateStore:
 
     def transition(self, workflow_id: str, state: str) -> None:
         with self._connect() as conn:
+            row = conn.execute(
+                "SELECT state FROM workflows WHERE workflow_id=?",
+                (workflow_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"unknown workflow: {workflow_id}")
+
+            current_state = row[0]
+            allowed = self.ALLOWED_TRANSITIONS.get(current_state, set())
+            if state not in allowed:
+                raise ValueError(
+                    f"invalid workflow transition: {current_state} -> {state}"
+                )
+
             conn.execute(
                 "UPDATE workflows SET state=?, updated_at=? WHERE workflow_id=?",
                 (state, utc_now(), workflow_id),
             )
-
-    def authorization_decision(
-        self,
-        workflow_id: str,
-        request_id: str,
-        operation: str,
-        decision: str,
-        policy: str,
-        reason: str | None = None,
-    ) -> dict[str, Any]:
-        record = {
-            "decision_id": f"authz:{uuid.uuid4()}",
-            "request_id": request_id,
-            "operation": operation,
-            "decision": decision,
-            "decided_at": utc_now(),
-            "policy": policy,
-        }
-        if reason is not None:
-            record["reason"] = reason
-
-        with self._connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO authorization_decisions
-                    (decision_id, workflow_id, request_id, operation,
-                     decision, decided_at, policy, reason)
-                VALUES (?,?,?,?,?,?,?,?)
-                """,
-                (
-                    record["decision_id"],
-                    workflow_id,
-                    request_id,
-                    operation,
-                    decision,
-                    record["decided_at"],
-                    policy,
-                    reason,
-                ),
-            )
-        return record
 
     def authorization_decision(
         self,
@@ -283,17 +256,6 @@ class StateStore:
                 (workflow_id,),
             ).fetchall()
 
-            decisions = conn.execute(
-                """
-                SELECT decision_id, request_id, operation, decision,
-                       decided_at, policy, reason
-                  FROM authorization_decisions
-                 WHERE workflow_id=?
-                 ORDER BY decided_at, decision_id
-                """,
-                (workflow_id,),
-            ).fetchall()
-
             events = conn.execute(
                 """
                 SELECT event_id, workflow_id, event_type, recorded_at, actor, data_json
@@ -324,20 +286,6 @@ class StateStore:
             "updated_at": workflow["updated_at"],
             "side_effects": bool(workflow["side_effects"]),
         }
-
-        decision_objs = []
-        for row in decisions:
-            item = {
-                "decision_id": row["decision_id"],
-                "request_id": row["request_id"],
-                "operation": row["operation"],
-                "decision": row["decision"],
-                "decided_at": row["decided_at"],
-                "policy": row["policy"],
-            }
-            if row["reason"] is not None:
-                item["reason"] = row["reason"]
-            decision_objs.append(item)
 
         decision_objs = []
         for row in decisions:

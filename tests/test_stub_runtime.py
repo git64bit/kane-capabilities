@@ -1,4 +1,3 @@
-import json
 import tempfile
 import threading
 import unittest
@@ -30,11 +29,15 @@ class StubRuntimeTests(unittest.TestCase):
             "operation": operation,
             "caller": {
                 "subject": "participant:test",
-                "authority": "test-authority"
+                "authority": "test-authority",
+                "authenticated_by": "test-authenticator",
             },
-            "interface": "test",
+            "client": {
+                "id": "test-client",
+                "kind": "test",
+            },
             "submitted_at": "2026-10-01T06:00:00Z",
-            "input": {}
+            "input": {},
         }
 
     def test_known_operation_is_stubbed_without_side_effects(self):
@@ -46,17 +49,21 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertTrue(result["receipt_id"].startswith("rcpt:"))
 
     def test_unknown_operation_fails_closed(self):
-        status, result = self.runtime.submit(self.request("publication.unknown"))
+        status, result = self.runtime.submit(
+            self.request("publication.unknown")
+        )
         self.assertEqual(status, 400)
         self.assertEqual(result["failure_class"], "unknown-operation")
+        self.assertEqual(result["operation"], "publication.unknown")
         self.assertFalse(result["side_effects"])
 
-    def test_prohibited_operation_fails_closed(self):
+    def test_prohibited_operation_fails_at_schema_boundary(self):
         request = self.request()
         request["operation"] = "shell.exec"
         status, result = self.runtime.submit(request)
         self.assertEqual(status, 400)
         self.assertEqual(result["failure_class"], "invalid-contract")
+        self.assertEqual(result["operation"], "audit.invalid_request")
         self.assertFalse(result["side_effects"])
 
     def test_invalid_contract_fails_closed(self):
@@ -67,12 +74,51 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertEqual(result["failure_class"], "invalid-contract")
         self.assertFalse(result["side_effects"])
 
-    def test_capability_advertisement_contains_stub(self):
+    def test_timestamp_format_is_enforced(self):
+        request = self.request()
+        request["submitted_at"] = "yesterday"
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "invalid-contract")
+
+    def test_authentication_provenance_is_required(self):
+        request = self.request()
+        del request["caller"]["authenticated_by"]
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "invalid-contract")
+
+    def test_client_identity_is_extensible(self):
+        request = self.request()
+        request["request_id"] = "req:cjdns-client"
+        request["client"] = {
+            "id": "cjdns-neighbor-service",
+            "kind": "service",
+        }
+        status, result = self.runtime.submit(request)
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "not-implemented")
+
+        _, evidence = self.runtime.workflow_evidence(result["workflow_id"])
+        accepted = evidence["audit_events"][1]
+        self.assertEqual(
+            accepted["data"]["client_id"],
+            "cjdns-neighbor-service",
+        )
+        self.assertEqual(accepted["data"]["client_kind"], "service")
+
+    def test_capability_advertisement_contains_effect_scope(self):
         caps = self.runtime.capabilities()
-        self.assertTrue(any(
-            item["operation"] == "publication.publish" and item["implementation"] == "stub"
+        publication = next(
+            item
             for item in caps["capabilities"]
-        ))
+            if item["operation"] == "publication.publish"
+        )
+        self.assertEqual(publication["implementation"], "stub")
+        self.assertEqual(
+            publication["effect_scope"],
+            "external-bounded",
+        )
 
     def test_incident_operations_are_bounded_stubs(self):
         caps = self.runtime.capabilities()
@@ -82,7 +128,9 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertIn("incident.acknowledge", operations)
         self.assertIn("incident.resolve", operations)
 
-        status, result = self.runtime.submit(self.request("incident.report"))
+        request = self.request("incident.report")
+        request["request_id"] = "req:incident-test"
+        status, result = self.runtime.submit(request)
         self.assertEqual(status, 200)
         self.assertEqual(result["status"], "not-implemented")
         self.assertFalse(result["side_effects"])
@@ -90,55 +138,143 @@ class StubRuntimeTests(unittest.TestCase):
             result["result"]["service_capability"],
             "incident.report",
         )
+        self.assertEqual(
+            result["result"]["effect_scope"],
+            "orchestrator-state",
+        )
 
-    def test_workflow_evidence_is_read_only_and_schema_valid(self):
+    def test_workflow_evidence_is_ordered_and_schema_valid(self):
         status, result = self.runtime.submit(self.request())
         self.assertEqual(status, 200)
 
-        evidence_status, evidence = self.runtime.workflow_evidence(result["workflow_id"])
+        evidence_status, evidence = self.runtime.workflow_evidence(
+            result["workflow_id"]
+        )
         self.assertEqual(evidence_status, 200)
-        self.assertEqual(evidence["workflow"]["workflow_id"], result["workflow_id"])
-        self.assertEqual(evidence["workflow"]["state"], "not-implemented")
+        self.assertEqual(
+            evidence["workflow"]["workflow_id"],
+            result["workflow_id"],
+        )
+        self.assertEqual(
+            evidence["workflow"]["state"],
+            "not-implemented",
+        )
         self.assertFalse(evidence["side_effects"])
         self.assertEqual(len(evidence["authorization_decisions"]), 1)
+        self.assertEqual(len(evidence["audit_events"]), 4)
+        self.assertEqual(
+            [event["sequence"] for event in evidence["audit_events"]],
+            [1, 2, 3, 4],
+        )
+        self.assertEqual(
+            [event["event_type"] for event in evidence["audit_events"]],
+            [
+                "civic.authorization.allowed",
+                "civic.operation.accepted",
+                "civic.service.selected",
+                "civic.operation.not-implemented",
+            ],
+        )
+        self.assertEqual(len(evidence["receipts"]), 1)
+        self.assertEqual(
+            evidence["receipts"][0]["receipt_id"],
+            result["receipt_id"],
+        )
+
+    def test_authorization_and_service_selection_are_evidenced(self):
+        status, result = self.runtime.submit(self.request())
+        self.assertEqual(status, 200)
+
+        _, evidence = self.runtime.workflow_evidence(
+            result["workflow_id"]
+        )
         decision = evidence["authorization_decisions"][0]
         self.assertEqual(decision["decision"], "allow")
         self.assertEqual(decision["policy"], "stub-policy")
-        self.assertEqual(len(evidence["audit_events"]), 4)
-        self.assertEqual(len(evidence["receipts"]), 1)
-        self.assertEqual(evidence["receipts"][0]["receipt_id"], result["receipt_id"])
 
-    def test_authorization_decision_is_recorded_before_stub_execution(self):
-        status, result = self.runtime.submit(self.request())
-        self.assertEqual(status, 200)
-
-        evidence_status, evidence = self.runtime.workflow_evidence(result["workflow_id"])
-        self.assertEqual(evidence_status, 200)
-        self.assertEqual(len(evidence["authorization_decisions"]), 1)
+        selected = evidence["audit_events"][2]
+        self.assertEqual(selected["event_type"], "civic.service.selected")
         self.assertEqual(
-            evidence["audit_events"][0]["event_type"],
-            "civic.authorization.allowed",
-        )
-        self.assertEqual(
-            evidence["authorization_decisions"][0]["request_id"],
-            result["request_id"],
-        )
-        self.assertEqual(
-            evidence["audit_events"][2]["event_type"],
-            "civic.service.selected",
-        )
-        self.assertEqual(
-            evidence["audit_events"][2]["data"]["implementation"],
-            "stub",
-        )
-        self.assertEqual(
-            evidence["audit_events"][2]["data"]["service_capability"],
+            selected["data"]["service_capability"],
             "publication.publish",
         )
-        self.assertFalse(evidence["side_effects"])
+        self.assertEqual(selected["data"]["implementation"], "stub")
+        self.assertEqual(
+            selected["data"]["effect_scope"],
+            "external-bounded",
+        )
+
+    def test_idempotency_key_replays_original_result(self):
+        request = self.request()
+        request["idempotency_key"] = "idem:test-001"
+        status, first = self.runtime.submit(request)
+        self.assertEqual(status, 200)
+
+        retry = self.request()
+        retry["request_id"] = "req:test-001-retry"
+        retry["submitted_at"] = "2026-10-01T06:01:00Z"
+        retry["idempotency_key"] = "idem:test-001"
+        status, second = self.runtime.submit(retry)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(second["workflow_id"], first["workflow_id"])
+        self.assertEqual(second["receipt_id"], first["receipt_id"])
+        self.assertTrue(second["result"]["replayed"])
+
+    def test_idempotency_key_conflict_fails_closed(self):
+        request = self.request()
+        request["idempotency_key"] = "idem:conflict"
+        status, _ = self.runtime.submit(request)
+        self.assertEqual(status, 200)
+
+        conflicting = self.request()
+        conflicting["request_id"] = "req:conflict-other"
+        conflicting["idempotency_key"] = "idem:conflict"
+        conflicting["input"] = {"different": True}
+        status, result = self.runtime.submit(conflicting)
+
+        self.assertEqual(status, 409)
+        self.assertEqual(result["failure_class"], "conflict")
+        self.assertFalse(result["side_effects"])
+
+        with self.runtime.state._connect() as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM workflows"
+            ).fetchone()[0]
+        self.assertEqual(count, 1)
+
+    def test_duplicate_request_id_replays_same_semantic_request(self):
+        status, first = self.runtime.submit(self.request())
+        self.assertEqual(status, 200)
+
+        retry = self.request()
+        retry["submitted_at"] = "2026-10-01T06:02:00Z"
+        status, second = self.runtime.submit(retry)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(second["workflow_id"], first["workflow_id"])
+        self.assertTrue(second["result"]["replayed"])
+
+    def test_failure_envelope_normalizes_untrusted_values(self):
+        failure = self.runtime.failure(
+            request_id={"not": "an id"},
+            operation="not an operation",
+            failure_class="invalid-contract",
+            message="x" * 5003,
+            retryable=False,
+        )
+        self.runtime.contracts.validate(
+            "failure-envelope-v1.schema.json",
+            failure,
+        )
+        self.assertEqual(failure["request_id"], "invalid:request")
+        self.assertEqual(failure["operation"], "audit.invalid_request")
+        self.assertEqual(len(failure["message"]), 1000)
 
     def test_missing_workflow_evidence_fails_closed(self):
-        status, result = self.runtime.workflow_evidence("wf:does-not-exist")
+        status, result = self.runtime.workflow_evidence(
+            "wf:does-not-exist"
+        )
         self.assertEqual(status, 404)
         self.assertEqual(result["error"], "workflow-not-found")
         self.assertFalse(result["side_effects"])
@@ -160,7 +296,7 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertEqual(evidence["workflow"]["state"], "validated")
         self.assertFalse(evidence["side_effects"])
 
-    def test_threaded_submit_uses_safe_sqlite_connections(self):
+    def test_threaded_submit_uses_safe_sqlite_transactions(self):
         results = []
         errors = []
 
@@ -168,11 +304,15 @@ class StubRuntimeTests(unittest.TestCase):
             try:
                 request = self.request()
                 request["request_id"] = f"req:thread-{index}"
+                request["input"] = {"thread": index}
                 results.append(self.runtime.submit(request))
             except Exception as exc:
                 errors.append(exc)
 
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(4)]
+        threads = [
+            threading.Thread(target=worker, args=(i,))
+            for i in range(4)
+        ]
         for thread in threads:
             thread.start()
         for thread in threads:

@@ -65,6 +65,26 @@
     {
       "id": "urn:civic-orchestrator:schema:stub-workflow-definition:v1",
       "path": "stub-workflow-definition-v1.schema.json"
+    },
+    {
+      "id": "urn:civic-orchestrator:schema:publication-artifact:v1",
+      "path": "publication-artifact-v1.schema.json"
+    },
+    {
+      "id": "urn:civic-orchestrator:schema:publication-publish-input:v1",
+      "path": "publication-publish-input-v1.schema.json"
+    },
+    {
+      "id": "urn:civic-orchestrator:schema:publication-service-request:v1",
+      "path": "publication-service-request-v1.schema.json"
+    },
+    {
+      "id": "urn:civic-orchestrator:schema:publication-service-result:v1",
+      "path": "publication-service-result-v1.schema.json"
+    },
+    {
+      "id": "urn:civic-orchestrator:schema:publication-service-failure:v1",
+      "path": "publication-service-failure-v1.schema.json"
     }
   ]
 }

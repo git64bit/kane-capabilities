@@ -16,6 +16,12 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry, Resource
 from rfc3339_validator import validate_rfc3339
 
+from .publication import (
+    PublicationServiceFailure,
+    PublicationServiceProtocolError,
+    PublicationServiceUnavailable,
+)
+
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,159}$")
 _OPERATION_RE = re.compile(

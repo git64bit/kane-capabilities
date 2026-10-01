@@ -46,5 +46,8 @@ Start with:
 6. [docs/PORTABILITY_AND_TRUST.md](docs/PORTABILITY_AND_TRUST.md)
 7. [docs/REFERENCE_TOPOLOGY.md](docs/REFERENCE_TOPOLOGY.md)
 8. [docs/KANE_NODE_PLACEMENT.md](docs/KANE_NODE_PLACEMENT.md)
+9. [docs/DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
 
 Implementation code is intentionally absent at this reset point. The first milestone establishes contracts and stubs before real service side effects are permitted.
+
+The Civic Infrastructure Demonstrator is a parallel deployment profile for grant evaluation and conformance. It uses synthetic/resettable data but the same public contracts as the production architecture.

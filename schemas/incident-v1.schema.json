@@ -18,8 +18,8 @@
   ],
   "properties": {
     "contract_version": { "const": 1 },
-    "incident_id": { "$ref": "common-v1.schema.json#/$defs/id" },
-    "source_signal_id": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "incident_id": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id" },
+    "source_signal_id": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id" },
     "domain": {
       "type": "string",
       "enum": [
@@ -62,8 +62,8 @@
     "context": {
       "type": "object"
     },
-    "opened_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
-    "updated_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" },
-    "resolved_at": { "$ref": "common-v1.schema.json#/$defs/timestamp" }
+    "opened_at": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/timestamp" },
+    "updated_at": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/timestamp" },
+    "resolved_at": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/timestamp" }
   }
 }

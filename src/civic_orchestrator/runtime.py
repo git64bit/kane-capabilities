@@ -954,6 +954,7 @@ class CivicOrchestrator:
                 client_id,
                 f"original_request_id={original_request_id}",
             )
+            self.contracts.validate("result-envelope-v1.schema.json", result)
 
         return 200, result
 

@@ -101,16 +101,171 @@ No public gateway or unrestricted Kubo API is required for the first acceptance 
 
 Exact network placement and firewall rules are assigned only after the service contract is frozen.
 
-## Phase 2 acceptance gates before deployment
+## Frozen first-operation contract
 
-Before assigning a CT number or installing Kubo, freeze:
+The first implementation is deliberately limited to **inline artifacts of at most 1 MiB**.
 
-1. `publication.publish` request fields required by the service adapter;
-2. exact byte-integrity verification rule;
-3. returned content-identity/result fields;
-4. ownership of retry/idempotency behavior;
-5. service failure classes visible to CT105;
-6. whether publication metadata needs persistent service-local storage beyond Kubo;
-7. private transport between CT105 and the publication node.
+This is sufficient for the first Civic publication targets such as policy text, manifests, attestations, and other small immutable records. It deliberately avoids introducing streaming uploads, object storage, repository-fetch semantics, or upload sessions before a concrete need exists.
+
+### Public `publication.publish` input
+
+The Civic request carries:
+
+```text
+artifact.media_type
+artifact.size_bytes
+artifact.sha256
+artifact.encoding = base64
+artifact.content
+optional label
+```
+
+Authority:
+
+`schemas/publication-publish-input-v1.schema.json`
+
+The label is descriptive only. It does not participate in content identity.
+
+### CT105 -> publication-service request
+
+After CT105 accepts and authorizes the Civic workflow, its service adapter sends:
+
+```text
+contract_version = 1
+workflow_id
+operation = publication.publish
+artifact
+```
+
+Authority:
+
+`schemas/publication-service-request-v1.schema.json`
+
+Caller identity, client identity, and Civic authorization policy are intentionally not forwarded as service-side authority. CT105 has already made the authorization decision and records it in the Civic workflow evidence.
+
+### Integrity rule
+
+A publication service must independently perform all of the following before publication:
+
+1. strict base64 decode;
+2. decoded byte count equals `size_bytes`;
+3. SHA-256 of decoded bytes equals `sha256`.
+
+After Kubo adds and pins the content, the service must read the artifact back by the returned CID and verify the exact byte count and SHA-256 again.
+
+A success response is prohibited unless both pre-publication and post-publication verification succeed.
+
+CT105 must verify that the service result repeats the expected `sha256` and `size_bytes` before completing the Civic workflow.
+
+### Kubo content-identity profile
+
+The first implementation fixes the Kubo add profile so the same bytes produce the same publication identity across conforming nodes:
+
+```text
+CID version     1
+multihash       sha2-256
+raw leaves      true
+chunker         size-262144
+pin             true
+CID rendering   base32
+```
+
+These are service implementation parameters, not caller-selectable Civic request fields.
+
+### Successful service result
+
+The publication service returns:
+
+```text
+contract_version = 1
+workflow_id
+operation = publication.publish
+sha256
+size_bytes
+cid              CIDv1, base32
+pinned = true
+verified = true
+```
+
+Authority:
+
+`schemas/publication-service-result-v1.schema.json`
+
+The CID is publication evidence. The SHA-256 remains the exact-byte integrity identity supplied by the Civic request.
+
+### Service failure classes
+
+The bounded service contract exposes only:
+
+```text
+invalid-request
+integrity-mismatch
+publication-failed
+verification-failed
+service-unavailable
+```
+
+Authority:
+
+`schemas/publication-service-failure-v1.schema.json`
+
+The publication service does not expose raw Kubo errors as Civic semantics. Implementation diagnostics may retain them locally.
+
+### Retry and idempotency ownership
+
+CT105 owns Civic request replay and idempotency.
+
+The publication service does not require a second idempotency database for the first implementation.
+
+A retry of the same exact artifact is safe because:
+
+- the fixed content profile produces the same CID;
+- pinning an already-pinned CID is idempotent;
+- the service repeats exact-byte verification before returning success.
+
+The same artifact may legitimately be published by different Civic workflows and resolve to the same CID.
+
+### Service-local persistence
+
+No additional SQL/service job database is required for the first implementation.
+
+The publication node persists:
+
+- the Kubo repository;
+- pin state;
+- ordinary service diagnostics/logs.
+
+CT105 persists the authoritative Civic workflow, authorization decision, audit events, receipt, and service result.
+
+If later requirements show that publication jobs need durable independent state, that is a new design decision rather than an assumption in the first node.
+
+### Private transport
+
+The first service adapter uses ordinary HTTP/JSON on the private Civic service network.
+
+Initial endpoints:
+
+```text
+GET  /healthz
+POST /v1/publications
+```
+
+The service binds only to its private CT address. The initial network rule permits CT105 to reach the publication endpoint and does not expose the Kubo API or service endpoint publicly.
+
+TLS, service credentials, or stronger adapter authentication may be added when the production trust boundary requires them. They are not prerequisites for proving the first bounded operation on the isolated service network.
+
+## Pre-deployment gate status
+
+The required design questions are now frozen:
+
+1. publication request fields — **FROZEN**;
+2. exact byte-integrity rule — **FROZEN**;
+3. returned content identity/result — **FROZEN**;
+4. retry/idempotency ownership — **FROZEN: CT105**;
+5. bounded service failure classes — **FROZEN**;
+6. extra service-local database — **NO for first implementation**;
+7. private transport — **FROZEN: HTTP/JSON on private service network**.
 
 No additional capability namespace is introduced by this node.
+
+The next step may assign the new Trixie CT identity and deploy the publication service without revisiting these decisions unless testing exposes a concrete defect.

@@ -41,6 +41,8 @@ class FakePublicationClient:
             raise PublicationServiceUnavailable("connection refused")
         if self.mode == "protocol-failure":
             raise PublicationServiceProtocolError("invalid service result")
+        if self.mode == "unexpected-failure":
+            raise RuntimeError("unexpected adapter defect")
 
         return {
             "contract_version": 1,
@@ -231,6 +233,24 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertTrue(result["side_effects"])
         self.assertEqual(result["result"]["failure_class"], "internal")
         self.assertFalse(result["result"]["retryable"])
+
+    def test_unexpected_adapter_failure_is_persisted_as_failed(self):
+        self.client.mode = "unexpected-failure"
+
+        status, result = self.runtime.submit(self.request())
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["side_effects"])
+        self.assertEqual(result["result"]["failure_class"], "internal")
+        self.assertIn(
+            "unexpected publication adapter failure",
+            result["result"]["message"],
+        )
+
+        _, evidence = self.runtime.workflow_evidence(result["workflow_id"])
+        self.assertEqual(evidence["workflow"]["state"], "failed")
+        self.assertEqual(evidence["receipts"][0]["outcome"], "failed")
 
     def test_publication_replay_does_not_call_backend_twice(self):
         request = self.request()

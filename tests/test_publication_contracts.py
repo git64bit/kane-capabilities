@@ -1,0 +1,114 @@
+import base64
+import hashlib
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from civic_orchestrator.runtime import ContractStore
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class PublicationContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.contracts = ContractStore(ROOT)
+
+    def artifact(self, payload=b"civic publication\n"):
+        return {
+            "media_type": "text/plain",
+            "size_bytes": len(payload),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "encoding": "base64",
+            "content": base64.b64encode(payload).decode("ascii"),
+        }
+
+    def test_publication_input_validates(self):
+        value = {
+            "artifact": self.artifact(),
+            "label": "policy fixture",
+        }
+        self.contracts.validate(
+            "publication-publish-input-v1.schema.json",
+            value,
+        )
+
+    def test_publication_service_request_validates(self):
+        value = {
+            "contract_version": 1,
+            "workflow_id": "wf:test-publication",
+            "operation": "publication.publish",
+            "artifact": self.artifact(),
+        }
+        self.contracts.validate(
+            "publication-service-request-v1.schema.json",
+            value,
+        )
+
+    def test_publication_service_success_validates(self):
+        value = {
+            "contract_version": 1,
+            "workflow_id": "wf:test-publication",
+            "operation": "publication.publish",
+            "sha256": "0" * 64,
+            "size_bytes": 0,
+            "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            "pinned": True,
+            "verified": True,
+        }
+        self.contracts.validate(
+            "publication-service-result-v1.schema.json",
+            value,
+        )
+
+    def test_publication_service_failure_validates(self):
+        value = {
+            "contract_version": 1,
+            "workflow_id": "wf:test-publication",
+            "operation": "publication.publish",
+            "failure_class": "integrity-mismatch",
+            "message": "decoded bytes do not match declared digest",
+            "retryable": False,
+        }
+        self.contracts.validate(
+            "publication-service-failure-v1.schema.json",
+            value,
+        )
+
+    def test_invalid_base64_shape_is_rejected(self):
+        value = {"artifact": self.artifact()}
+        value["artifact"]["content"] = "***not-base64***"
+        with self.assertRaises(Exception):
+            self.contracts.validate(
+                "publication-publish-input-v1.schema.json",
+                value,
+            )
+
+    def test_oversize_artifact_is_rejected(self):
+        value = {"artifact": self.artifact()}
+        value["artifact"]["size_bytes"] = 1048577
+        with self.assertRaises(Exception):
+            self.contracts.validate(
+                "publication-publish-input-v1.schema.json",
+                value,
+            )
+
+    def test_catalog_contains_publication_contracts(self):
+        catalog = json.loads(
+            (ROOT / "schemas" / "catalog-v1.json").read_text(encoding="utf-8")
+        )
+        ids = {item["id"] for item in catalog["schemas"]}
+        for required in {
+            "urn:civic-orchestrator:schema:publication-artifact:v1",
+            "urn:civic-orchestrator:schema:publication-publish-input:v1",
+            "urn:civic-orchestrator:schema:publication-service-request:v1",
+            "urn:civic-orchestrator:schema:publication-service-result:v1",
+            "urn:civic-orchestrator:schema:publication-service-failure:v1",
+        }:
+            self.assertIn(required, ids)
+
+
+if __name__ == "__main__":
+    unittest.main()

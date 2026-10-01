@@ -18,7 +18,7 @@ required_failure_cases:
   - prohibited-operation
   - invalid-contract
 
-target_interfaces:
+target_clients:
   - usermin
   - kane-fabric
   - hubzilla
@@ -28,7 +28,8 @@ evidence_fields:
   - workflow_id
   - operation
   - caller
-  - interface
+  - client
+  - authenticated_by
   - authorization_decision
   - workflow_state
   - receipt_id

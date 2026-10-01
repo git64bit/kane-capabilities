@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: Civic Orchestrator API
+  version: 0.1.0
+  description: >
+    Contract-first API for bounded Civic Infrastructure operations.
+    Phase 1 is stub-only and must not perform production side effects.
+servers:
+  - url: https://orchestrator.invalid
+    description: Placeholder only; deployment locators are not Civic identity.
+paths:
+  /v1/operations:
+    post:
+      operationId: submitCivicOperation
+      summary: Submit one bounded Civic operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/request-envelope-v1.schema.json
+      responses:
+        "200":
+          description: Contract-valid orchestrator result
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/result-envelope-v1.schema.json
+        "400":
+          description: Contract or request failure
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/failure-envelope-v1.schema.json
+        "403":
+          description: Authorization failure
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/failure-envelope-v1.schema.json
+        "409":
+          description: Workflow/state conflict
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/failure-envelope-v1.schema.json
+        "503":
+          description: Required backend unavailable
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/failure-envelope-v1.schema.json
+  /v1/capabilities:
+    get:
+      operationId: listCapabilities
+      summary: List the bounded capability names known to this orchestrator
+      responses:
+        "200":
+          description: Capability advertisement
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [contract_version, capabilities]
+                properties:
+                  contract_version:
+                    const: 1
+                  capabilities:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [operation, implementation]
+                      properties:
+                        operation:
+                          $ref: ../schemas/common-v1.schema.json#/$defs/operation
+                        implementation:
+                          type: string
+                          enum: [stub, available, unavailable, disabled]

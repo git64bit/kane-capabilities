@@ -116,6 +116,8 @@ client.kind
 
 `client.id` is intentionally not a fixed enum of known applications. New software that legitimately belongs to the same orchestrator domain can identify itself without revising the v1 schema merely to add another program name.
 
+`caller.authenticated_by` is an assertion carried by the trusted adapter boundary. Phase 1 validates that the field is present and records it as provenance; Phase 1 does **not** independently authenticate the subject or cryptographically bind a client to its declared `client.id`. That binding belongs to the production adapter/authentication work before those adapters are trusted.
+
 Client extensibility does not imply admission to CT105. Admission remains governed by `ORCHESTRATOR_SCOPE.md`.
 
 ## Replay and idempotency
@@ -149,3 +151,10 @@ Phase 1H remains stub-only, so actual side effects remain false regardless of in
 An independent validator may load the catalog, register each listed schema by its `$id`, and then validate the public contracts without relying on the Python runtime's private loading behavior.
 
 The catalog is transport metadata only; it does not add Civic semantics.
+
+
+## Rejection diagnostics
+
+Rejected requests, replay attempts, conflicts, and HTTP-level parsing failures leave a minimal local diagnostic record in CT105.
+
+These records are operational diagnostics, not Civic workflow receipts and not proof of abuse. They exist so failures do not disappear merely because no normal workflow was accepted.

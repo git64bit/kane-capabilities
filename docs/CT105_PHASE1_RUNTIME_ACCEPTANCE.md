@@ -166,6 +166,37 @@ The workflow retained one authorization decision, four audit events, one receipt
 
 Result: **PASS**
 
+## Interface-equivalence acceptance
+
+The Phase 1 development acceptance harness submitted the same bounded `publication.publish` operation using the interface identities:
+
+```text
+usermin
+hubzilla
+kane-fabric
+```
+
+Observed semantic result for all three:
+
+```text
+operation                  = publication.publish
+status                     = not-implemented
+implementation             = stub
+service_capability         = publication.publish
+authorization_decision     = allow
+authorization_policy       = stub-policy
+audit event sequence       = identical
+receipt_outcome            = not-implemented
+receipt_side_effects       = false
+side_effects               = false
+```
+
+Request IDs, workflow IDs, receipt IDs, caller subjects, timestamps, and recorded interface identity remained request-specific as intended.
+
+This gate proves contract-level interface equivalence only. It does not claim that production Usermin, Hubzilla, or Kane Fabric adapters have been implemented.
+
+Result: **PASS**
+
 ## Acceptance conclusion
 
 The Phase 1 runtime has now proven:
@@ -178,6 +209,7 @@ The Phase 1 runtime has now proven:
 - explicit authorization-decision persistence;
 - authorization audit evidence;
 - explicit service-capability selection evidence;
+- interface-independent Civic operation semantics across Usermin, Hubzilla, and Kane Fabric development identities;
 - receipt issuance;
 - local SQLite state;
 - threaded request safety;
@@ -189,6 +221,6 @@ No production service adapter is enabled.
 
 ## Next gate
 
-Preserve explicit service-adapter selection evidence in the stub workflow, then exercise equivalent contract-valid requests from the Phase 1 Usermin, Hubzilla, and Kane Fabric development-client surfaces.
+Enforce and test the bounded Phase 1 workflow transition graph so invalid state transitions fail closed.
 
 No inbound CT105 service-network exposure or production backend adapter is permitted yet.

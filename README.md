@@ -33,6 +33,7 @@ The orchestrator is the fusebox between interaction surfaces and service/trust n
 6. **No implementation technology becomes civic identity.** Hostnames, ESP32 hardware identity, Git repositories, Unix accounts, service URLs, and transport endpoints are locators or implementation details unless an explicit civic contract says otherwise.
 7. **Kane County is the reference deployment, not the product boundary.** Public contracts must be implementable by an independent operator in another jurisdiction without Kane County private infrastructure.
 8. **Cryptography is evidence infrastructure, not an economy.** Hashes, signatures, capabilities, receipts, attestations, and certificates establish identity, integrity, authorization, and provenance; they do not imply currency, utility-token value, ownership, or transferable governance weight.
+9. **One orchestrator, one bounded authority/workflow domain.** Civic Infrastructure applications do not all plug into CT105. Independent applications may adopt the same orchestrator pattern while retaining separate state, membership, policy, trust, and workflow authority.
 
 ## Repository authority
 
@@ -47,7 +48,8 @@ Start with:
 7. [docs/REFERENCE_TOPOLOGY.md](docs/REFERENCE_TOPOLOGY.md)
 8. [docs/KANE_NODE_PLACEMENT.md](docs/KANE_NODE_PLACEMENT.md)
 9. [docs/DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
+10. [docs/ORCHESTRATOR_SCOPE.md](docs/ORCHESTRATOR_SCOPE.md)
 
-Implementation code is intentionally absent at this reset point. The first milestone establishes contracts and stubs before real service side effects are permitted.
+The repository now contains the accepted Phase 1 contract-bearing stub runtime. Production service adapters and production side effects remain disabled until their later acceptance gates.
 
 The Civic Infrastructure Demonstrator is a parallel deployment profile for grant evaluation and conformance. It uses synthetic/resettable data but the same public contracts as the production architecture.

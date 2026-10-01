@@ -34,6 +34,12 @@ class Handler(BaseHTTPRequestHandler):
         operation=None,
         retryable: bool = False,
     ) -> None:
+        self.runtime.state.record_request_diagnostic(
+            f"http-{failure_class}",
+            request_id=request_id,
+            operation=operation,
+            detail=message,
+        )
         self._send_json(
             status,
             self.runtime.failure(

@@ -100,9 +100,30 @@ class StubRuntimeTests(unittest.TestCase):
         self.assertEqual(evidence["workflow"]["workflow_id"], result["workflow_id"])
         self.assertEqual(evidence["workflow"]["state"], "not-implemented")
         self.assertFalse(evidence["side_effects"])
-        self.assertEqual(len(evidence["audit_events"]), 2)
+        self.assertEqual(len(evidence["authorization_decisions"]), 1)
+        decision = evidence["authorization_decisions"][0]
+        self.assertEqual(decision["decision"], "allow")
+        self.assertEqual(decision["policy"], "stub-policy")
+        self.assertEqual(len(evidence["audit_events"]), 3)
         self.assertEqual(len(evidence["receipts"]), 1)
         self.assertEqual(evidence["receipts"][0]["receipt_id"], result["receipt_id"])
+
+    def test_authorization_decision_is_recorded_before_stub_execution(self):
+        status, result = self.runtime.submit(self.request())
+        self.assertEqual(status, 200)
+
+        evidence_status, evidence = self.runtime.workflow_evidence(result["workflow_id"])
+        self.assertEqual(evidence_status, 200)
+        self.assertEqual(len(evidence["authorization_decisions"]), 1)
+        self.assertEqual(
+            evidence["audit_events"][0]["event_type"],
+            "civic.authorization.allowed",
+        )
+        self.assertEqual(
+            evidence["authorization_decisions"][0]["request_id"],
+            result["request_id"],
+        )
+        self.assertFalse(evidence["side_effects"])
 
     def test_missing_workflow_evidence_fails_closed(self):
         status, result = self.runtime.workflow_evidence("wf:does-not-exist")

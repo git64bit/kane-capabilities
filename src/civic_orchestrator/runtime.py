@@ -5,10 +5,11 @@ import json
 import re
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
@@ -144,11 +145,22 @@ class StateStore:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """Open one SQLite connection for a state operation and always close it.
+
+        The inner connection context preserves sqlite3 commit/rollback
+        semantics, including explicit BEGIN IMMEDIATE issued by callers.
+        The outer finally guarantees the connection itself is closed.
+        """
         conn = sqlite3.connect(self.db_path, timeout=30)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-        return conn
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     @staticmethod
     def _columns(conn: sqlite3.Connection, table: str) -> set[str]:

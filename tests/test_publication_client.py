@@ -42,10 +42,12 @@ class FakeResponse:
 class PublicationServiceClientTests(unittest.TestCase):
     def setUp(self):
         self.contracts = ContractStore(ROOT)
+        self.token = "T" * 48
         self.client = PublicationServiceClient(
             "http://publication.test:8046",
             self.contracts.validate,
             timeout_seconds=2.0,
+            bearer_token=self.token,
         )
         self.workflow_id = "wf:test-publication-client"
         self.payload = b"civic publication\n"
@@ -94,6 +96,10 @@ class PublicationServiceClientTests(unittest.TestCase):
             "http://publication.test:8046/v1/publications",
         )
         self.assertEqual(request.get_method(), "POST")
+        self.assertEqual(
+            request.get_header("Authorization"),
+            f"Bearer {self.token}",
+        )
         sent = json.loads(request.data.decode("utf-8"))
         self.assertEqual(
             sent,
@@ -156,6 +162,41 @@ class PublicationServiceClientTests(unittest.TestCase):
                 "invalid publication service result",
             ):
                 self.client.publish(self.workflow_id, self.artifact)
+
+    def test_missing_service_credential_fails_before_network(self):
+        client = PublicationServiceClient(
+            "http://publication.test:8046",
+            self.contracts.validate,
+            timeout_seconds=2.0,
+        )
+
+        with patch("civic_orchestrator.publication.urlopen") as mocked:
+            with self.assertRaises(PublicationServiceUnavailable) as caught:
+                client.publish(self.workflow_id, self.artifact)
+
+        mocked.assert_not_called()
+        self.assertFalse(caught.exception.side_effects_possible)
+        self.assertEqual(caught.exception.side_effects_certainty, "known")
+
+    def test_service_authentication_failure_is_known_no_effect(self):
+        http_error = HTTPError(
+            "http://publication.test:8046/v1/publications",
+            401,
+            "Unauthorized",
+            hdrs=None,
+            fp=BytesIO(b"{}"),
+        )
+
+        with patch(
+            "civic_orchestrator.publication.urlopen",
+            side_effect=http_error,
+        ):
+            with self.assertRaises(PublicationServiceUnavailable) as caught:
+                self.client.publish(self.workflow_id, self.artifact)
+
+        self.assertFalse(caught.exception.side_effects_possible)
+        self.assertEqual(caught.exception.side_effects_certainty, "known")
+        self.assertIn("authentication failed", str(caught.exception))
 
     def test_service_failure_is_validated_and_preserved(self):
         failure = {

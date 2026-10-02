@@ -8,10 +8,12 @@ from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
 from civic_orchestrator.publication import (
+    CID_PROFILE,
     PublicationServiceClient,
     PublicationServiceFailure,
     PublicationServiceProtocolError,
     PublicationServiceUnavailable,
+    expected_single_raw_cid,
 )
 from civic_orchestrator.runtime import ContractStore
 
@@ -62,7 +64,8 @@ class PublicationServiceClientTests(unittest.TestCase):
             "operation": "publication.publish",
             "sha256": self.artifact["sha256"],
             "size_bytes": self.artifact["size_bytes"],
-            "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            "cid": expected_single_raw_cid(self.artifact["sha256"]),
+            "cid_profile": CID_PROFILE,
             "pinned": True,
             "verified": True,
         }
@@ -105,6 +108,41 @@ class PublicationServiceClientTests(unittest.TestCase):
             "publication-service-request-v1.schema.json",
             sent,
         )
+
+    def test_known_single_raw_cid_vector(self):
+        digest = hashlib.sha256(b"hello civic").hexdigest()
+        self.assertEqual(
+            expected_single_raw_cid(digest),
+            "bafkreibqfrpsjusanrs6tthjrxvgutdlldbwtjr5zer2uvzfkfj3xsnh5e",
+        )
+
+    def test_result_cid_must_match_submitted_artifact(self):
+        result = self.success_result()
+        result["cid"] = "bafkreiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+        with patch(
+            "civic_orchestrator.publication.urlopen",
+            return_value=FakeResponse(200, self.encoded(result)),
+        ):
+            with self.assertRaisesRegex(
+                PublicationServiceProtocolError,
+                "CID that does not match",
+            ):
+                self.client.publish(self.workflow_id, self.artifact)
+
+    def test_result_cid_profile_must_match_frozen_profile(self):
+        result = self.success_result()
+        result["cid_profile"] = "other-profile"
+
+        with patch(
+            "civic_orchestrator.publication.urlopen",
+            return_value=FakeResponse(200, self.encoded(result)),
+        ):
+            with self.assertRaisesRegex(
+                PublicationServiceProtocolError,
+                "invalid publication service result",
+            ):
+                self.client.publish(self.workflow_id, self.artifact)
 
     def test_service_failure_is_validated_and_preserved(self):
         failure = {

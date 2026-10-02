@@ -196,3 +196,22 @@ registry:       /etc/civic-orchestrator/participants-v1.json
 The participant ID is a stable Civic provenance identifier and is not derived from the Unix username or UID.
 
 Initial registry creation produced `root:root 0600`. Because the production broker service runs as the non-root `civic-usermin-broker` account, deployment must grant that service read access while retaining root ownership and prohibiting group/world write; the intended live mode is therefore `root:civic-usermin-broker 0640`.
+
+
+### Usermin participant registry permissions confirmed — 2026-10-02
+
+Confirmed on `witness-hubzilla` after correcting the initial root-only mode:
+
+```text
+/etc/civic-orchestrator/participants-v1.json
+owner: root
+group: civic-usermin-broker
+mode:  0640
+```
+
+The non-root `civic-usermin-broker` account successfully read the registry. The active mapping at that point was:
+
+```text
+sase25sep26a / uid 1002
+  -> participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
+```

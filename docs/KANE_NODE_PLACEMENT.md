@@ -15,8 +15,9 @@ The independent-operator rule remains: another county may place the same capabil
 | Civic Orchestrator | `srv-b` CT105 `civic-orchestrator` | keep isolated |
 | Kane Fabric geographic authority | `srv-b` CT102 `kane-fabric` | retain existing |
 | Secure browser origin / Wiregate | `srv-b` CT103 `kane-wiregate` | retain existing |
-| Gitea source/revision authority | `srv-b` CT104 `civic-gitea` | retain existing |
-| Publication / IPFS backend | new Trixie-based CT on the OVH Proxmox 9 host, **not `srv-b`** | create after contract gate; replace old node |
+| Gitea source/revision authority | `srv-b` CT104 `civic-gitea` | retain existing; use for suitable document generations/revisions |
+| Publication/document catalog | existing PostgreSQL service available to the Orchestrator | structured catalog only; not artifact-byte custody |
+| Publication / IPFS backend | isolated Trixie-based CT on the OVH Proxmox 9 host, **not `srv-b`** | deployed validation-only; Kubo side effects remain disabled |
 | RAG state / retrieval / indexes | new isolated stateful service node on `srv-b` | create after contract gate |
 | Model inference | existing `annales` inference service/container | retain separate |
 | Firmware signing authority | `annales` LXD `firmware-authority` software signing authority | retain protected boundary; hardware backing optional, not required |
@@ -110,17 +111,47 @@ Existing `srv-b` CT104 `civic-gitea`.
 
 Retain.
 
-The orchestrator may request exact repository/commit/path content and may later return publication records or controlled metadata, but Gitea remains editable source/revision truth.
+The orchestrator may request exact repository/commit/path content, relate managed document generations to exact revisions, and return publication records or controlled metadata, but Gitea remains editable source/revision truth.
+
+Gitea is not the universal participant filesystem. The structured publication/document catalog may relate a logical document generation to a Gitea commit without making the Git path the universal Civic document identity.
 
 ### Reason
 
 Git authority and workflow authority are different concerns. Gitea also has its own intentional outbound-mail exception and should not be folded into the generic CT105 network policy.
 
+
+## 4A. Publication/document catalog
+
+### Placement
+
+Use the existing PostgreSQL service available to the Orchestrator for the structured participant publication/document catalog.
+
+The catalog may hold:
+
+- participant/publication associations;
+- artifact metadata;
+- POSIX-like logical paths;
+- document and generation identifiers;
+- timestamps;
+- Gitea revision references;
+- IPFS publication references;
+- current Civic-controlled pin/lifecycle state.
+
+It must not become the artifact-byte store merely because it contains metadata about those artifacts.
+
+Existing CT105 workflow/audit persistence may remain separate where that boundary is operationally useful.
+
+### Reason
+
+Structured catalog state and immutable artifact custody are different responsibilities. PostgreSQL is appropriate for relationships, paths, timestamps, and lifecycle state; Gitea remains revision authority where selected, and IPFS remains publication-byte custody.
+
 ## 5. Publication / IPFS backend
 
 ### Placement
 
-Create a **new isolated Trixie-based CT on the OVH Proxmox 9 host** after the publication contract gate is frozen. The publication/IPFS backend is explicitly **not hosted on `srv-b`**.
+The isolated Trixie-based publication CT has been deployed on the OVH Proxmox 9 host. The publication/IPFS backend is explicitly **not hosted on `srv-b`**.
+
+The current service is validation-only. Kubo publication and swarm participation remain disabled until the participant trust and first-side-effect gates are accepted.
 
 This placement is a Kane reference-deployment decision. Proxmox 9, Debian Trixie, OVH, the eventual CT number, and the eventual hostname are not part of the portable Civic Infrastructure contract.
 
@@ -134,7 +165,7 @@ publication service
   no participant-facing shell
 ```
 
-No CT number or hostname is assigned by this document.
+CT number and hostname remain deployment locators rather than public Civic identity and are intentionally not made part of this portable contract document.
 
 ### Do not place in CT105
 
@@ -151,13 +182,12 @@ The existing `witness-ipfs` node is **retired from the target architecture**. It
 
 Migration rule:
 
-1. build the new OVH publication/IPFS CT;
-2. initialize new publication state under the frozen `publication.*` contract;
-3. replicate or re-pin only the content that is explicitly required;
-4. verify required CIDs/content identities from the new node;
-5. switch orchestrated publication to the new service;
-6. shut down the old `witness-ipfs` node;
-7. retain only the evidence needed to reconstruct the migration decision.
+1. initialize new publication state under the bounded `publication.*` contract;
+2. replicate or re-pin only the content that is explicitly required;
+3. verify required CIDs/content identities from the new node;
+4. enable real orchestrated publication only after the participant trust gate;
+5. shut down the old `witness-ipfs` node after required migration evidence is complete;
+6. retain only the evidence needed to reconstruct the migration decision.
 
 The old node must not remain an accidental parallel authority after cutover.
 
@@ -298,17 +328,16 @@ It does not become the signing authority merely because it creates firmware bina
 
 Separating build execution from protected release signing is a valuable supply-chain boundary and is already established in Kane Fabric.
 
-## New-node count implied by this decision
+## Remaining new-node count implied by this decision
 
-The current architecture requires **three new service nodes beyond CT105**, unless later audits justify safe reuse:
+The publication service node has now been deployed in validation-only mode.
 
-1. publication / IPFS service — new Trixie CT on the OVH Proxmox 9 host, not `srv-b`;
-2. RAG state / retrieval service;
-3. ESP32-S3 management / synchronization service.
+The current architecture still anticipates **two additional new service nodes beyond the already deployed CT105/publication stack**, unless later audits justify safe reuse:
 
-No node should be created yet solely from this count.
+1. RAG state / retrieval service;
+2. ESP32-S3 management / synchronization service.
 
-Each is gated by its orchestrator-facing contract and resource/trust specification.
+Neither should be created solely from this count. Each remains gated by its Orchestrator-facing contract and resource/trust specification.
 
 ## Existing Kane reference topology
 
@@ -326,8 +355,9 @@ srv-b
        +---- CT102 kane-fabric -------- geographic authority
        +---- CT103 kane-wiregate ------ secure browser origin
        +---- CT104 civic-gitea -------- source/revision authority
+       +---- PostgreSQL catalog -------- publication/document metadata
        +---- publication client path ---+---------------------------> OVH Proxmox 9
-       |                                  `-- NEW Trixie CT: publication/IPFS
+       |                                  `-- publication/IPFS CT (validation-only; Kubo disabled)
        +---- NEW retrieval ------------ RAG/index/private state
        +---- NEW edge-management ------ ESP32 lifecycle/sync
        |

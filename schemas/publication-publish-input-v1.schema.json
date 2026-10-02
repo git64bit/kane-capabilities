@@ -10,11 +10,6 @@
   "properties": {
     "artifact": {
       "$ref": "urn:civic-orchestrator:schema:publication-artifact:v1"
-    },
-    "label": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 200
     }
   }
 }

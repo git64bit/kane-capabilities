@@ -9,9 +9,9 @@ It is neither the universal datastore nor the universal authority.
 ```text
 Interaction surfaces                  Civic Orchestrator                 Service / trust plane
 
-Usermin CLI/TUI -----------+
+Usermin thin publication --+
 Hubzilla addon ------------+
-Kane Fabric browser -------+------> contract validation -----------> Kane Fabric authority
+Kane Fabric heavy client --+------> contract validation -----------> Kane Fabric authority
 Gitea integration ---------+        authorization                  -> IPFS/Kubo
 mail-driven adapter -------+        workflow transitions           -> RAG/retrieval
 future clients ------------+        routing                        -> annales inference
@@ -42,9 +42,9 @@ Authority: `ORCHESTRATOR_SCOPE.md`.
 
 Examples:
 
-- Usermin retains Unix account and shell behavior.
-- Hubzilla retains channels, posts, comments, federation, and addon UI.
-- Kane Fabric retains browser-side artifact verification, map composition, rendering, inspection, and source-neutral acquisition logic.
+- Usermin retains Unix account, quota-bounded working storage, mailbox, terminal, and the thin file-publication UI.
+- Hubzilla retains channels, posts, comments, federation, visible image handling, and addon UI; the Civic role does not include arbitrary document storage.
+- Kane Fabric retains browser-side artifact verification, map composition, rendering, inspection, source-neutral acquisition logic, and may provide the heavy publication/document-management client.
 - Gitea retains Git repositories, commits, revisions, and editable source history.
 
 ### The orchestrator owns
@@ -57,7 +57,8 @@ Examples:
 - audit;
 - receipts;
 - idempotency and replay protection where required;
-- backend-independent result semantics.
+- backend-independent result semantics;
+- the bounded participant publication/document catalog semantics, including publication provenance, logical document identity, generation relationships, and lifecycle state.
 
 ### Specialized services retain
 
@@ -106,13 +107,31 @@ compromise of orchestrator != possession of signing key
 
 The orchestrator stores only state required to coordinate workflows and prove their history. It must not silently become the exclusive custodian of:
 
-- participant publications;
+- participant artifact bytes or working files;
 - county geographic source truth;
 - Git source truth;
 - private RAG corpus data;
 - firmware signing keys;
 - Hubzilla social content;
 - Portal home directories or mailboxes.
+
+The Orchestrator may own bounded structured metadata about participant publications and managed documents without owning the artifact bytes themselves.
+
+
+## Publication and document planes
+
+Publication and document management are related but not identical.
+
+`publication.publish` is intentionally minimal: an authenticated participant publishes exact bytes and the infrastructure records the resulting provenance, integrity metadata, workflow evidence, and CID when successful. Publication does not require a declared purpose, retention duration, version relationship, logical path, or future intent.
+
+Later management may organize publications into participant-controlled logical documents and generations. POSIX-like paths are catalog semantics rather than proof of physical filesystem placement. The Kane reference deployment may use PostgreSQL for structured catalog state and Gitea for suitable revision history while published bytes remain with the publication/IPFS service and working files remain with their owning storage surface.
+
+A richer client such as Kane Fabric may expose the complete catalog and lifecycle controls without receiving a different storage or authorization authority.
+
+Authority:
+
+- `PUBLICATION_DOCUMENT_MODEL.md`;
+- `INTERACTION_STORAGE_BOUNDARIES.md`.
 
 ## Initial execution model
 

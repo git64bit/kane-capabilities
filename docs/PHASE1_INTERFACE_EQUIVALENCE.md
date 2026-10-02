@@ -40,6 +40,8 @@ It proves only that the Orchestrator keeps Civic operation semantics independent
 
 It does **not** prove that real Usermin, Hubzilla, or Kane Fabric adapters behave equivalently. Those adapters do not yet exist; their actual cross-surface conformance remains Phase 3 work.
 
+It also does not require every production surface to expose the same file-ingress UI. The accepted storage/client model allows Usermin to be the thin quota-bounded file-publication surface, Kane Fabric to provide heavy publication/document management, and Hubzilla to remain a social/visible-image surface. Equivalence applies when two approved clients invoke the same Civic operation; it is not a requirement that every client expose every operation.
+
 ## Run
 
 On CT105:

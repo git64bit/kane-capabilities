@@ -193,91 +193,174 @@ Phase 1 is now closed. Further work should prioritize one real bounded operation
 
 ## Phase 2 — Service and trust node architecture
 
-Do not begin broad backend integration until Phase 1 contracts are stable enough to reveal actual capability boundaries.
+**Status:** ACCEPTED FOR PUBLICATION VALIDATION PATH; broader service architecture continues incrementally.
 
-Inventory each required service using the node-design gates in `docs/NODE_DESIGN_GATES.md`. The current Kane reference placement is recorded in `docs/KANE_NODE_PLACEMENT.md`.
+Phase 2 selected `publication.publish` as the first bounded external operation and established the publication-service boundary before enabling real IPFS side effects.
 
-For every capability determine:
+Accepted on 2026-10-01:
 
-- state owner;
-- trust level;
-- secret/private-key ownership;
-- network exposure;
-- availability requirement;
-- storage requirement;
-- recovery model;
-- whether co-location is permitted;
-- exact orchestrator-facing interface.
+- isolated publication-service boundary;
+- bounded HTTP/JSON service contract;
+- exact byte-integrity checks;
+- deterministic CID profile;
+- private production route from CT105 to the publication service;
+- `publication.publish` activated in the Orchestrator registry;
+- real validation-only workflow with persisted authorization, audit, receipt, and expected `service-unavailable` result;
+- Kubo and swarm side effects remain disabled.
 
-Expected service classes include:
+Inventory of later services continues under `docs/NODE_DESIGN_GATES.md` and `docs/KANE_NODE_PLACEMENT.md`.
 
-- Kane Fabric geographic authority/runtime;
-- administrative/browser secure origin and Wiregate;
-- IPFS/Kubo publication service;
-- Gitea source/revision authority;
-- RAG state/retrieval/index service;
-- inference service on `annales`;
-- firmware signing authority;
-- ESP32-S3 management/synchronization service;
-- future replicated/distribution services.
+The current publication/document design also fixes these state roles:
 
-### Phase 2 acceptance
+- Usermin/Portal owns participant working files and quota;
+- Hubzilla remains a social/visible-image surface, not arbitrary document storage;
+- PostgreSQL is the intended structured publication/document catalog for the Kane reference deployment;
+- Gitea is revision authority where Git is the selected revision mechanism;
+- IPFS owns immutable publication bytes and Civic-controlled pin state;
+- CT105 owns publication/document catalog semantics, workflow, provenance, authorization, audit, and receipts without becoming universal byte custody.
+
+Authority:
+
+- `docs/PHASE2_PUBLICATION_SERVICE_BOUNDARY.md`;
+- `docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md`;
+- `docs/PUBLICATION_DOCUMENT_MODEL.md`;
+- `docs/INTERACTION_STORAGE_BOUNDARIES.md`.
+
+### Phase 2 acceptance rule
 
 Every additional node exists because of an explicit trust, state, network, failure-domain, or lifecycle requirement—not because a technology normally runs on its own server.
 
 ---
 
-## Phase 3 — Interaction adapters
+## Phase 3 — Interaction adapters and participant publication catalog
 
-Connect human-facing and service-facing surfaces to the stable orchestrator contracts.
+**Status:** ACTIVE.
 
-### Usermin
+Connect human-facing and service-facing surfaces to the stable Orchestrator contracts without giving any client an alternate storage or authorization authority.
 
-Provide bounded CLI/TUI operations suitable for shell and curses-style forms. Unix identity, home directory, mailbox, quota, and local preferences remain Portal responsibilities.
+### Usermin — thin publication client
+
+The first participant action is deliberately:
+
+```text
+Choose file
+Publish
+```
+
+Usermin retains Unix identity, home directory, mailbox, quota, terminal, and ordinary working-file behavior.
+
+The publication form does not ask for:
+
+- label;
+- purpose;
+- retention duration;
+- logical document path;
+- pin duration;
+- supersession;
+- future-version intent.
+
+Production discovery of stock Usermin Custom Commands is complete. U-001 is accepted, including direct proof that AF_UNIX `SO_PEERCRED` returns the real participant UID/GID.
+
+Next gates:
+
+- **U-002:** local peer-credential broker;
+- **U-003:** authenticated broker-to-Orchestrator transport;
+- **U-004:** validation-only end to end through the real Usermin Custom Command.
+
+### Publication/document catalog
+
+Persist the distinction among:
+
+- artifact — exact bytes/content identity;
+- publication — immutable participant-linked publication event;
+- document — participant-managed logical object;
+- generation — one managed document state;
+- lifecycle state — explicit later pin/unpin/retire and management actions.
+
+The same CID may have multiple publication records.
+
+Do not infer document/version/supersession relationships from filenames, chronology, or content similarity.
+
+Use PostgreSQL for structured catalog state in the Kane deployment. POSIX-like paths are logical catalog paths, not proof of physical filesystem placement.
+
+A future `document.*` namespace may be admitted only after its contract is frozen.
 
 ### Hubzilla
 
-Provide a thin addon/client for authenticated operation requests, workflow/status display, returned CIDs/receipts/results, and selected Civic actions. Hubzilla remains the discussion/channel surface.
+Keep Hubzilla as the discussion/channel/social-evidence surface.
 
-### Kane Fabric
+Reference policy:
 
-Integrate orchestrated operations around the existing browser-native verification, map composition, administrative descriptors, participant publications, and interaction model. Do not move browser-native verification/rendering into CT105.
+- visible image upload may remain available where required;
+- general arbitrary-file storage is disabled;
+- the addon may display or manage publication records through bounded Orchestrator operations;
+- routine moderation must not depend on operators opening arbitrary participant files.
+
+### Kane Fabric — heavy client
+
+Kane Fabric is the primary full-featured online and reduced-offline management client.
+
+It may expose:
+
+- participant publication history;
+- file type/size/timestamps;
+- SHA-256/CID/verification;
+- logical paths;
+- document generations;
+- Gitea revision references;
+- workflow/receipt evidence;
+- later pin/unpin/retire and explicit relationship management.
+
+Its richer UI does not grant different storage authority.
 
 ### Gitea
 
-Integrate exact repo/commit/path artifact references and controlled callbacks/events while preserving Gitea as editable source/revision truth.
+Integrate exact repo/commit/path references and controlled callbacks/events while preserving Gitea as editable revision truth where Git is appropriate.
+
+Gitea does not become the universal participant filesystem or universal Civic document identity.
 
 ### Phase 3 acceptance
 
-The same operation semantics are available through multiple interfaces without duplicating backend workflow logic.
+The same Civic records and operation semantics are available through multiple interfaces without duplicating backend workflow logic or creating competing storage authorities.
 
 ---
 
-## Phase 4 — First real side-effect service
+## Phase 4 — First real IPFS side effect
 
-Choose one narrowly bounded service adapter as the first production capability.
+**Status:** GATED.
 
-The preferred candidate is publication because its authority can be tightly expressed:
+Enable Kubo publication only after the trusted participant-adapter route is accepted.
+
+The first real side-effect pattern remains:
 
 ```text
-exact approved bytes
-  -> content identity
+authenticated participant
+  -> exact bytes
+  -> authorized publication workflow
+  -> deterministic content identity
   -> publish/pin
-  -> verify
+  -> read-back verify
+  -> participant-linked publication record
   -> receipt
 ```
+
+Publication itself does not require purpose, retention duration, document organization, or version intent.
 
 Requirements:
 
 - exact input identity;
-- explicit authorization;
+- trusted participant identity;
+- authenticated adapter transport;
 - deterministic result contract;
 - idempotency;
-- audit record;
+- participant-linked publication record;
+- audit and receipt;
 - backend isolation;
-- fail-closed verification.
+- fail-closed verification;
+- conservative crash/reconciliation procedure before real side effects;
+- no claim that later unpinning globally deletes IPFS content.
 
-No second production capability is enabled until the first demonstrates the complete end-to-end control pattern.
+No second production side-effect capability is enabled until publication demonstrates the complete end-to-end control pattern.
 
 ---
 
@@ -444,10 +527,3 @@ side_effects=false                    PASS
 
 This correction does not change Civic contracts or Phase 1 architecture.
 
-## Phase 2 — Service and trust node architecture
-
-**Status:** ACTIVE.
-
-Phase 2 begins with the publication/IPFS service boundary because `publication.publish` remains the preferred first real end-to-end operation.
-
-The first Phase 2 task is architecture only: define authority, state ownership, failure domain, transport, and acceptance gates for the new publication node before assigning a CT number or installing Kubo.

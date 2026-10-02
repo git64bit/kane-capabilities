@@ -81,11 +81,13 @@ The fixture must be obviously synthetic while remaining structurally realistic.
 
 ### Step 3 — Submit Civic operation
 
-Use a normal client surface to submit a bounded operation such as:
+Use the normal thin publication surface to submit:
 
 ```text
 publication.publish
 ```
+
+The participant chooses the file. Purpose, retention, document path, version intent, and pin duration are not required publication inputs.
 
 During Phase 1 the result is the real stub result:
 
@@ -132,12 +134,14 @@ Show the same semantic operation from at least two interaction surfaces.
 Target progression:
 
 ```text
-Usermin TUI        -> publication.publish
-Kane Fabric browser -> publication.publish
-Hubzilla addon     -> publication.publish
+Usermin thin client   -> publication.publish
+Kane Fabric browser   -> publication.publish and publication/document management
+Hubzilla addon        -> publication status/management views where appropriate
 ```
 
-The caller/client metadata differs. The Civic operation and result contract do not.
+Cross-surface equivalence does not require every interface to provide arbitrary file ingress. Usermin remains the quota-bounded thin file-publication surface; Kane Fabric may provide the heavy management experience; Hubzilla remains the social/visible-image surface.
+
+Where two clients invoke the same Civic operation, caller/client metadata may differ while the Civic operation and result contract remain equivalent.
 
 ### Step 7 — Controlled failure
 

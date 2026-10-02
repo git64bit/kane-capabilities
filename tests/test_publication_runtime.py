@@ -100,7 +100,6 @@ class PublicationRuntimeTests(unittest.TestCase):
             "idempotency_key": "idem:publication-runtime-001",
             "input": {
                 "artifact": self.artifact,
-                "label": "test publication",
             },
         }
 

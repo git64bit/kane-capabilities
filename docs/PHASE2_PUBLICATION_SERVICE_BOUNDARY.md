@@ -2,9 +2,11 @@
 
 ## Status
 
-**DESIGN GATE — no service deployment yet**
+**VALIDATION-ONLY SERVICE DEPLOYED — first real IPFS side effect still gated**
 
-This document defines the minimum boundary for the first Phase 2 service node.
+This document defines the minimum boundary for the first Phase 2 publication service and records the accepted validation-only deployment state.
+
+The bounded publication service is reachable through the production Orchestrator route, but Kubo publication and swarm participation remain disabled.
 
 The first real end-to-end Civic operation remains:
 
@@ -51,7 +53,10 @@ CT105 owns:
 - workflow state;
 - authorization decision;
 - service-selection evidence;
-- Civic receipt/audit chain.
+- Civic receipt/audit chain;
+- the participant-linked publication record and its relationship to the exact artifact/service result.
+
+The structured publication/document catalog may use PostgreSQL in the Kane reference deployment. The publication node does not own participant document semantics.
 
 Git/Gitea remains source/revision authority where source artifacts originate there.
 
@@ -85,7 +90,9 @@ The first implementation may use Kubo internally, but Kubo remains behind the se
 
 ## Initial deployment decision
 
-Create a **new Debian Trixie unprivileged CT on the OVH Proxmox 9 host**. This node is explicitly **not** placed on `srv-b`.
+Use the isolated Debian Trixie publication CT on the OVH Proxmox 9 host. This node is explicitly **not** placed on `srv-b`.
+
+The service is deployed in validation-only mode. Enabling Kubo side effects is a later acceptance gate.
 
 The retired historical IPFS node is not part of the target architecture and should not become an authority source.
 
@@ -126,9 +133,9 @@ If later Civic distribution requires peer replication, swarm participation is a 
 
 ## Frozen first-operation contract
 
-The first implementation is deliberately limited to **inline artifacts of at most 1 MiB**.
+The current implementation is deliberately limited to **inline artifacts of at most 1 MiB**.
 
-This is sufficient for the first Civic publication targets such as policy text, manifests, attestations, and other small immutable records. It deliberately avoids introducing streaming uploads, object storage, repository-fetch semantics, or upload sessions before a concrete need exists.
+This is an implementation limit for the first bounded adapter path, not a statement about the eventual participant document model. It deliberately avoids introducing streaming uploads, object storage, repository-fetch semantics, or upload sessions before a concrete need exists.
 
 ### Public `publication.publish` input
 
@@ -140,14 +147,13 @@ artifact.size_bytes
 artifact.sha256
 artifact.encoding = base64
 artifact.content
-optional label
 ```
 
 Authority:
 
 `schemas/publication-publish-input-v1.schema.json`
 
-The label is descriptive only. It does not participate in content identity.
+The publication input intentionally contains no descriptive label, purpose, retention, path, version, or lifecycle metadata. Those concerns belong to later participant management, not the act of publishing exact bytes.
 
 ### CT105 -> publication-service request
 
@@ -240,6 +246,8 @@ CT105 owns Civic request replay and idempotency.
 
 The publication service does not require a second idempotency database for the first implementation.
 
+A repeated CID does not collapse publication provenance. Separate authorized workflows may produce distinct participant publication records even when the exact bytes resolve to the same CID.
+
 A retry of the same exact artifact is safe because:
 
 - the fixed content profile produces the same CID;
@@ -247,6 +255,15 @@ A retry of the same exact artifact is safe because:
 - the service repeats exact-byte verification before returning success.
 
 The same artifact may legitimately be published by different Civic workflows and resolve to the same CID.
+
+
+### Retention and pinning semantics
+
+The participant does not have to choose pin duration or retention intent when invoking `publication.publish`.
+
+The publication service follows the current deployment default for Civic-controlled pin state. A later heavy client may request explicit pin/unpin/retire lifecycle changes through bounded Civic operations once those contracts are frozen.
+
+Unpinning Civic-controlled infrastructure must never be represented as guaranteed global deletion from IPFS.
 
 ### Service-local persistence
 
@@ -277,18 +294,21 @@ The bounded publication service binds only to its private CT address. The initia
 
 TLS, service credentials, or stronger adapter authentication may be added when the production trust boundary requires them. They are not prerequisites for proving the first bounded operation on the isolated service network.
 
-## Pre-deployment gate status
+## Validation-only acceptance state
 
-The required design questions are now frozen:
+Accepted on 2026-10-01:
 
-1. publication request fields — **FROZEN**;
-2. exact byte-integrity rule — **FROZEN**;
-3. returned content identity/result — **FROZEN**;
-4. retry/idempotency ownership — **FROZEN: CT105**;
-5. bounded service failure classes — **FROZEN**;
-6. extra service-local database — **NO for first implementation**;
-7. private transport — **FROZEN: HTTP/JSON on private service network**.
+1. bounded publication request/result/failure contracts;
+2. exact byte-integrity validation;
+3. deterministic content-identity profile;
+4. CT105-owned replay/idempotency;
+5. bounded service failure classes;
+6. no extra service-local SQL database;
+7. private HTTP/JSON service transport;
+8. production Orchestrator routing to the validation-only backend;
+9. persisted workflow/audit/receipt evidence for the expected no-side-effect failure;
+10. Kubo and swarm side effects remain disabled.
 
-No additional capability namespace is introduced by this node.
+No additional capability namespace is introduced by the publication node.
 
-The next step may assign the new Trixie CT identity **on the OVH Proxmox 9 host** and deploy the publication service there without revisiting these decisions unless testing exposes a concrete defect. Do not provision this publication/IPFS CT on `srv-b`.
+Before real participant-facing publication, the remaining gates are the trusted interaction-adapter boundary, authenticated Orchestrator transport, and the first Kubo side-effect acceptance. The file-only Usermin surface is defined in `PHASE3_USERMIN_ADAPTER_BOUNDARY.md`; the broader publication/document lifecycle is defined in `PUBLICATION_DOCUMENT_MODEL.md`.

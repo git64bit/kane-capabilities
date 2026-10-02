@@ -156,4 +156,10 @@ Establish a trusted interaction-adapter boundary before exposing any participant
 
 For Usermin, the adapter must derive the participant identity from the authenticated Unix/Usermin execution context, use a fixed controlled client identity, and prevent participants from supplying arbitrary caller, client, or authentication-provenance assertions.
 
+The Usermin participant form is file-only: choose the file and publish. Purpose, retention, document path, version intent, and pin duration are later management concerns, not publication prerequisites.
+
+The successful participant workflow must also create a durable participant-linked publication record distinct from CID/content identity so identical bytes published by different participants remain separate provenance events.
+
 A raw TCP relay from the WireGuard mesh to the Orchestrator API is not sufficient for this gate.
+
+See `PHASE3_USERMIN_ADAPTER_BOUNDARY.md` and `PUBLICATION_DOCUMENT_MODEL.md`.

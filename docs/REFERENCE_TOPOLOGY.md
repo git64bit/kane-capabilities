@@ -13,12 +13,16 @@ The topology must remain portable to an independent deployment. Names such as `s
 Owns:
 
 - Unix participant account;
-- shell and TUI presentation;
-- home directory;
-- mailbox and quota;
-- local participant preferences.
+- shell and thin Custom Commands presentation;
+- home directory and ordinary participant working files;
+- mailbox;
+- decisive participant storage quota;
+- local participant preferences;
+- the thin file-publication surface.
 
-Does not own global workflow logic, publication authority, signing authority, geographic authority, or RAG policy.
+The publication surface should ask only for the file to publish. It does not collect purpose, retention duration, document relationships, or future-version intent.
+
+Does not own global workflow logic, publication authority, signing authority, geographic authority, document-catalog authority, or RAG policy.
 
 ### Hubzilla
 
@@ -28,9 +32,10 @@ Owns:
 - posts and discussion;
 - federation;
 - local UI;
+- visible image upload where enabled;
 - addon interaction behavior.
 
-The addon is a client of orchestrated capabilities.
+The Civic Infrastructure Hubzilla role excludes general arbitrary-file storage. An addon may display or manage publication records through bounded capabilities without turning Hubzilla into a participant document repository.
 
 ### Kane Fabric browser
 
@@ -46,6 +51,8 @@ Owns browser-native:
 
 It calls the orchestrator for server-side Civic operations but does not become a thin server-rendered frontend.
 
+Kane Fabric may also act as the heavy participant publication/document client: listing publications, logical paths, generations, revision references, verification evidence, and lifecycle controls while preserving the same underlying storage and authorization boundaries.
+
 ### Gitea
 
 Owns editable source and revision truth:
@@ -54,9 +61,10 @@ Owns editable source and revision truth:
 - commits;
 - exact source revisions;
 - review history;
-- approved source artifacts.
+- approved source artifacts;
+- revision history for participant-managed generations where Git is the selected mechanism.
 
-It does not become workflow authority.
+It does not become workflow authority or the universal participant filesystem.
 
 ## Layer 2 — Civic Orchestrator
 
@@ -70,7 +78,10 @@ The orchestrator owns:
 - provenance;
 - audit;
 - receipts;
-- idempotency and replay controls where required.
+- idempotency and replay controls where required;
+- bounded publication/document catalog semantics and provenance.
+
+The Orchestrator may use a structured store such as PostgreSQL for publication/document catalog state while leaving working bytes, Git revision bytes, and immutable publication bytes with their owning services.
 
 It must not become the universal datastore or universal cryptographic authority.
 
@@ -93,9 +104,30 @@ The orchestrator coordinates these capabilities but does not redefine geographic
 
 ### Publication service
 
-Owns the mechanics required to publish and retain exact approved artifacts, including IPFS/Kubo where selected.
+Owns the mechanics required to publish exact approved artifacts and maintain Civic-controlled pin state, including IPFS/Kubo where selected.
 
 It should accept exact content identities and bounded publication requests, not arbitrary RPC forwarding.
+
+It does not decide participant purpose, logical path, document/version relationships, or retention intent. Those facts either do not exist yet or belong to later participant management through the Orchestrator catalog.
+
+
+### Publication/document catalog
+
+The Orchestrator owns the bounded semantics of participant publication and managed-document metadata.
+
+The Kane reference deployment may use PostgreSQL for structured state such as:
+
+- participant/publication associations;
+- artifact metadata;
+- logical POSIX-like paths;
+- document identifiers;
+- generation relationships;
+- timestamps;
+- revision references;
+- publication references;
+- current Civic-controlled lifecycle state.
+
+The catalog is not itself the authoritative store for artifact bytes.
 
 ### RAG state/retrieval service
 

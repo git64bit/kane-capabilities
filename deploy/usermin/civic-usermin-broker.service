@@ -8,7 +8,6 @@ Type=simple
 User=civic-usermin-broker
 Group=civic-usermin-broker
 ExecStart=/opt/civic-usermin-broker/venv/bin/python -m civic_orchestrator.usermin_broker --participant-registry /etc/civic-orchestrator/participants-v1.json
-StandardInput=socket
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true

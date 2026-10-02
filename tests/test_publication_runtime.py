@@ -582,7 +582,8 @@ class PublicationRuntimeTests(unittest.TestCase):
             RuntimePaths(
                 repo_root=ROOT,
                 state_db=Path(self.tmp.name) / "no-client.sqlite3",
-            )
+            ),
+            publication_budget_policy=self.policy,
         )
         runtime.registry.operations["publication.publish"][
             "implementation"

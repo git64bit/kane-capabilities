@@ -498,3 +498,39 @@ netfilter-persistent:
 The identical DNAT rule was already live before persistence, so no firewall reload was required.
 
 This makes the accepted Usermin-to-CT105 Civic fabric route reboot-persistent using the existing `srv-b` network-control mechanism, with no Civic application daemon installed on the Proxmox host.
+
+
+### CT105 U-003 credential state confirmed — 2026-10-02
+
+Confirmed inside `srv-b` CT105 `civic-orchestrator`:
+
+```text
+civic-orchestrator.service:
+  ActiveState=active
+  SubState=running
+  MainPID=12520
+  NRestarts=0
+
+drop-ins:
+  20-publication-client.conf
+  30-authenticated-publication.conf
+
+/etc/civic-orchestrator/credentials/usermin-adapter.json:
+  owner=root
+  group=root
+  mode=0600
+  size=279 bytes
+  version=1
+  token length=64
+
+binding:
+  authenticated_by=adapter:usermin-broker
+  caller_authority=portal-participant-registry
+  client_id=usermin-broker
+  client_kind=service
+  subject_prefix=participant:
+```
+
+The participant-shell negative test already returned `401 adapter credential is required`, which proves the running Orchestrator is enforcing the configured adapter authentication boundary.
+
+At this checkpoint `civic-orchestrator-ingress.socket` was active but not enabled for boot persistence.

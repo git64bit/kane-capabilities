@@ -360,3 +360,24 @@ GET http://10.20.0.15:8045/healthz:
 ```
 
 This proves the CT105 private ingress relay reaches the existing loopback-only Orchestrator service. The Orchestrator itself remains bound to `127.0.0.1:8045`.
+
+
+### U-003 host-boundary correction — 2026-10-02
+
+The temporary repository proposal for a `systemd-socket-proxyd` application relay on the physical `srv-b` Proxmox host was rejected before live deployment and removed from the repository.
+
+No Civic relay daemon was installed on `srv-b`.
+
+The accepted boundary is:
+
+```text
+witness-hubzilla / 10.110.0.19
+    -> existing WireGuard fabric
+srv-b / 10.110.0.12
+    -> narrowly scoped host routing/firewall/NAT only
+CT105 / 10.20.0.15:8045
+    -> CT-local ingress relay
+127.0.0.1:8045 Civic Orchestrator
+```
+
+The virtualization host remains network/hypervisor substrate rather than an application host.

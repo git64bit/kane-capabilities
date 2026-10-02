@@ -136,6 +136,16 @@ The initial bounded policy will enforce at least:
 
 The numerical limits are deployment policy, not portable Civic contract constants. Rate/burst policy may be added later without changing the publication contract.
 
+The repository loads these limits from an integrity-protected deployment file supplied with `--publication-budget-policy`. The file is not a secret, but it is authorization policy and therefore must be an absolute-path regular file, owned by root in production, and not group/world writable. Version 1 has exactly three fields:
+
+```text
+version = 1
+max_publications = <non-negative deployment integer>
+max_publication_bytes = <non-negative deployment integer>
+```
+
+The portable repository defines no default values for either limit. Configuring a publication-service route without a publication budget policy is a startup configuration error.
+
 Budget accounting must use authoritative CT105 state and must remain correct across concurrent requests and crash/retry recovery. A check against completed publication rows alone is insufficient because more than one authorized workflow may be in flight before either completes.
 
 Therefore the initial implementation must reserve budget atomically with publication authorization:

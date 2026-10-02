@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from civic_orchestrator.publication_budget import PublicationBudgetPolicy
 from civic_orchestrator.server import (
     build_runtime,
     load_systemd_publication_bearer_token,
@@ -56,6 +57,10 @@ class PublicationCredentialLoaderTests(unittest.TestCase):
             state_db=self.credentials_dir / "state.sqlite3",
             publication_base_url="http://publication.test:8046",
             publication_bearer_token=token,
+            publication_budget_policy=PublicationBudgetPolicy(
+                max_publications=10,
+                max_publication_bytes=2_621_440,
+            ),
         )
 
         self.assertIsNotNone(runtime.publication_client)

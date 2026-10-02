@@ -6,6 +6,7 @@ import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
+from civic_orchestrator.publication_budget import PublicationBudgetPolicy
 from civic_orchestrator.runtime import (
     AuthenticatedAdapterBinding,
     CivicOrchestrator,
@@ -394,11 +395,27 @@ class ServerContractTests(unittest.TestCase):
         self.assertEqual(response["failure_class"], "invalid-contract")
         self.assertFalse(response["side_effects"])
 
+    def test_publication_base_url_requires_budget_policy(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "publication budget policy is required",
+        ):
+            build_runtime(
+                repo_root=ROOT,
+                state_db=Path(self.tmp.name) / "missing-budget.sqlite3",
+                publication_base_url="http://10.110.0.21:8046",
+            )
+
     def test_publication_base_url_builds_available_service_client(self):
+        policy = PublicationBudgetPolicy(
+            max_publications=10,
+            max_publication_bytes=2_621_440,
+        )
         runtime = build_runtime(
             repo_root=ROOT,
             state_db=Path(self.tmp.name) / "configured.sqlite3",
             publication_base_url="http://10.110.0.21:8046",
+            publication_budget_policy=policy,
         )
 
         self.assertIsNotNone(runtime.publication_client)
@@ -408,6 +425,7 @@ class ServerContractTests(unittest.TestCase):
         )
         publication = runtime.registry.lookup("publication.publish")
         self.assertEqual(publication["implementation"], "available")
+        self.assertIs(runtime.publication_budget_policy, policy)
 
 
 if __name__ == "__main__":

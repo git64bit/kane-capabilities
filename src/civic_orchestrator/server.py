@@ -10,6 +10,10 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from .publication import PublicationServiceClient
+from .publication_budget import (
+    PublicationBudgetPolicy,
+    load_publication_budget_policy,
+)
 from .runtime import (
     AuthenticatedAdapterBinding,
     CivicOrchestrator,
@@ -375,12 +379,20 @@ def build_runtime(
     state_db: Path,
     publication_base_url: str | None = None,
     publication_bearer_token: str | None = None,
+    publication_budget_policy: PublicationBudgetPolicy | None = None,
 ) -> CivicOrchestrator:
+    if publication_base_url and publication_budget_policy is None:
+        raise ValueError(
+            "publication budget policy is required when publication "
+            "service routing is configured"
+        )
+
     runtime = CivicOrchestrator(
         RuntimePaths(
             repo_root=repo_root,
             state_db=state_db,
-        )
+        ),
+        publication_budget_policy=publication_budget_policy,
     )
     if publication_base_url:
         runtime.publication_client = PublicationServiceClient(
@@ -399,6 +411,13 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8045)
     parser.add_argument("--publication-base-url")
     parser.add_argument(
+        "--publication-budget-policy",
+        help=(
+            "absolute path to the root-owned publication budget policy "
+            "JSON file"
+        ),
+    )
+    parser.add_argument(
         "--publication-credential-name",
         help=(
             "systemd credential name containing the CT105-to-publication "
@@ -414,6 +433,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    publication_budget_policy = None
+    if args.publication_budget_policy:
+        publication_budget_policy = load_publication_budget_policy(
+            Path(args.publication_budget_policy)
+        )
+
     publication_bearer_token = None
     if args.publication_credential_name:
         publication_bearer_token = load_systemd_publication_bearer_token(
@@ -425,6 +450,7 @@ def main() -> None:
         state_db=Path(args.state_db),
         publication_base_url=args.publication_base_url,
         publication_bearer_token=publication_bearer_token,
+        publication_budget_policy=publication_budget_policy,
     )
     Handler.runtime = runtime
     Handler.adapter_authenticator = None

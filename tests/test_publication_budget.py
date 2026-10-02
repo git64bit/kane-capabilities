@@ -1,3 +1,5 @@
+import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -5,6 +7,7 @@ from pathlib import Path
 from civic_orchestrator.publication_budget import (
     PublicationBudgetExceeded,
     PublicationBudgetPolicy,
+    load_publication_budget_policy,
 )
 from civic_orchestrator.runtime import StateStore
 
@@ -22,6 +25,84 @@ class PublicationBudgetPolicyTests(unittest.TestCase):
                 max_publication_bytes=True,
             )
 
+
+
+
+class PublicationBudgetConfigurationTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = (
+            Path(self.tmp.name).resolve() / "publication-budget-v1.json"
+        )
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write_policy(self, value, mode=0o644):
+        self.path.write_text(json.dumps(value), encoding="utf-8")
+        self.path.chmod(mode)
+
+    def valid_policy(self):
+        return {
+            "version": 1,
+            "max_publications": 25,
+            "max_publication_bytes": 5_000_000,
+        }
+
+    def load(self):
+        return load_publication_budget_policy(
+            self.path,
+            required_owner_uid=os.geteuid(),
+        )
+
+    def test_loads_exact_policy_fields(self):
+        self.write_policy(self.valid_policy())
+
+        policy = self.load()
+
+        self.assertEqual(policy.max_publications, 25)
+        self.assertEqual(policy.max_publication_bytes, 5_000_000)
+
+    def test_rejects_group_writable_policy(self):
+        self.write_policy(self.valid_policy(), mode=0o664)
+
+        with self.assertRaisesRegex(ValueError, "group/world writable"):
+            self.load()
+
+    def test_rejects_wrong_owner(self):
+        self.write_policy(self.valid_policy())
+
+        with self.assertRaisesRegex(ValueError, "invalid owner"):
+            load_publication_budget_policy(
+                self.path,
+                required_owner_uid=os.geteuid() + 1,
+            )
+
+    def test_rejects_extra_policy_fields(self):
+        value = self.valid_policy()
+        value["extra"] = "no"
+        self.write_policy(value)
+
+        with self.assertRaisesRegex(ValueError, "fields are invalid"):
+            self.load()
+
+    def test_rejects_relative_policy_path(self):
+        with self.assertRaisesRegex(ValueError, "must be absolute"):
+            load_publication_budget_policy(
+                Path("publication-budget-v1.json"),
+                required_owner_uid=os.geteuid(),
+            )
+
+    def test_rejects_symlink_policy_path(self):
+        self.write_policy(self.valid_policy())
+        link = self.path.parent / "budget-link.json"
+        link.symlink_to(self.path)
+
+        with self.assertRaisesRegex(ValueError, "cannot be opened"):
+            load_publication_budget_policy(
+                link,
+                required_owner_uid=os.geteuid(),
+            )
 
 class PublicationBudgetStateTests(unittest.TestCase):
     def setUp(self):

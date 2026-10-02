@@ -263,8 +263,8 @@ Production discovery of stock Usermin Custom Commands is complete. U-001 is acce
 
 Next gates:
 
-- **U-002:** local peer-credential broker receiving bytes, not privileged paths, and mapping Unix accounts to stable participant IDs;
-- **U-003:** authenticated broker-to-Orchestrator transport with server-side binding of client/authentication provenance and subject namespace;
+- **U-002:** repository implementation complete; deploy and accept the local peer-credential broker on the real Usermin host. It receives bytes, not privileged paths, maps Unix accounts to stable participant IDs, and has no remote publisher.
+- **U-003:** authenticated broker-to-Orchestrator transport with server-side binding of client/authentication provenance and subject namespace.
 - **U-004:** validation-only end to end through the real Usermin Custom Command.
 
 ### Publication/document catalog

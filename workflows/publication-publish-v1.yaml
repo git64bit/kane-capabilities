@@ -6,13 +6,13 @@ authorization_reason: Bounded exact-artifact publication accepted for the config
 service_capability: publication.publish
 
 steps:
-  - validate: publication-publish-input-v1
-  - authorize: publication-policy-v1
-  - transition: accepted
-  - call: publication.publish
-  - verify: publication-service-result-v1
-  - record: publication-audit-receipt
-  - return: result-envelope-v1
+  - "validate: publication-publish-input-v1"
+  - "authorize: publication-policy-v1"
+  - "transition: accepted"
+  - "call: publication.publish"
+  - "verify: publication-service-result-v1"
+  - "record: publication-audit-receipt"
+  - "return: result-envelope-v1"
 
 constraints:
   exact_artifact: true

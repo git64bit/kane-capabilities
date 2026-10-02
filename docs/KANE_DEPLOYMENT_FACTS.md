@@ -318,3 +318,25 @@ ICMP:
 ```
 
 This confirms that `witness-hubzilla` and `srv-b` already share the established witness/CPE WireGuard fabric `10.110.0.0/22`. U-003 does not require routing between the separate diagnostics `10.0.0.0/24` WireGuard fabric and the witness/CPE fabric.
+
+
+### CT105 U-003 private ingress units verified — 2026-10-02
+
+Confirmed inside `srv-b` CT105 `civic-orchestrator`:
+
+```text
+/etc/systemd/system/civic-orchestrator-ingress.socket
+/etc/systemd/system/civic-orchestrator-ingress.service
+```
+
+`systemd-analyze verify` completed with no output when both units were checked together.
+
+The intended relay boundary is:
+
+```text
+10.20.0.15:8045
+    -> systemd-socket-proxyd
+    -> 127.0.0.1:8045
+```
+
+The units had not yet been started at this checkpoint.

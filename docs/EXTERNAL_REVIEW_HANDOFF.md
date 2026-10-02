@@ -46,7 +46,7 @@ The current branch/release line incorporates or gates:
 - U-002 byte transfer rather than privileged broker path opening;
 - U-003 transport-bound adapter identity constraints;
 - CT105-to-publication-service authentication as a Phase 4 gate;
-- participant publication budget as a Phase 4 gate.
+- participant publication budgeting implemented in CT105 authorization state with atomic reservation/hold accounting, fail-closed deployment-policy loading, and live deployment values/acceptance still gated.
 
 ## Deliberate non-changes
 
@@ -78,7 +78,16 @@ Regression evidence at the `v0.1.0-alpha.3` checkpoint:
 73 tests on Python 3.13    PASS
 ```
 
-Subsequent cleanup commits add regression coverage. Treat the 73-test count as checkpoint evidence rather than the current test inventory; run the full Python 3.11/3.13 matrix before the next acceptance tag.
+Subsequent cleanup commits add regression coverage. Treat the 73-test count as checkpoint evidence rather than the current test inventory.
+
+Current post-checkpoint repository regression evidence:
+
+```text
+140 tests on Python 3.11    PASS
+140 tests on Python 3.13    PASS
+```
+
+This later test count is cleanup-branch evidence, not a replacement release claim for `v0.1.0-alpha.3`.
 
 ## Next review targets
 
@@ -90,7 +99,7 @@ Useful independent review targets now are:
 - adapter credential to caller/client binding;
 - stable participant-identity mapping;
 - publication-service authentication;
-- participant publication budgets;
+- participant publication budget deployment values, live policy installation, and acceptance behavior;
 - preservation of thin-client semantics through U-002 production acceptance and U-003 broker integration/production acceptance.
 
 The next implementation step should not reopen the file-only publication model unless new evidence demonstrates a concrete defect.

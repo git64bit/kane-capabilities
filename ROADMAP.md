@@ -355,7 +355,7 @@ Requirements:
 - deterministic result contract with explicit `cid_profile`;
 - CT105-independent CID calculation and comparison;
 - resumable/idempotent external workflows and startup reconciliation;
-- participant publication budget;
+- participant publication budget — repository implementation and regression coverage complete; Kane deployment values, CT105 policy installation, and live acceptance pending;
 - participant-linked publication record committed atomically with terminal workflow evidence;
 - audit and receipt;
 - backend isolation;

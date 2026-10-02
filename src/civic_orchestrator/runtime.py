@@ -1821,10 +1821,51 @@ class CivicOrchestrator:
                 request["input"]["artifact"],
             )
         except PublicationServiceFailure as exc:
+            if exc.retryable:
+                possible_effect = exc.failure_class in {
+                    "publication-failed",
+                    "verification-failed",
+                }
+                certainty = "unknown" if possible_effect else "known"
+                self.state.pause_external_operation(
+                    workflow_id=workflow_id,
+                    failure_class=exc.failure_class,
+                    message=exc.message,
+                    retryable=True,
+                    side_effects=possible_effect,
+                    side_effects_certainty=certainty,
+                    validate_contract=self.contracts.validate,
+                )
+                envelope_class = (
+                    "backend-unavailable"
+                    if exc.failure_class == "service-unavailable"
+                    else "internal"
+                )
+                return 503, self.failure(
+                    request_id,
+                    operation,
+                    envelope_class,
+                    exc.message,
+                    True,
+                    side_effects=possible_effect,
+                    detail={
+                        "workflow_id": workflow_id,
+                        "workflow_state": "waiting",
+                        "service_failure_class": exc.failure_class,
+                        "side_effects_certainty": certainty,
+                    },
+                )
+
             side_effects = exc.failure_class in {
                 "publication-failed",
                 "verification-failed",
             }
+            certainty = (
+                "known"
+                if exc.failure_class == "verification-failed"
+                or not side_effects
+                else "unknown"
+            )
             result = self.state.finish_external_operation(
                 request=request,
                 descriptor=descriptor,
@@ -1832,64 +1873,87 @@ class CivicOrchestrator:
                 receipt_id=receipt_id,
                 outcome="failed",
                 side_effects=side_effects,
+                side_effects_certainty=certainty,
                 detail={
                     "failure_class": exc.failure_class,
                     "message": exc.message,
-                    "retryable": exc.retryable,
+                    "retryable": False,
                 },
                 validate_contract=self.contracts.validate,
             )
             return 200, result
         except PublicationServiceUnavailable as exc:
-            result = self.state.finish_external_operation(
-                request=request,
-                descriptor=descriptor,
+            self.state.pause_external_operation(
                 workflow_id=workflow_id,
-                receipt_id=receipt_id,
-                outcome="failed",
+                failure_class="backend-unavailable",
+                message=str(exc),
+                retryable=True,
                 side_effects=True,
-                detail={
-                    "failure_class": "backend-unavailable",
-                    "message": str(exc)[:1000],
-                    "retryable": True,
-                },
+                side_effects_certainty="unknown",
                 validate_contract=self.contracts.validate,
             )
-            return 200, result
+            return 503, self.failure(
+                request_id,
+                operation,
+                "backend-unavailable",
+                str(exc)[:1000],
+                True,
+                side_effects=True,
+                detail={
+                    "workflow_id": workflow_id,
+                    "workflow_state": "waiting",
+                    "side_effects_certainty": "unknown",
+                },
+            )
         except PublicationServiceProtocolError as exc:
-            result = self.state.finish_external_operation(
-                request=request,
-                descriptor=descriptor,
+            self.state.pause_external_operation(
                 workflow_id=workflow_id,
-                receipt_id=receipt_id,
-                outcome="failed",
+                failure_class="internal",
+                message=str(exc),
+                retryable=True,
                 side_effects=True,
-                detail={
-                    "failure_class": "internal",
-                    "message": str(exc)[:1000],
-                    "retryable": False,
-                },
+                side_effects_certainty="unknown",
                 validate_contract=self.contracts.validate,
             )
-            return 200, result
+            return 502, self.failure(
+                request_id,
+                operation,
+                "internal",
+                str(exc)[:1000],
+                True,
+                side_effects=True,
+                detail={
+                    "workflow_id": workflow_id,
+                    "workflow_state": "waiting",
+                    "side_effects_certainty": "unknown",
+                },
+            )
         except Exception as exc:
-            result = self.state.finish_external_operation(
-                request=request,
-                descriptor=descriptor,
+            message = (
+                f"unexpected publication adapter failure: {exc}"
+            )[:1000]
+            self.state.pause_external_operation(
                 workflow_id=workflow_id,
-                receipt_id=receipt_id,
-                outcome="failed",
+                failure_class="internal",
+                message=message,
+                retryable=False,
                 side_effects=True,
-                detail={
-                    "failure_class": "internal",
-                    "message": (
-                        f"unexpected publication adapter failure: {exc}"
-                    )[:1000],
-                    "retryable": False,
-                },
+                side_effects_certainty="unknown",
                 validate_contract=self.contracts.validate,
             )
-            return 200, result
+            return 500, self.failure(
+                request_id,
+                operation,
+                "internal",
+                message,
+                False,
+                side_effects=True,
+                detail={
+                    "workflow_id": workflow_id,
+                    "workflow_state": "waiting",
+                    "side_effects_certainty": "unknown",
+                },
+            )
 
         result = self.state.finish_external_operation(
             request=request,
@@ -1898,6 +1962,7 @@ class CivicOrchestrator:
             receipt_id=receipt_id,
             outcome="completed",
             side_effects=True,
+            side_effects_certainty="known",
             detail={
                 "sha256": service_result["sha256"],
                 "size_bytes": service_result["size_bytes"],
@@ -1908,6 +1973,8 @@ class CivicOrchestrator:
             },
             validate_contract=self.contracts.validate,
         )
+        return 200, result
+
         return 200, result
 
     def workflow_evidence(

@@ -622,3 +622,19 @@ systemd-analyze verify:
 ```
 
 The broker had not yet been restarted at this checkpoint.
+
+
+### witness-hubzilla U-003 broker restart accepted — 2026-10-02
+
+Confirmed after applying the U-003 remote-dispatch overlay:
+
+```text
+civic-usermin-broker.service
+  MainPID=725079
+  Result=success
+  NRestarts=0
+  ActiveState=active
+  SubState=running
+```
+
+Journal for the restart window showed a clean stop and start with no credential, network, or startup errors. The broker is now running with the U-003 Orchestrator endpoint and systemd-loaded adapter credential.

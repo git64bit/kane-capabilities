@@ -843,3 +843,24 @@ running service before daemon-reload:
 ```
 
 The authentication overlay is staged on disk and has not yet changed the running publication service.
+
+
+### CT106 authentication overlay did not enter effective unit — 2026-10-02
+
+After `systemctl daemon-reload` inside CT106:
+
+```text
+DropInPaths:
+  10-listen.conf
+  20-authentication.conf
+
+running service:
+  MainPID=293
+  NRestarts=0
+  ActiveState=active
+  SubState=running
+```
+
+However, `systemctl cat civic-publication.service` showed only the path header for `20-authentication.conf` and no effective contents from that file. The effective ExecStart remained the unauthenticated `10-listen.conf` command, with no visible `LoadCredential` or `--credential-name`.
+
+No restart was performed. CT106 is therefore not yet restart-ready for authenticated publication.

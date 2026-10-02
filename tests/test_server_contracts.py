@@ -362,6 +362,7 @@ class ServerContractTests(unittest.TestCase):
             "operation": "publication.publish",
             "caller": {
                 "subject": "participant:test",
+                "authority": "test-authority",
                 "authenticated_by": "test-auth",
             },
             "client": {

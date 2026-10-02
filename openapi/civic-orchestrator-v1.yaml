@@ -8,9 +8,17 @@ info:
 servers:
   - url: https://orchestrator.invalid
     description: Placeholder only; deployment locators are not Civic identity.
+components:
+  securitySchemes:
+    adapterBearer:
+      type: http
+      scheme: bearer
+      description: Protected deployment adapter credential bound server-side to fixed client/authentication provenance.
 paths:
   /v1/operations:
     post:
+      security:
+        - adapterBearer: []
       operationId: submitCivicOperation
       summary: Submit one bounded Civic operation
       requestBody:
@@ -28,6 +36,12 @@ paths:
                 $ref: ../schemas/result-envelope-v1.schema.json
         "400":
           description: Contract or request failure
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/failure-envelope-v1.schema.json
+        "401":
+          description: Missing or invalid authenticated adapter credential
           content:
             application/json:
               schema:
@@ -84,6 +98,8 @@ paths:
 
   /v1/workflows/{workflow_id}:
     get:
+      security:
+        - adapterBearer: []
       operationId: getWorkflowEvidence
       summary: Retrieve read-only local workflow, audit, and receipt evidence
       parameters:
@@ -100,6 +116,12 @@ paths:
             application/json:
               schema:
                 $ref: ../schemas/workflow-evidence-v1.schema.json
+        "401":
+          description: Missing or invalid authenticated adapter credential
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/failure-envelope-v1.schema.json
         "404":
           description: Workflow not found
           content:

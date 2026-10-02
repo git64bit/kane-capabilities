@@ -76,7 +76,7 @@ class ServerContractTests(unittest.TestCase):
             timeout=5,
         )
         request_headers = dict(headers or {})
-        if authenticate and method == "POST":
+        if authenticate:
             request_headers.setdefault(
                 "Authorization",
                 f"Bearer {self.adapter_token}",
@@ -291,6 +291,32 @@ class ServerContractTests(unittest.TestCase):
         self.assertEqual(payload["failure_class"], "internal")
         self.assertFalse(payload["side_effects"])
 
+
+    def test_workflow_evidence_requires_adapter_credential(self):
+        request = {
+            "contract_version": 1,
+            "request_id": "req:workflow-auth-boundary",
+            "operation": "repository.fetch_exact",
+            "caller": {
+                "subject": "participant:test",
+                "authenticated_by": "test-auth",
+            },
+            "client": {
+                "id": "test-client",
+                "kind": "test",
+            },
+            "submitted_at": "2026-10-01T08:09:00Z",
+            "input": {},
+        }
+        _, result = self.runtime.submit(request)
+
+        status, payload = self.request(
+            "GET",
+            f"/v1/workflows/{result['workflow_id']}",
+            authenticate=False,
+        )
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["failure_class"], "unauthorized")
 
     def test_percent_encoded_workflow_id_is_resolved(self):
         request = {

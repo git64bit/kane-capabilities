@@ -247,6 +247,29 @@ class Handler(BaseHTTPRequestHandler):
             ),
         )
 
+    def _authenticate_adapter(self) -> AuthenticatedAdapterBinding | None:
+        if self.adapter_authenticator is None:
+            self._operation_failure(
+                503,
+                "backend-unavailable",
+                "authenticated adapter ingress is not configured",
+                retryable=False,
+            )
+            return None
+
+        try:
+            return self.adapter_authenticator.authenticate(
+                self.headers.get("Authorization")
+            )
+        except AdapterCredentialError as exc:
+            self._operation_failure(
+                401,
+                "unauthorized",
+                str(exc),
+                retryable=False,
+            )
+            return None
+
     def do_GET(self) -> None:
         path = urlparse(self.path).path
 
@@ -259,6 +282,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path.startswith("/v1/workflows/"):
+            if self._authenticate_adapter() is None:
+                return
             workflow_id = unquote(path[len("/v1/workflows/"):])
             if not workflow_id:
                 self._send_json(
@@ -299,26 +324,8 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
-        if self.adapter_authenticator is None:
-            self._operation_failure(
-                503,
-                "backend-unavailable",
-                "authenticated adapter ingress is not configured",
-                retryable=False,
-            )
-            return
-
-        try:
-            adapter_binding = self.adapter_authenticator.authenticate(
-                self.headers.get("Authorization")
-            )
-        except AdapterCredentialError as exc:
-            self._operation_failure(
-                401,
-                "unauthorized",
-                str(exc),
-                retryable=False,
-            )
+        adapter_binding = self._authenticate_adapter()
+        if adapter_binding is None:
             return
 
         try:

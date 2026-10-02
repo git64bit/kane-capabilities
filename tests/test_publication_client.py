@@ -116,6 +116,19 @@ class PublicationServiceClientTests(unittest.TestCase):
             "bafkreibqfrpsjusanrs6tthjrxvgutdlldbwtjr5zer2uvzfkfj3xsnh5e",
         )
 
+    def test_declared_sha256_must_match_submitted_bytes_before_network(self):
+        artifact = dict(self.artifact)
+        artifact["sha256"] = "0" * 64
+
+        with patch("civic_orchestrator.publication.urlopen") as mocked:
+            with self.assertRaisesRegex(
+                ValueError,
+                "bytes do not match declared sha256",
+            ):
+                self.client.publish(self.workflow_id, artifact)
+
+        mocked.assert_not_called()
+
     def test_result_cid_must_match_submitted_artifact(self):
         result = self.success_result()
         result["cid"] = "bafkreiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

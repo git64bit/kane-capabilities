@@ -13,6 +13,10 @@ from .usermin_adapter import (
     MAX_ARTIFACT_BYTES,
     ParticipantRegistry,
 )
+from .usermin_remote import (
+    OrchestratorPublisher,
+    load_systemd_adapter_credential,
+)
 
 
 _FRAME = struct.Struct("!I")
@@ -129,13 +133,47 @@ def main() -> None:
         "--participant-group",
         default="civic-participants",
     )
+    parser.add_argument(
+        "--orchestrator-base-url",
+        help=(
+            "Civic Orchestrator base URL. When omitted, the broker remains "
+            "validation-only and performs no remote dispatch."
+        ),
+    )
+    parser.add_argument(
+        "--adapter-credential-name",
+        help=(
+            "systemd credential name for authenticated Orchestrator ingress; "
+            "required only with --orchestrator-base-url"
+        ),
+    )
     args = parser.parse_args()
+
+    if bool(args.orchestrator_base_url) != bool(args.adapter_credential_name):
+        parser.error(
+            "--orchestrator-base-url and --adapter-credential-name "
+            "must be configured together"
+        )
 
     registry = ParticipantRegistry(
         args.participant_registry,
         participant_group=args.participant_group,
     )
-    adapter = LocalPublicationAdapter(registry)
+
+    publisher = None
+    if args.orchestrator_base_url:
+        credential = load_systemd_adapter_credential(
+            args.adapter_credential_name
+        )
+        publisher = OrchestratorPublisher(
+            args.orchestrator_base_url,
+            credential,
+        )
+
+    adapter = LocalPublicationAdapter(
+        registry,
+        publisher=publisher,
+    )
 
     listener = systemd_listener()
     with listener:

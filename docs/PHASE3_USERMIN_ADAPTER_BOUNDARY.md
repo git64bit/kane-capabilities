@@ -199,6 +199,12 @@ The broker must reject peers that:
 
 The broker receives bytes, not a privileged filesystem pathname.
 
+### Scale and concurrency boundary
+
+Thousands of lifetime Portal/Usermin participant accounts are compatible with the current stable-ID registry model; the registry is provisioning state, not one resident broker process per account. Ordinary logged-in Usermin sessions do not consume broker capacity unless they invoke `Publish Public File`.
+
+The current broker server loop processes one accepted AF_UNIX connection at a time. Therefore hundreds of concurrent Usermin sessions are not equivalent to hundreds of concurrent publication operations. Broad production rollout must not assume high concurrent publication throughput until the broker is either load-tested at the required rate or changed to a bounded concurrent connection model. This matters more once U-003 remote Orchestrator dispatch adds network latency.
+
 ### Participant provisioning invariant
 
 New Portal/Usermin participant accounts must be provisioned automatically rather than by hand-editing `participants-v1.json`. The provisioning path must add the Unix account to `civic-participants` and allocate exactly one UUID-based stable Civic `participant_id`. Re-provisioning the same active Unix account is idempotent and returns the existing ID. Retired mappings remain tombstones and are not automatically reused.

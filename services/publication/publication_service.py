@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import hmac
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -12,6 +13,20 @@ from typing import Any
 HOST = "192.168.1.106"
 PORT = 8046
 MAX_ARTIFACT_BYTES = 262_144
+
+
+def bearer_authorized(
+    authorization_header: str | None,
+    expected_token: bytes | None,
+) -> bool:
+    if expected_token is None:
+        return False
+    if not isinstance(authorization_header, str):
+        return False
+    scheme, sep, token = authorization_header.partition(" ")
+    if sep != " " or scheme != "Bearer" or not token:
+        return False
+    return hmac.compare_digest(token.encode("utf-8"), expected_token)
 
 
 def json_bytes(value: dict[str, Any]) -> bytes:
@@ -110,6 +125,7 @@ def validate_request(value: Any) -> tuple[str, bytes, str, int]:
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "civic-publication/0"
+    bearer_token: bytes | None = None
 
     def log_message(self, fmt: str, *args: Any) -> None:
         super().log_message(fmt, *args)
@@ -154,6 +170,33 @@ class Handler(BaseHTTPRequestHandler):
                     "invalid-request",
                     "endpoint not found",
                     False,
+                ),
+            )
+            return
+
+        if self.bearer_token is None:
+            self.send_json(
+                503,
+                failure(
+                    "wf:invalid",
+                    "service-unavailable",
+                    "publication service authentication is not configured",
+                    True,
+                ),
+            )
+            return
+
+        if not bearer_authorized(
+            self.headers.get("Authorization"),
+            self.bearer_token,
+        ):
+            self.send_json(
+                401,
+                failure(
+                    "wf:invalid",
+                    "invalid-request",
+                    "publication service authentication failed",
+                    True,
                 ),
             )
             return

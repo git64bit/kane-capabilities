@@ -86,10 +86,19 @@ class PublicationServiceClient:
         base_url: str,
         validate_contract: ContractValidator,
         timeout_seconds: float = 5.0,
+        bearer_token: str | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.validate_contract = validate_contract
         self.timeout_seconds = timeout_seconds
+        if bearer_token is not None:
+            if (
+                len(bearer_token) < 32
+                or len(bearer_token) > 4096
+                or any(ch.isspace() for ch in bearer_token)
+            ):
+                raise ValueError("publication service bearer token is invalid")
+        self.bearer_token = bearer_token
 
     def publish(
         self,
@@ -108,6 +117,13 @@ class PublicationServiceClient:
         )
         verified_sha256 = validate_artifact_integrity(artifact)
 
+        if self.bearer_token is None:
+            raise PublicationServiceUnavailable(
+                "publication service credential is not configured",
+                side_effects_possible=False,
+                side_effects_certainty="known",
+            )
+
         body = json.dumps(
             request_value,
             sort_keys=True,
@@ -121,6 +137,7 @@ class PublicationServiceClient:
             data=body,
             headers={
                 "Accept": "application/json",
+                "Authorization": f"Bearer {self.bearer_token}",
                 "Content-Type": "application/json",
             },
             method="POST",
@@ -132,6 +149,12 @@ class PublicationServiceClient:
                 raw = response.read()
         except HTTPError as exc:
             raw = exc.read()
+            if exc.code in {401, 403}:
+                raise PublicationServiceUnavailable(
+                    "publication service authentication failed",
+                    side_effects_possible=False,
+                    side_effects_certainty="known",
+                ) from exc
             self._raise_service_failure(
                 status_code=exc.code,
                 raw=raw,

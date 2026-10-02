@@ -1888,8 +1888,8 @@ class CivicOrchestrator:
                 failure_class="backend-unavailable",
                 message=str(exc),
                 retryable=True,
-                side_effects=True,
-                side_effects_certainty="unknown",
+                side_effects=exc.side_effects_possible,
+                side_effects_certainty=exc.side_effects_certainty,
                 validate_contract=self.contracts.validate,
             )
             return 503, self.failure(
@@ -1898,11 +1898,11 @@ class CivicOrchestrator:
                 "backend-unavailable",
                 str(exc)[:1000],
                 True,
-                side_effects=True,
+                side_effects=exc.side_effects_possible,
                 detail={
                     "workflow_id": workflow_id,
                     "workflow_state": "waiting",
-                    "side_effects_certainty": "unknown",
+                    "side_effects_certainty": exc.side_effects_certainty,
                 },
             )
         except PublicationServiceProtocolError as exc:

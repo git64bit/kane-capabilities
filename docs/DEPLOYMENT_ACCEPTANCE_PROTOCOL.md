@@ -38,6 +38,18 @@ Do not rely on shell prompt appearance alone.
 
 ## Read-only discovery before writes
 
+Read-only discovery commands must be safe to run interactively on a production root shell.
+
+Rules for discovery blocks:
+
+- keep them short enough that their output and failure point are obvious;
+- do not use `set -e` or `set -o pipefail` across a multi-probe audit block;
+- an optional probe that may legitimately return nonzero must be isolated and explicitly tolerated;
+- a failed discovery probe must not terminate the operator shell;
+- prefer one subsystem at a time rather than a long omnibus audit;
+- do not use a probe merely to discover an executable path when a safer direct file/read-only query exists;
+- host assertions remain mandatory, but discovery aborts should return control to the operator shell rather than closing it.
+
 Before modifying a service, capture the state that controls both current operation and restart behavior:
 
 - effective systemd unit, including drop-ins;

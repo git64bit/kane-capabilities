@@ -1,0 +1,9 @@
+[Unit]
+Description=Civic Orchestrator WireGuard Relay Socket
+
+[Socket]
+ListenStream=10.110.0.12:8045
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

@@ -754,3 +754,15 @@ PREROUTING:
 ```
 
 The attempted combined `ip -brief addr show wg0 vmbr1` command was rejected by `ip` syntax and made no change.
+
+
+### proxmox1 H4 transfer interfaces confirmed — 2026-10-02
+
+Confirmed on physical host `proxmox1`:
+
+```text
+wg0   10.110.0.21/32
+vmbr1 192.168.1.1/16
+```
+
+These addresses match the accepted publication-stack topology. The temporary CT106 credential-transfer DNAT can therefore target `10.110.0.21:48046 -> 192.168.1.106:48046`.

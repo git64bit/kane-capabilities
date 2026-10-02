@@ -1,0 +1,12 @@
+[Service]
+EnvironmentFile=/etc/civic-orchestrator/usermin-broker.env
+LoadCredential=usermin-adapter.json:/etc/civic-orchestrator/credentials/usermin-adapter.json
+
+ExecStart=
+ExecStart=/opt/civic-usermin-broker/venv/bin/python -m civic_orchestrator.usermin_broker \
+  --participant-registry /etc/civic-orchestrator/participants-v1.json \
+  --orchestrator-base-url ${CIVIC_ORCHESTRATOR_BASE_URL} \
+  --adapter-credential-name usermin-adapter.json
+
+RestrictAddressFamilies=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

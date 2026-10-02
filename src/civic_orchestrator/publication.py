@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import binascii
+import hashlib
 import json
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -12,6 +14,29 @@ ContractValidator = Callable[[str, Any], None]
 
 CID_PROFILE = "civic-ipfs-kubo-v1"
 MAX_SINGLE_RAW_BLOCK_BYTES = 262_144
+
+
+def validate_artifact_integrity(artifact: dict[str, Any]) -> str:
+    """Verify that declared size/digest describe the submitted artifact bytes."""
+    try:
+        decoded = base64.b64decode(
+            artifact["content"].encode("ascii"),
+            validate=True,
+        )
+    except (KeyError, UnicodeEncodeError, binascii.Error) as exc:
+        raise ValueError("publication artifact content is not strict base64") from exc
+
+    if len(decoded) != artifact["size_bytes"]:
+        raise ValueError(
+            "publication artifact decoded size does not match size_bytes"
+        )
+
+    actual_sha256 = hashlib.sha256(decoded).hexdigest()
+    if actual_sha256 != artifact["sha256"]:
+        raise ValueError(
+            "publication artifact bytes do not match declared sha256"
+        )
+    return actual_sha256
 
 
 def expected_single_raw_cid(sha256_hex: str) -> str:
@@ -81,6 +106,7 @@ class PublicationServiceClient:
             "publication-service-request-v1.schema.json",
             request_value,
         )
+        verified_sha256 = validate_artifact_integrity(artifact)
 
         body = json.dumps(
             request_value,
@@ -170,7 +196,7 @@ class PublicationServiceClient:
             raise PublicationServiceProtocolError(
                 "artifact exceeds independently verifiable single-block profile"
             )
-        expected_cid = expected_single_raw_cid(artifact["sha256"])
+        expected_cid = expected_single_raw_cid(verified_sha256)
         if result["cid"] != expected_cid:
             raise PublicationServiceProtocolError(
                 "publication service returned a CID that does not match "

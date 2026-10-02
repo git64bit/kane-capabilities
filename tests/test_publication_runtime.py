@@ -198,6 +198,22 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertFalse(result["side_effects"])
         self.assertEqual(self.client.calls, [])
 
+    def test_artifact_integrity_failure_creates_no_workflow_or_backend_call(self):
+        request = self.request()
+        request["input"]["artifact"]["sha256"] = "0" * 64
+
+        status, result = self.runtime.submit(request)
+
+        self.assertEqual(status, 400)
+        self.assertEqual(result["failure_class"], "invalid-contract")
+        self.assertFalse(result["side_effects"])
+        self.assertEqual(self.client.calls, [])
+        with self.runtime.state._connect() as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM workflows"
+            ).fetchone()[0]
+        self.assertEqual(count, 0)
+
     def test_retryable_service_failure_waits_and_can_resume(self):
         self.client.mode = "service-failure"
 

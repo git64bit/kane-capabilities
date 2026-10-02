@@ -20,6 +20,7 @@ from .publication import (
     PublicationServiceFailure,
     PublicationServiceProtocolError,
     PublicationServiceUnavailable,
+    validate_artifact_integrity,
 )
 
 
@@ -1762,7 +1763,8 @@ class CivicOrchestrator:
                 "publication-publish-input-v1.schema.json",
                 request["input"],
             )
-        except ValidationError as exc:
+            validate_artifact_integrity(request["input"]["artifact"])
+        except (ValidationError, ValueError) as exc:
             self.state.record_request_diagnostic(
                 "invalid-contract",
                 request_id,

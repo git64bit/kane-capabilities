@@ -98,3 +98,18 @@ No Usermin broker systemd unit, socket activation, Orchestrator route, or networ
 On `witness-hubzilla`, creating `/opt/civic-usermin-broker/venv` with Python 3.12.3 failed because `ensurepip` is unavailable. The host requires the Debian/Ubuntu `python3.12-venv` package before the broker virtual environment can be completed.
 
 The failed attempt created only a partial `/opt/civic-usermin-broker/venv` directory; no Civic package, systemd unit, or service was installed or activated.
+
+
+### Usermin broker Python venv prerequisite installed — 2026-10-02
+
+Confirmed on `witness-hubzilla`:
+
+```text
+python3.12-venv      installed
+python3-pip-whl      installed as dependency
+python3-setuptools-whl installed as dependency
+```
+
+No packages were upgraded. The install reported 35 packages not upgraded. No Civic service was installed or activated by this package step.
+
+The earlier `/opt/civic-usermin-broker/venv` remains a partial venv created before `python3.12-venv` was available and must be replaced before use.

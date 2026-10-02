@@ -2,7 +2,7 @@
 
 ## Status
 
-**U-001 ACCEPTED — U-002 repository implementation complete, production acceptance pending — U-003 repository implementation complete, production routing/credential acceptance pending — U-004 pending**
+**U-001 ACCEPTED — U-002 ACCEPTED on production Portal/Usermin host — U-003 repository implementation complete, production routing/credential acceptance pending — U-004 pending**
 
 This document records the production Usermin discovery completed on 2026-10-01/02 and the participant-facing adapter boundary together with its staged repository implementation and production-acceptance state.
 
@@ -289,7 +289,40 @@ Required:
 - no remote Orchestrator side effect yet;
 - tests for impersonation, path/symlink abuse, oversize input, and malformed local requests.
 
-**Repository status:** IMPLEMENTED and regression-tested. **Production status:** NOT YET ACCEPTED.
+**Repository status:** IMPLEMENTED and regression-tested. **Production status:** ACCEPTED on 2026-10-02 on `witness-hubzilla`.
+
+Production acceptance evidence:
+
+```text
+socket:
+  ActiveState=active
+  SubState=listening
+  /run/civic-orchestrator/usermin.sock
+  owner civic-usermin-broker
+  group civic-participants
+  mode 0660
+
+participant:
+  Unix account sase25sep26a
+  UID 1002
+  stable participant_id participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
+
+test artifact:
+  size_bytes 33
+  sha256 f93c8e21400f06755c4965593a81b24d6dcc6ca6b4abab17e71896133149156e
+  media_type application/octet-stream
+
+result:
+  status validated
+  remote_dispatch false
+
+broker service:
+  ActiveState=active
+  SubState=running
+  NRestarts=0
+```
+
+This proves the real local path from participant-owned bytes through AF_UNIX and kernel peer credentials to the stable Civic participant identity without remote side effects.
 
 ### U-003 — Authenticated Orchestrator transport
 

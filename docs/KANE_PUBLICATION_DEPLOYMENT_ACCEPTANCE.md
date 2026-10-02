@@ -212,7 +212,25 @@ The systemd manager was then reloaded as a separate bounded write. Verification 
 - service remained active/running;
 - live listener remained `192.168.1.106:8046`.
 
-**CT106 bind restart drift is repaired in systemd manager state.** No intentional service restart has occurred yet. H4 credential provisioning and the controlled restart/acceptance gate remain pending.
+**CT106 bind restart drift is repaired in systemd manager state.**
+
+### Controlled restart acceptance
+
+A controlled restart was performed from inside CT106 after the explicit bind override had been loaded.
+
+Post-restart evidence:
+
+- new PID: `293`;
+- `NRestarts=0`;
+- service active/running;
+- effective ExecStart includes `--listen 192.168.1.106 --port 8046`;
+- actual listener is `192.168.1.106:8046`;
+- `GET /healthz` returns validation-only status with `kubo_enabled=false` and `swarm_enabled=false`;
+- both `ipfs.service` and `kubo.service` remain inactive.
+
+**CT106 bind restart-safety gate: ACCEPTED.**
+
+H4 credential provisioning and authenticated validation-only acceptance remain pending.
 
 ## Remaining acceptance order
 

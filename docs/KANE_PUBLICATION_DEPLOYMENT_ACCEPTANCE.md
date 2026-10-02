@@ -202,7 +202,17 @@ First production writes completed and verified:
 4. running PID remained `1167`, `NRestarts=0`, service active/running;
 5. live listener remained `192.168.1.106:8046`.
 
-At this checkpoint the drop-in exists on disk but the systemd manager has not yet been reloaded. The next bounded write is `systemctl daemon-reload`; service restart remains a separate later gate.
+The systemd manager was then reloaded as a separate bounded write. Verification after `daemon-reload` showed:
+
+- effective unit includes `10-listen.conf`;
+- manager `ExecStart` is `/usr/bin/python3 /opt/civic-publication/publication_service.py --listen 192.168.1.106 --port 8046`;
+- `DropInPaths` contains only the expected restart-safety drop-in;
+- PID remained `1167`;
+- `NRestarts=0`;
+- service remained active/running;
+- live listener remained `192.168.1.106:8046`.
+
+**CT106 bind restart drift is repaired in systemd manager state.** No intentional service restart has occurred yet. H4 credential provisioning and the controlled restart/acceptance gate remain pending.
 
 ## Remaining acceptance order
 

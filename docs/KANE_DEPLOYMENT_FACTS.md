@@ -638,3 +638,27 @@ civic-usermin-broker.service
 ```
 
 Journal for the restart window showed a clean stop and start with no credential, network, or startup errors. The broker is now running with the U-003 Orchestrator endpoint and systemd-loaded adapter credential.
+
+
+### U-003 authenticated participant dispatch reached Orchestrator — 2026-10-02
+
+Confirmed from ordinary participant shell `sase25sep26a@witness-hubzilla` using `civic_orchestrator.usermin_upload`:
+
+```text
+participant file:
+  /home/sase25sep26a/u003-test.txt
+  owner=sase25sep26a
+  mode=0644
+  size=41 bytes
+
+broker result:
+  remote_dispatch=true
+  status=rejected
+  orchestrator_http_status=502
+  failure_class=internal
+  retryable=true
+  side_effects=true
+  message="publication service failure returned a different workflow_id"
+```
+
+This proves the U-003 authenticated path through the local broker, protected adapter credential, Civic network route, CT105 ingress, and Orchestrator. The remaining failure is downstream in the Orchestrator-to-publication-service workflow contract, not in Usermin transport or broker authentication.

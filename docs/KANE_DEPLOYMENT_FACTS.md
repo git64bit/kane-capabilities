@@ -126,3 +126,16 @@ Confirmed on `witness-hubzilla` after installing `python3.12-venv`:
 ```
 
 The earlier partial venv was removed and recreated cleanly. No Civic package, systemd unit, socket, Orchestrator route, or credential was installed by this step.
+
+
+### Usermin broker pinned source reachable — 2026-10-02
+
+Confirmed from inside `witness-hubzilla` that the exact repository revision below is reachable from GitHub/codeload over HTTPS:
+
+```text
+3ea891a0e0e5d361ac8380f8b0dd41e7d5a42ab1
+HTTP status: 200
+content type: application/x-gzip
+```
+
+GitHub Actions for that exact revision completed successfully before installation was attempted.

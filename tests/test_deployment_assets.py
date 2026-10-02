@@ -46,6 +46,35 @@ class DeploymentAssetTests(unittest.TestCase):
         )
         self.assertIn("not part of this stack", safety)
 
+    def test_usermin_base_unit_remains_local_only(self):
+        unit = self.read("deploy/usermin/civic-usermin-broker.service")
+        self.assertIn("RestrictAddressFamilies=AF_UNIX", unit)
+        self.assertNotIn("--orchestrator-base-url", unit)
+        self.assertNotIn("LoadCredential=", unit)
+
+    def test_usermin_u003_overlay_is_explicit_and_credential_bound(self):
+        overlay = self.read("deploy/usermin/20-orchestrator.conf.example")
+        self.assertIn(
+            "EnvironmentFile=/etc/civic-orchestrator/usermin-broker.env",
+            overlay,
+        )
+        self.assertIn(
+            "LoadCredential=usermin-adapter.json:/etc/civic-orchestrator/credentials/usermin-adapter.json",
+            overlay,
+        )
+        self.assertIn("--orchestrator-base-url ${CIVIC_ORCHESTRATOR_BASE_URL}", overlay)
+        self.assertIn("--adapter-credential-name usermin-adapter.json", overlay)
+        self.assertIn("RestrictAddressFamilies=\n", overlay)
+        self.assertIn(
+            "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6",
+            overlay,
+        )
+
+    def test_usermin_u003_endpoint_is_deployment_specific(self):
+        env = self.read("deploy/usermin/usermin-broker.env.example")
+        self.assertIn("CIVIC_ORCHESTRATOR_BASE_URL=", env)
+        self.assertIn("ORCHESTRATOR_HOST", env)
+
 
 if __name__ == "__main__":
     unittest.main()

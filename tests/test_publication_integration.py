@@ -12,6 +12,7 @@ from civic_orchestrator.publication import (
     PublicationServiceClient,
     expected_single_raw_cid,
 )
+from civic_orchestrator.publication_budget import PublicationBudgetPolicy
 from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
 
 
@@ -99,7 +100,11 @@ class PublicationIntegrationTests(unittest.TestCase):
             RuntimePaths(
                 repo_root=ROOT,
                 state_db=Path(self.tmp.name) / "state.sqlite3",
-            )
+            ),
+            publication_budget_policy=PublicationBudgetPolicy(
+                max_publications=10,
+                max_publication_bytes=2_621_440,
+            ),
         )
         runtime.publication_client = PublicationServiceClient(
             f"http://{host}:{port}",

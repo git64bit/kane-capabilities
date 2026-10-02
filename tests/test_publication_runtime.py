@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from civic_orchestrator.publication_budget import PublicationBudgetPolicy
 from civic_orchestrator.publication import (
     CID_PROFILE,
     PublicationServiceFailure,
@@ -73,12 +74,17 @@ class PublicationRuntimeTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.client = FakePublicationClient()
+        self.policy = PublicationBudgetPolicy(
+            max_publications=10,
+            max_publication_bytes=2_621_440,
+        )
         self.runtime = CivicOrchestrator(
             RuntimePaths(
                 repo_root=ROOT,
                 state_db=Path(self.tmp.name) / "state.sqlite3",
             ),
             publication_client=self.client,
+            publication_budget_policy=self.policy,
         )
         self.runtime.registry.operations["publication.publish"][
             "implementation"
@@ -187,6 +193,63 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertEqual(publication[10], "test-authenticator")
         self.assertEqual(publication[11], 1)
 
+        usage = self.runtime.state.publication_budget_usage(
+            "participant:test"
+        )
+        self.assertEqual(usage.completed_publications, 1)
+        self.assertEqual(usage.held_publications, 0)
+        self.assertEqual(usage.charged_bytes, len(self.payload))
+
+    def test_budget_denial_is_terminal_replayable_and_never_dispatched(self):
+        self.runtime.publication_budget_policy = PublicationBudgetPolicy(
+            max_publications=0,
+            max_publication_bytes=0,
+        )
+        request = self.request()
+
+        status, result = self.runtime.submit(request)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result["status"], "rejected")
+        self.assertFalse(result["side_effects"])
+        self.assertEqual(self.client.calls, [])
+
+        _, evidence = self.runtime.workflow_evidence(result["workflow_id"])
+        self.assertEqual(evidence["workflow"]["state"], "rejected")
+        self.assertEqual(
+            evidence["authorization_decisions"][0]["decision"],
+            "deny",
+        )
+        self.assertEqual(
+            evidence["audit_events"][0]["event_type"],
+            "civic.authorization.denied",
+        )
+        self.assertEqual(evidence["receipts"][0]["outcome"], "rejected")
+
+        retry = self.request()
+        retry["request_id"] = "req:publication-budget-retry"
+        status, replay = self.runtime.submit(retry)
+        self.assertEqual(status, 200)
+        self.assertEqual(replay["status"], "rejected")
+        self.assertTrue(replay["result"]["replayed"])
+        self.assertEqual(replay["workflow_id"], result["workflow_id"])
+        self.assertEqual(self.client.calls, [])
+
+    def test_missing_budget_policy_fails_before_workflow(self):
+        self.runtime.publication_budget_policy = None
+
+        status, result = self.runtime.submit(self.request())
+
+        self.assertEqual(status, 503)
+        self.assertEqual(result["failure_class"], "backend-unavailable")
+        self.assertIn("budget policy", result["message"])
+        self.assertEqual(self.client.calls, [])
+        with self.runtime.state._connect() as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM workflows"
+            ).fetchone()[0]
+        self.assertEqual(count, 0)
+
     def test_publication_specific_input_is_validated_before_backend_call(self):
         request = self.request()
         request["input"]["artifact"]["encoding"] = "hex"
@@ -243,6 +306,12 @@ class PublicationRuntimeTests(unittest.TestCase):
             "civic.operation.waiting",
         )
 
+        usage = self.runtime.state.publication_budget_usage(
+            "participant:test"
+        )
+        self.assertEqual(usage.held_publications, 1)
+        self.assertEqual(usage.completed_publications, 0)
+
         self.client.mode = "success"
         retry = self.request()
         retry["request_id"] = "req:publication-runtime-retry"
@@ -290,6 +359,20 @@ class PublicationRuntimeTests(unittest.TestCase):
             result["result"]["failure_class"],
             "verification-failed",
         )
+        usage = self.runtime.state.publication_budget_usage(
+            "participant:test"
+        )
+        self.assertEqual(usage.held_publications, 1)
+        with self.runtime.state._connect() as conn:
+            hold_state = conn.execute(
+                """
+                SELECT hold_state
+                  FROM publication_budget_holds
+                 WHERE participant_id=?
+                """,
+                ("participant:test",),
+            ).fetchone()[0]
+        self.assertEqual(hold_state, "uncertain")
 
     def test_connection_refused_is_known_no_effect_waiting_failure(self):
         self.client.mode = "transport-failure"
@@ -379,6 +462,7 @@ class PublicationRuntimeTests(unittest.TestCase):
             "publication-policy-v1",
             "test crash boundary",
             self.runtime.contracts.validate,
+            publication_budget_policy=self.policy,
         )
         self.assertFalse(replayed)
         workflow_id = start["workflow_id"]
@@ -390,6 +474,7 @@ class PublicationRuntimeTests(unittest.TestCase):
                 state_db=Path(self.tmp.name) / "state.sqlite3",
             ),
             publication_client=restarted_client,
+            publication_budget_policy=self.policy,
         )
 
         _, evidence = restarted.workflow_evidence(workflow_id)
@@ -419,6 +504,7 @@ class PublicationRuntimeTests(unittest.TestCase):
             "publication-policy-v1",
             "test crash after backend success",
             self.runtime.contracts.validate,
+            publication_budget_policy=self.policy,
         )
         self.assertFalse(replayed)
         workflow_id = start["workflow_id"]
@@ -437,6 +523,7 @@ class PublicationRuntimeTests(unittest.TestCase):
                 state_db=Path(self.tmp.name) / "state.sqlite3",
             ),
             publication_client=restarted_client,
+            publication_budget_policy=self.policy,
         )
 
         _, evidence = restarted.workflow_evidence(workflow_id)

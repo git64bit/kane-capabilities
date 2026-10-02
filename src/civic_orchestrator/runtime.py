@@ -707,6 +707,7 @@ class StateStore:
         authorization_policy: str,
         authorization_reason: str,
         validate_contract: Callable[[str, Any], None],
+        publication_budget_policy: PublicationBudgetPolicy | None = None,
     ) -> tuple[dict[str, Any], bool]:
         request_id = request["request_id"]
         operation = request["operation"]
@@ -733,6 +734,29 @@ class StateStore:
 
                 state = existing["state"]
                 if state == "waiting":
+                    if (
+                        publication_budget_policy is not None
+                        and operation == "publication.publish"
+                    ):
+                        hold = conn.execute(
+                            """
+                            SELECT workflow_id
+                              FROM publication_budget_holds
+                             WHERE workflow_id=?
+                            """,
+                            (existing["workflow_id"],),
+                        ).fetchone()
+                        if hold is None:
+                            self._reserve_publication_budget_conn(
+                                conn,
+                                workflow_id=existing["workflow_id"],
+                                participant_id=caller_subject,
+                                size_bytes=request["input"]["artifact"][
+                                    "size_bytes"
+                                ],
+                                policy=publication_budget_policy,
+                            )
+
                     self._assert_transition("waiting", "accepted")
                     conn.execute(
                         "UPDATE workflows SET state=?, updated_at=? "
@@ -865,6 +889,172 @@ class StateStore:
                     client_id,
                 ),
             )
+
+            if (
+                publication_budget_policy is not None
+                and operation == "publication.publish"
+            ):
+                try:
+                    self._reserve_publication_budget_conn(
+                        conn,
+                        workflow_id=workflow_id,
+                        participant_id=caller_subject,
+                        size_bytes=request["input"]["artifact"]["size_bytes"],
+                        policy=publication_budget_policy,
+                    )
+                except PublicationBudgetExceeded as exc:
+                    reason = str(exc)[:1000]
+                    budget = {
+                        "charged_publications": (
+                            exc.usage.charged_publications
+                        ),
+                        "charged_bytes": exc.usage.charged_bytes,
+                        "requested_bytes": exc.requested_bytes,
+                        "max_publications": exc.policy.max_publications,
+                        "max_publication_bytes": (
+                            exc.policy.max_publication_bytes
+                        ),
+                    }
+                    decision_record = {
+                        "decision_id": decision_id,
+                        "request_id": request_id,
+                        "operation": operation,
+                        "decision": "deny",
+                        "decided_at": utc_now(),
+                        "policy": authorization_policy,
+                        "reason": reason,
+                    }
+                    validate_contract(
+                        "authorization-decision-v1.schema.json",
+                        decision_record,
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO authorization_decisions
+                            (decision_id, workflow_id, request_id, operation,
+                             decision, decided_at, policy, reason)
+                        VALUES (?,?,?,?,?,?,?,?)
+                        """,
+                        (
+                            decision_record["decision_id"],
+                            workflow_id,
+                            decision_record["request_id"],
+                            decision_record["operation"],
+                            decision_record["decision"],
+                            decision_record["decided_at"],
+                            decision_record["policy"],
+                            decision_record["reason"],
+                        ),
+                    )
+
+                    self._assert_transition("validated", "rejected")
+                    completed_at = utc_now()
+                    conn.execute(
+                        """
+                        UPDATE workflows
+                           SET state='rejected', updated_at=?,
+                               side_effects=0,
+                               side_effects_certainty='known'
+                         WHERE workflow_id=?
+                        """,
+                        (completed_at, workflow_id),
+                    )
+
+                    evidence = {
+                        "implementation": descriptor["implementation"],
+                        "service_capability": descriptor[
+                            "service_capability"
+                        ],
+                        "effect_scope": descriptor["effect_scope"],
+                        "policy": authorization_policy,
+                        "reason": reason,
+                        "budget": budget,
+                        "side_effects": False,
+                        "side_effects_certainty": "known",
+                    }
+                    event_record = {
+                        "event_id": f"evt:{uuid.uuid4()}",
+                        "workflow_id": workflow_id,
+                        "sequence": 1,
+                        "event_type": "civic.authorization.denied",
+                        "recorded_at": utc_now(),
+                        "actor": "civic-orchestrator",
+                        "data": evidence,
+                    }
+                    validate_contract(
+                        "audit-event-v1.schema.json",
+                        event_record,
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO audit_events
+                            (event_id, workflow_id, sequence, event_type,
+                             recorded_at, actor, data_json)
+                        VALUES (?,?,?,?,?,?,?)
+                        """,
+                        (
+                            event_record["event_id"],
+                            workflow_id,
+                            event_record["sequence"],
+                            event_record["event_type"],
+                            event_record["recorded_at"],
+                            event_record["actor"],
+                            canonical_json(evidence),
+                        ),
+                    )
+
+                    receipt_record = {
+                        "receipt_id": receipt_id,
+                        "workflow_id": workflow_id,
+                        "operation": operation,
+                        "issued_at": utc_now(),
+                        "outcome": "rejected",
+                        "side_effects": False,
+                        "evidence": evidence,
+                    }
+                    validate_contract(
+                        "receipt-v1.schema.json",
+                        receipt_record,
+                    )
+                    conn.execute(
+                        """
+                        INSERT INTO receipts
+                            (receipt_id, workflow_id, operation, issued_at,
+                             outcome, side_effects, evidence_json)
+                        VALUES (?,?,?,?,?,?,?)
+                        """,
+                        (
+                            receipt_id,
+                            workflow_id,
+                            operation,
+                            receipt_record["issued_at"],
+                            "rejected",
+                            0,
+                            canonical_json(evidence),
+                        ),
+                    )
+
+                    result = {
+                        "contract_version": 1,
+                        "request_id": request_id,
+                        "workflow_id": workflow_id,
+                        "operation": operation,
+                        "status": "rejected",
+                        "completed_at": completed_at,
+                        "side_effects": False,
+                        "result": evidence,
+                        "receipt_id": receipt_id,
+                    }
+                    validate_contract(
+                        "result-envelope-v1.schema.json",
+                        result,
+                    )
+                    conn.execute(
+                        "UPDATE workflows SET result_json=? "
+                        "WHERE workflow_id=?",
+                        (canonical_json(result), workflow_id),
+                    )
+                    return result, False
 
             decision_record = {
                 "decision_id": decision_id,
@@ -1035,6 +1225,15 @@ class StateStore:
                     workflow_id,
                 ),
             )
+            if aggregate_side_effects or aggregate_certainty == "unknown":
+                conn.execute(
+                    """
+                    UPDATE publication_budget_holds
+                       SET hold_state='uncertain', updated_at=?
+                     WHERE workflow_id=?
+                    """,
+                    (utc_now(), workflow_id),
+                )
 
             sequence = int(
                 conn.execute(
@@ -1120,6 +1319,14 @@ class StateStore:
                     """,
                     (utc_now(), workflow_id),
                 )
+                conn.execute(
+                    """
+                    UPDATE publication_budget_holds
+                       SET hold_state='uncertain', updated_at=?
+                     WHERE workflow_id=?
+                    """,
+                    (utc_now(), workflow_id),
+                )
 
                 sequence = int(
                     conn.execute(
@@ -1182,6 +1389,7 @@ class StateStore:
         side_effects_certainty: str,
         detail: dict[str, Any],
         validate_contract: Callable[[str, Any], None],
+        budget_hold_required: bool = False,
     ) -> dict[str, Any]:
         if outcome not in {"completed", "failed"}:
             raise ValueError(f"invalid external operation outcome: {outcome}")
@@ -1345,6 +1553,24 @@ class StateStore:
                         1 if detail.get("verified") else 0,
                     ),
                 )
+
+            if budget_hold_required:
+                if request["operation"] != "publication.publish":
+                    raise ValueError(
+                        "publication budget hold used for non-publication "
+                        "operation"
+                    )
+                if outcome == "completed" or not final_side_effects:
+                    self._release_publication_budget_hold_conn(
+                        conn,
+                        workflow_id,
+                    )
+                else:
+                    self._mark_publication_budget_hold_conn(
+                        conn,
+                        workflow_id,
+                        "uncertain",
+                    )
 
             result = {
                 "contract_version": 1,
@@ -1786,6 +2012,7 @@ class CivicOrchestrator:
         self,
         paths: RuntimePaths,
         publication_client: Any | None = None,
+        publication_budget_policy: PublicationBudgetPolicy | None = None,
     ) -> None:
         self.contracts = ContractStore(paths.repo_root)
         self.registry = OperationRegistry(
@@ -1828,6 +2055,7 @@ class CivicOrchestrator:
             )
         )
         self.publication_client = publication_client
+        self.publication_budget_policy = publication_budget_policy
 
     def capabilities(self) -> dict[str, Any]:
         return {
@@ -2057,6 +2285,24 @@ class CivicOrchestrator:
                 False,
             )
 
+        if self.publication_budget_policy is None:
+            message = "publication budget policy is not configured"
+            self.state.record_request_diagnostic(
+                "publication-budget-unconfigured",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                message,
+            )
+            return 503, self.failure(
+                request_id,
+                operation,
+                "backend-unavailable",
+                message,
+                False,
+            )
+
         if self.publication_client is None:
             message = "publication service client is not configured"
             self.state.record_request_diagnostic(
@@ -2082,6 +2328,34 @@ class CivicOrchestrator:
                 self.publication_workflow.authorization_policy,
                 self.publication_workflow.authorization_reason,
                 self.contracts.validate,
+                publication_budget_policy=self.publication_budget_policy,
+            )
+        except PublicationBudgetExceeded as exc:
+            self.state.record_request_diagnostic(
+                "publication-budget-denied-recovery",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                exc,
+            )
+            return 403, self.failure(
+                request_id,
+                operation,
+                "unauthorized",
+                str(exc),
+                False,
+                detail={
+                    "charged_publications": (
+                        exc.usage.charged_publications
+                    ),
+                    "charged_bytes": exc.usage.charged_bytes,
+                    "requested_bytes": exc.requested_bytes,
+                    "max_publications": exc.policy.max_publications,
+                    "max_publication_bytes": (
+                        exc.policy.max_publication_bytes
+                    ),
+                },
             )
         except ConflictError as exc:
             self.state.record_request_diagnostic(
@@ -2099,6 +2373,17 @@ class CivicOrchestrator:
                 str(exc),
                 False,
             )
+
+        if not replayed and start.get("status") == "rejected":
+            self.state.record_request_diagnostic(
+                "publication-budget-denied",
+                request_id,
+                operation,
+                caller_subject,
+                client_id,
+                start["result"].get("reason"),
+            )
+            return 200, start
 
         if replayed:
             original_request_id = start["request_id"]
@@ -2189,6 +2474,7 @@ class CivicOrchestrator:
                     "retryable": False,
                 },
                 validate_contract=self.contracts.validate,
+                budget_hold_required=True,
             )
             return 200, result
         except PublicationServiceUnavailable as exc:
@@ -2281,6 +2567,7 @@ class CivicOrchestrator:
                 "verified": service_result["verified"],
             },
             validate_contract=self.contracts.validate,
+            budget_hold_required=True,
         )
         return 200, result
 

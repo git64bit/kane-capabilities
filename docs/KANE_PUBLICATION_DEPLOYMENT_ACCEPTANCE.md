@@ -162,6 +162,20 @@ Observed:
 - current script accepts `--listen`, `--port`, and `--credential-name`;
 - effective systemd unit supplies none of those arguments.
 
+### Remaining CT106 pre-write audit
+
+Additional observations:
+
+- CT106 runs systemd 257 (257.8-1~deb13u2), which supports systemd credentials;
+- `/etc/civic-publication` is absent;
+- `/etc/civic-publication/credentials` is absent;
+- `publication-service.json` is absent;
+- `/etc/systemd/system/civic-publication.service.d` is absent;
+- both `ipfs.service` and `kubo.service` are inactive;
+- no listeners were observed on TCP 4001, 5001, or 8080.
+
+These facts close the CT106 read-only pre-write audit. The first repair must establish restart-safe service configuration without restarting the service and without enabling authentication or Kubo in the same write.
+
 ### Confirmed restart drift
 
 The restart defect is now proved directly from production:

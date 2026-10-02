@@ -1,18 +1,76 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import base64
 import binascii
 import hashlib
 import hmac
 import json
+import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 
 
 HOST = "192.168.1.106"
 PORT = 8046
 MAX_ARTIFACT_BYTES = 262_144
+_CREDENTIAL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+MAX_CREDENTIAL_BYTES = 4_096
+
+
+def load_systemd_bearer_token(
+    credential_name: str,
+    *,
+    credentials_directory: str | None = None,
+) -> bytes:
+    """Load the publication-service bearer token from systemd credentials."""
+    if not _CREDENTIAL_NAME_RE.fullmatch(credential_name):
+        raise ValueError("publication credential name is invalid")
+
+    directory_value = (
+        credentials_directory
+        if credentials_directory is not None
+        else os.environ.get("CREDENTIALS_DIRECTORY")
+    )
+    if not directory_value:
+        raise ValueError("systemd CREDENTIALS_DIRECTORY is unavailable")
+
+    directory = Path(directory_value)
+    if not directory.is_absolute():
+        raise ValueError("systemd CREDENTIALS_DIRECTORY must be absolute")
+
+    path = directory / credential_name
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise ValueError("publication credential cannot be read") from exc
+
+    if not raw or len(raw) > MAX_CREDENTIAL_BYTES:
+        raise ValueError("publication credential size is invalid")
+
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("publication credential is not valid JSON") from exc
+
+    if not isinstance(value, dict) or set(value) != {"version", "token"}:
+        raise ValueError("publication credential fields are invalid")
+    if value["version"] != 1:
+        raise ValueError("publication credential version is invalid")
+
+    token = value["token"]
+    if (
+        not isinstance(token, str)
+        or len(token) < 32
+        or len(token) > 4096
+        or any(ch.isspace() for ch in token)
+    ):
+        raise ValueError("publication bearer token is invalid")
+
+    return token.encode("utf-8")
 
 
 def bearer_authorized(
@@ -251,6 +309,22 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--credential-name",
+        help=(
+            "systemd credential name containing the CT105 publication "
+            "service bearer token"
+        ),
+    )
+    args = parser.parse_args()
+
+    Handler.bearer_token = None
+    if args.credential_name:
+        Handler.bearer_token = load_systemd_bearer_token(
+            args.credential_name
+        )
+
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     server.serve_forever()
 

@@ -58,7 +58,7 @@ civic-usermin-broker.service:
 
 No separate Portal/Usermin container has been established in this repository. Do not tell an operator to leave `witness-hubzilla` merely because the task concerns Usermin/Portal.
 
-The physical host and container/VM numeric identifier for `witness-hubzilla` are not recorded here. Do not invent them.
+The physical host for `witness-hubzilla` is `annales`, confirmed by the operator on 2026-10-02. The container/VM numeric identifier is not recorded here. Do not invent it.
 
 ## Publication node: `publication1`
 

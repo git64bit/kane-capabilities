@@ -34,6 +34,26 @@ The broker requires both:
 - current membership in `civic-participants`;
 - exactly one active registry mapping matching the current Unix username and UID.
 
+## Automatic account provisioning
+
+A production Usermin participant account must not require manual editing of the registry. After the Unix account exists, the account-provisioning path must invoke:
+
+```text
+/usr/local/sbin/usermin-participant-provision <username>
+```
+
+The helper is idempotent. For a new Unix account it:
+
+1. verifies the account exists;
+2. adds it to `civic-participants` if needed;
+3. allocates one UUID-based permanent `participant_id`;
+4. updates `participants-v1.json` under an exclusive lock with an atomic replace;
+5. preserves existing registry ownership and mode.
+
+Re-running provisioning for the same active Unix account returns the existing `participant_id` and does not create a duplicate. An exact retired username/UID mapping is never automatically reused.
+
+The current Kane deployment still needs this helper wired into the actual Portal/Usermin account-creation path before automatic provisioning is production-accepted.
+
 ## Byte-only boundary
 
 The privileged broker never receives or opens the participant's pathname.

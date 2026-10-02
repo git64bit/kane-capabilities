@@ -328,17 +328,16 @@ It does not become the signing authority merely because it creates firmware bina
 
 Separating build execution from protected release signing is a valuable supply-chain boundary and is already established in Kane Fabric.
 
-## New-node count implied by this decision
+## Remaining new-node count implied by this decision
 
-The current architecture requires **three new service nodes beyond CT105**, unless later audits justify safe reuse:
+The publication service node has now been deployed in validation-only mode.
 
-1. publication / IPFS service — new Trixie CT on the OVH Proxmox 9 host, not `srv-b`;
-2. RAG state / retrieval service;
-3. ESP32-S3 management / synchronization service.
+The current architecture still anticipates **two additional new service nodes beyond the already deployed CT105/publication stack**, unless later audits justify safe reuse:
 
-No node should be created yet solely from this count.
+1. RAG state / retrieval service;
+2. ESP32-S3 management / synchronization service.
 
-Each is gated by its orchestrator-facing contract and resource/trust specification.
+Neither should be created solely from this count. Each remains gated by its Orchestrator-facing contract and resource/trust specification.
 
 ## Existing Kane reference topology
 
@@ -358,7 +357,7 @@ srv-b
        +---- CT104 civic-gitea -------- source/revision authority
        +---- PostgreSQL catalog -------- publication/document metadata
        +---- publication client path ---+---------------------------> OVH Proxmox 9
-       |                                  `-- NEW Trixie CT: publication/IPFS
+       |                                  `-- publication/IPFS CT (validation-only; Kubo disabled)
        +---- NEW retrieval ------------ RAG/index/private state
        +---- NEW edge-management ------ ESP32 lifecycle/sync
        |

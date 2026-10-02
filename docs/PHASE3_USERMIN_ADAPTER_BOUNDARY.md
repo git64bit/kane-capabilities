@@ -199,6 +199,12 @@ The broker must reject peers that:
 
 The broker receives bytes, not a privileged filesystem pathname.
 
+### Participant provisioning invariant
+
+New Portal/Usermin participant accounts must be provisioned automatically rather than by hand-editing `participants-v1.json`. The provisioning path must add the Unix account to `civic-participants` and allocate exactly one UUID-based stable Civic `participant_id`. Re-provisioning the same active Unix account is idempotent and returns the existing ID. Retired mappings remain tombstones and are not automatically reused.
+
+The repository provides `civic_orchestrator.usermin_provision` and the deployment wrapper `deploy/usermin/usermin-participant-provision`. Production acceptance still requires wiring that helper into the actual account-creation path on `witness-hubzilla`.
+
 ## Remote trust boundary
 
 The raw Civic Orchestrator HTTP API must not be exposed to participants merely because the local broker exists.

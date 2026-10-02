@@ -567,3 +567,25 @@ The live and reboot-persistent states now match exactly:
 ```
 
 No duplicate live rule exists.
+
+
+### U-003 broker credential provisioned — 2026-10-02
+
+Confirmed inside `annales` LXD container `witness-hubzilla`:
+
+```text
+/etc/civic-orchestrator/credentials/usermin-adapter.json
+  owner=root
+  group=root
+  mode=0600
+  size=279 bytes
+
+one-shot credential receiver:
+  bound temporarily to 10.110.0.19:48045
+  accepted the transfer from CT105
+  validated credential version/binding
+  installed the credential
+  exited after the single transfer
+```
+
+The credential was transferred directly from CT105 over the existing WireGuard fabric without printing the bearer token, committing it to Git, or creating a persistent administrative transport service.

@@ -124,7 +124,9 @@ Git authority and workflow authority are different concerns. Gitea also has its 
 
 ### Placement
 
-Use the existing PostgreSQL service available to the Orchestrator for the structured participant publication/document catalog.
+Use the existing PostgreSQL service available to the Orchestrator for the structured participant publication/document catalog projection and later mutable document-management state.
+
+Before catalog implementation begins, the Kane deployment record must identify the exact PostgreSQL service/node and its operating owner. This document does not invent that locator.
 
 The catalog may hold:
 
@@ -139,7 +141,7 @@ The catalog may hold:
 
 It must not become the artifact-byte store merely because it contains metadata about those artifacts.
 
-Existing CT105 workflow/audit persistence may remain separate where that boundary is operationally useful.
+The immutable publication record itself remains authoritative in CT105 SQLite and is committed atomically with terminal workflow/audit/receipt state. PostgreSQL initially consumes a rebuildable projection keyed by `publication_id`.
 
 ### Reason
 

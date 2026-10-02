@@ -14,9 +14,15 @@
     "side_effects"
   ],
   "properties": {
-    "contract_version": { "const": 1 },
-    "request_id": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id" },
-    "operation": { "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/operation" },
+    "contract_version": {
+      "const": 1
+    },
+    "request_id": {
+      "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/id"
+    },
+    "operation": {
+      "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/operation"
+    },
     "failure_class": {
       "type": "string",
       "enum": [
@@ -35,8 +41,14 @@
       "minLength": 1,
       "maxLength": 1000
     },
-    "retryable": { "type": "boolean" },
-    "side_effects": { "const": false },
-    "detail": { "type": "object" }
+    "retryable": {
+      "type": "boolean"
+    },
+    "side_effects": {
+      "type": "boolean"
+    },
+    "detail": {
+      "type": "object"
+    }
   }
 }

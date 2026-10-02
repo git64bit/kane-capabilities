@@ -133,9 +133,11 @@ If later Civic distribution requires peer replication, swarm participation is a 
 
 ## Frozen first-operation contract
 
-The current implementation is deliberately limited to **inline artifacts of at most 1 MiB**.
+The current safety limit is **262,144 bytes**.
 
-This is an implementation limit for the first bounded adapter path, not a statement about the eventual participant document model. It deliberately avoids introducing streaming uploads, object storage, repository-fetch semantics, or upload sessions before a concrete need exists.
+This temporary bound guarantees that every accepted artifact is a single raw-leaf block under the frozen Kubo profile, allowing CT105 to independently compute and verify the expected CID before recording publication success. The limit may return to 1 MiB or higher only after deterministic multi-chunk UnixFS root calculation is implemented and tested.
+
+The bound is an implementation safety limit, not a statement about the eventual participant document model.
 
 ### Public `publication.publish` input
 
@@ -184,7 +186,14 @@ After Kubo adds and pins the content, the service must read the artifact back by
 
 A success response is prohibited unless both pre-publication and post-publication verification succeed.
 
-CT105 must verify that the service result repeats the expected `sha256` and `size_bytes` before completing the Civic workflow.
+CT105 must independently compute the expected CID for the frozen profile and require all of the following before completing the Civic workflow:
+
+- returned `sha256` equals the submitted digest;
+- returned `size_bytes` equals the submitted size;
+- returned `cid_profile` equals `civic-ipfs-kubo-v1`;
+- returned `cid` equals CT105's independently computed CID.
+
+Echoed hash and size are not sufficient CID verification.
 
 ### Kubo content-identity profile
 
@@ -212,6 +221,7 @@ operation = publication.publish
 sha256
 size_bytes
 cid              CIDv1, base32
+cid_profile       civic-ipfs-kubo-v1
 pinned = true
 verified = true
 ```
@@ -279,9 +289,11 @@ CT105 persists the authoritative Civic workflow, authorization decision, audit e
 
 If later requirements show that publication jobs need durable independent state, that is a new design decision rather than an assumption in the first node.
 
-### Private transport
+### Private transport and service authentication
 
 The first service adapter uses ordinary HTTP/JSON on the private Civic service network.
+
+Private reachability is not publication authority. Before Kubo is enabled, the publication endpoint must authenticate CT105 with a service credential unavailable to participants and unrelated services. Firewall/relay restrictions remain defense in depth.
 
 Initial endpoints:
 
@@ -292,7 +304,7 @@ POST /v1/publications
 
 The bounded publication service binds only to its private CT address. The initial network rule permits Kane CT105 to reach that service endpoint and does not expose the Kubo API publicly. Kubo itself remains loopback-only inside the publication CT.
 
-TLS, service credentials, or stronger adapter authentication may be added when the production trust boundary requires them. They are not prerequisites for proving the first bounded operation on the isolated service network.
+The current validation-only service may remain unauthenticated while it is incapable of publication side effects. A CT105-only service credential is mandatory before Kubo publication is enabled.
 
 ## Validation-only acceptance state
 
@@ -308,6 +320,8 @@ Accepted on 2026-10-01:
 8. production Orchestrator routing to the validation-only backend;
 9. persisted workflow/audit/receipt evidence for the expected no-side-effect failure;
 10. Kubo and swarm side effects remain disabled.
+
+The remaining Phase 4 safety gates are defined in `PHASE4_PUBLICATION_SAFETY_GATES.md`, including independent CID verification, resumable workflows, service authentication, stable participant identity, publication budgets, atomic publication records, and side-effect certainty.
 
 No additional capability namespace is introduced by the publication node.
 

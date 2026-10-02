@@ -11,7 +11,7 @@ from typing import Any
 
 HOST = "192.168.1.106"
 PORT = 8046
-MAX_ARTIFACT_BYTES = 1_048_576
+MAX_ARTIFACT_BYTES = 262_144
 
 
 def json_bytes(value: dict[str, Any]) -> bytes:
@@ -153,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
-        # Base64 expansion plus JSON envelope stays well below 1.5 MiB.
+        # Single-block artifact plus base64/JSON envelope stays below this bound.
         if length < 0 or length > 1_500_000:
             self.send_json(
                 413,

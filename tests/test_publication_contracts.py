@@ -64,7 +64,8 @@ class PublicationContractTests(unittest.TestCase):
             "operation": "publication.publish",
             "sha256": "0" * 64,
             "size_bytes": 0,
-            "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            "cid": "bafkreibqfrpsjusanrs6tthjrxvgutdlldbwtjr5zer2uvzfkfj3xsnh5e",
+            "cid_profile": "civic-ipfs-kubo-v1",
             "pinned": True,
             "verified": True,
         }
@@ -98,7 +99,7 @@ class PublicationContractTests(unittest.TestCase):
 
     def test_oversize_artifact_is_rejected(self):
         value = {"artifact": self.artifact()}
-        value["artifact"]["size_bytes"] = 1048577
+        value["artifact"]["size_bytes"] = 262145
         with self.assertRaises(Exception):
             self.contracts.validate(
                 "publication-publish-input-v1.schema.json",

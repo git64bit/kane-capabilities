@@ -71,7 +71,6 @@ A publication record may contain:
 - artifact SHA-256;
 - byte size;
 - media type;
-- original filename as factual ingress metadata where available;
 - CID;
 - publication timestamp;
 - client surface;
@@ -171,7 +170,6 @@ The infrastructure derives or records the rest:
 
 - authenticated participant;
 - exact bytes;
-- original filename where available;
 - byte size;
 - SHA-256;
 - media type derived mechanically by the adapter, with `application/octet-stream` as the safe fallback when no narrower type is established;
@@ -183,7 +181,13 @@ The participant does not supply publication purpose, retention duration, future-
 
 Mechanical processing required to publish exact bytes—reading the bytes, counting them, hashing them, base64 transport, and bounded media-type classification—is not content moderation and must not require a human operator to open or interpret the file.
 
-The publication contract contains no descriptive label field. Publication records only factual ingress and publication metadata; descriptive meaning is added later, if the participant chooses, through document/catalog management.
+The publication contract contains no descriptive label or original-filename field. Publication records only exact-byte and provenance facts required to establish publication. Descriptive names and paths are added later, if the participant chooses, through document/catalog management.
+
+## Participant identity
+
+Publication provenance uses a stable, never-recycled Civic participant identifier.
+
+Unix usernames and UIDs are local account locators. The authenticated Portal account is mapped to the stable participant identifier before publication evidence is recorded. Renaming, deleting, or later reusing a Unix account must not transfer historical publication attribution.
 
 ## Pinning and removal semantics
 
@@ -207,11 +211,12 @@ Pin duration is not required at publication time. The publication service follow
 
 The Orchestrator owns the bounded semantics of the participant publication/document catalog.
 
-For the Kane reference deployment, PostgreSQL is the intended structured store for catalog state such as:
+The immutable publication fact belongs to the Orchestrator evidence store. A successful publication record is committed in the same SQLite transaction as terminal workflow state, final audit evidence, receipt, and result.
 
-- participants and publication associations;
-- artifact metadata;
-- publication records;
+For the Kane reference deployment, PostgreSQL is initially a rebuildable projection for structured catalog/query state such as:
+
+- participant and publication projections;
+- artifact metadata projections;
 - document identifiers;
 - POSIX-like logical paths;
 - generation relationships;
@@ -220,9 +225,9 @@ For the Kane reference deployment, PostgreSQL is the intended structured store f
 - annotations;
 - current Civic-controlled pin/lifecycle state.
 
-This does not make PostgreSQL a content-byte store or a universal Civic datastore.
+The projection is keyed by the immutable Orchestrator publication identifier and can be reconstructed from authoritative publication records.
 
-Existing Orchestrator workflow/audit persistence may remain separate from the document/publication catalog where that separation is operationally useful.
+This does not make PostgreSQL a content-byte store, the source of immutable publication truth, or a universal Civic datastore.
 
 ## Logical paths
 

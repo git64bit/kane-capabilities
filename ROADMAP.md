@@ -263,8 +263,8 @@ Production discovery of stock Usermin Custom Commands is complete. U-001 is acce
 
 Next gates:
 
-- **U-002:** local peer-credential broker;
-- **U-003:** authenticated broker-to-Orchestrator transport;
+- **U-002:** local peer-credential broker receiving bytes, not privileged paths, and mapping Unix accounts to stable participant IDs;
+- **U-003:** authenticated broker-to-Orchestrator transport with server-side binding of client/authentication provenance and subject namespace;
 - **U-004:** validation-only end to end through the real Usermin Custom Command.
 
 ### Publication/document catalog
@@ -281,7 +281,7 @@ The same CID may have multiple publication records.
 
 Do not infer document/version/supersession relationships from filenames, chronology, or content similarity.
 
-Use PostgreSQL for structured catalog state in the Kane deployment. POSIX-like paths are logical catalog paths, not proof of physical filesystem placement.
+Store the immutable publication fact atomically with terminal workflow evidence in the Orchestrator SQLite state. Use PostgreSQL as a rebuildable publication/document catalog projection and later as authority for mutable document-management semantics. POSIX-like paths are logical catalog paths, not proof of physical filesystem placement.
 
 A future `document.*` namespace may be admitted only after its contract is frozen.
 
@@ -349,16 +349,21 @@ Publication itself does not require purpose, retention duration, document organi
 Requirements:
 
 - exact input identity;
-- trusted participant identity;
-- authenticated adapter transport;
-- deterministic result contract;
-- idempotency;
-- participant-linked publication record;
+- stable, never-recycled participant identity;
+- authenticated adapter transport with transport-bound caller/client provenance;
+- authenticated CT105-to-publication-service transport;
+- deterministic result contract with explicit `cid_profile`;
+- CT105-independent CID calculation and comparison;
+- resumable/idempotent external workflows and startup reconciliation;
+- participant publication budget;
+- participant-linked publication record committed atomically with terminal workflow evidence;
 - audit and receipt;
 - backend isolation;
+- explicit side-effect certainty for ambiguous transport outcomes;
 - fail-closed verification;
-- conservative crash/reconciliation procedure before real side effects;
 - no claim that later unpinning globally deletes IPFS content.
+
+Authority: `docs/PHASE4_PUBLICATION_SAFETY_GATES.md`.
 
 No second production side-effect capability is enabled until publication demonstrates the complete end-to-end control pattern.
 

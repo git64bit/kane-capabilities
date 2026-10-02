@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -8,6 +9,19 @@ from urllib.request import Request, urlopen
 
 
 ContractValidator = Callable[[str, Any], None]
+
+CID_PROFILE = "civic-ipfs-kubo-v1"
+MAX_SINGLE_RAW_BLOCK_BYTES = 262_144
+
+
+def expected_single_raw_cid(sha256_hex: str) -> str:
+    """Return the CIDv1/raw/sha2-256 base32 identity for one raw block."""
+    digest = bytes.fromhex(sha256_hex)
+    if len(digest) != 32:
+        raise ValueError("sha256 digest must be 32 bytes")
+    # CIDv1 (0x01), raw codec (0x55), sha2-256 multihash (0x12, 0x20).
+    binary_cid = b"\x01\x55\x12\x20" + digest
+    return "b" + base64.b32encode(binary_cid).decode("ascii").lower().rstrip("=")
 
 
 @dataclass(frozen=True)
@@ -23,7 +37,16 @@ class PublicationServiceFailure(Exception):
 
 
 class PublicationServiceUnavailable(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        side_effects_possible: bool = True,
+        side_effects_certainty: str = "unknown",
+    ) -> None:
+        super().__init__(message)
+        self.side_effects_possible = bool(side_effects_possible)
+        self.side_effects_certainty = side_effects_certainty
 
 
 class PublicationServiceProtocolError(RuntimeError):
@@ -89,9 +112,26 @@ class PublicationServiceClient:
                 expected_workflow_id=workflow_id,
             )
             raise AssertionError("unreachable")
-        except (URLError, TimeoutError, OSError) as exc:
+        except URLError as exc:
+            known_pre_dispatch = isinstance(exc.reason, ConnectionRefusedError)
             raise PublicationServiceUnavailable(
-                f"publication service unavailable: {exc}"
+                f"publication service unavailable: {exc}",
+                side_effects_possible=not known_pre_dispatch,
+                side_effects_certainty=(
+                    "known" if known_pre_dispatch else "unknown"
+                ),
+            ) from exc
+        except ConnectionRefusedError as exc:
+            raise PublicationServiceUnavailable(
+                f"publication service unavailable: {exc}",
+                side_effects_possible=False,
+                side_effects_certainty="known",
+            ) from exc
+        except (TimeoutError, OSError) as exc:
+            raise PublicationServiceUnavailable(
+                f"publication service unavailable: {exc}",
+                side_effects_possible=True,
+                side_effects_certainty="unknown",
             ) from exc
 
         if status_code != 200:
@@ -121,6 +161,20 @@ class PublicationServiceClient:
         if result["size_bytes"] != artifact["size_bytes"]:
             raise PublicationServiceProtocolError(
                 "publication service returned a different size_bytes"
+            )
+        if result["cid_profile"] != CID_PROFILE:
+            raise PublicationServiceProtocolError(
+                "publication service returned an unsupported cid_profile"
+            )
+        if artifact["size_bytes"] > MAX_SINGLE_RAW_BLOCK_BYTES:
+            raise PublicationServiceProtocolError(
+                "artifact exceeds independently verifiable single-block profile"
+            )
+        expected_cid = expected_single_raw_cid(artifact["sha256"])
+        if result["cid"] != expected_cid:
+            raise PublicationServiceProtocolError(
+                "publication service returned a CID that does not match "
+                "the submitted artifact under the frozen profile"
             )
 
         return result

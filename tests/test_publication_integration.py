@@ -7,7 +7,11 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from civic_orchestrator.publication import PublicationServiceClient
+from civic_orchestrator.publication import (
+    CID_PROFILE,
+    PublicationServiceClient,
+    expected_single_raw_cid,
+)
 from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
 
 
@@ -53,10 +57,8 @@ class PublicationFixtureHandler(BaseHTTPRequestHandler):
                 "operation": "publication.publish",
                 "sha256": artifact["sha256"],
                 "size_bytes": artifact["size_bytes"],
-                "cid": (
-                    "bafybeigdyrzt5sfp7udm7hu76uh7y26"
-                    "nf3efuylzgf4p5l2h4q"
-                ),
+                "cid": expected_single_raw_cid(artifact["sha256"]),
+                "cid_profile": CID_PROFILE,
                 "pinned": True,
                 "verified": True,
             }
@@ -162,23 +164,21 @@ class PublicationIntegrationTests(unittest.TestCase):
             self.request("req:publication-integration-validation-only")
         )
 
-        self.assertEqual(status, 200)
-        self.assertEqual(result["status"], "failed")
+        self.assertEqual(status, 503)
+        self.assertEqual(result["failure_class"], "backend-unavailable")
         self.assertFalse(result["side_effects"])
-        self.assertEqual(
-            result["result"]["failure_class"],
-            "service-unavailable",
-        )
-        self.assertTrue(result["result"]["retryable"])
+        self.assertTrue(result["retryable"])
 
+        workflow_id = result["detail"]["workflow_id"]
         evidence_status, evidence = self.runtime.workflow_evidence(
-            result["workflow_id"]
+            workflow_id
         )
         self.assertEqual(evidence_status, 200)
-        self.assertEqual(evidence["workflow"]["state"], "failed")
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertEqual(evidence["receipts"], [])
         self.assertEqual(
             evidence["audit_events"][-1]["event_type"],
-            "civic.operation.failed",
+            "civic.operation.waiting",
         )
 
 

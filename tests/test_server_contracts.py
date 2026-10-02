@@ -221,11 +221,11 @@ class ServerContractTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(payload["failure_class"], "invalid-contract")
 
-    def test_publication_envelope_larger_than_one_mib_reaches_runtime(self):
+    def test_oversize_publication_reaches_runtime_contract_boundary(self):
         import base64
         import hashlib
 
-        payload = b"x" * 800_000
+        payload = b"x" * 300_000
         artifact = {
             "media_type": "application/octet-stream",
             "size_bytes": len(payload),
@@ -235,7 +235,7 @@ class ServerContractTests(unittest.TestCase):
         }
         request = {
             "contract_version": 1,
-            "request_id": "req:http-large-publication",
+            "request_id": "req:http-oversize-publication",
             "operation": "publication.publish",
             "caller": {
                 "subject": "participant:test",
@@ -250,9 +250,10 @@ class ServerContractTests(unittest.TestCase):
                 "artifact": artifact,
             },
         }
-        body = json.dumps(request, separators=(",", ":"))
-        body_bytes = body.encode("utf-8")
-        self.assertGreater(len(body_bytes), 1024 * 1024)
+        body_bytes = json.dumps(
+            request,
+            separators=(",", ":"),
+        ).encode("utf-8")
         self.assertLess(len(body_bytes), 1_500_000)
 
         status, response = self.request(
@@ -265,8 +266,8 @@ class ServerContractTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(status, 500)
-        self.assertEqual(response["failure_class"], "backend-unavailable")
+        self.assertEqual(status, 400)
+        self.assertEqual(response["failure_class"], "invalid-contract")
         self.assertFalse(response["side_effects"])
 
     def test_publication_base_url_builds_available_service_client(self):

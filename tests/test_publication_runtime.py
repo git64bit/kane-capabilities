@@ -5,9 +5,11 @@ import unittest
 from pathlib import Path
 
 from civic_orchestrator.publication import (
+    CID_PROFILE,
     PublicationServiceFailure,
     PublicationServiceProtocolError,
     PublicationServiceUnavailable,
+    expected_single_raw_cid,
 )
 from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
 
@@ -38,7 +40,17 @@ class FakePublicationClient:
                 },
             )
         if self.mode == "transport-failure":
-            raise PublicationServiceUnavailable("connection refused")
+            raise PublicationServiceUnavailable(
+                "connection refused",
+                side_effects_possible=False,
+                side_effects_certainty="known",
+            )
+        if self.mode == "transport-timeout":
+            raise PublicationServiceUnavailable(
+                "timed out after dispatch",
+                side_effects_possible=True,
+                side_effects_certainty="unknown",
+            )
         if self.mode == "protocol-failure":
             raise PublicationServiceProtocolError("invalid service result")
         if self.mode == "unexpected-failure":
@@ -50,7 +62,8 @@ class FakePublicationClient:
             "operation": "publication.publish",
             "sha256": artifact["sha256"],
             "size_bytes": artifact["size_bytes"],
-            "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            "cid": expected_single_raw_cid(artifact["sha256"]),
+            "cid_profile": CID_PROFILE,
             "pinned": True,
             "verified": True,
         }
@@ -112,10 +125,13 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertEqual(result["result"]["sha256"], self.artifact["sha256"])
         self.assertEqual(
             result["result"]["cid"],
-            "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            expected_single_raw_cid(self.artifact["sha256"]),
         )
+        self.assertEqual(result["result"]["cid_profile"], CID_PROFILE)
         self.assertTrue(result["result"]["pinned"])
         self.assertTrue(result["result"]["verified"])
+        self.assertEqual(result["result"]["side_effects_certainty"], "known")
+        self.assertTrue(result["result"]["publication_id"].startswith("pub:"))
         self.assertEqual(len(self.client.calls), 1)
         self.assertEqual(self.client.calls[0][1], self.artifact)
 
@@ -125,7 +141,12 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertEqual(evidence_status, 200)
         self.assertEqual(evidence["workflow"]["state"], "completed")
         self.assertTrue(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "known",
+        )
         self.assertTrue(evidence["side_effects"])
+        self.assertEqual(evidence["side_effects_certainty"], "known")
         self.assertEqual(
             [event["event_type"] for event in evidence["audit_events"]],
             [
@@ -146,6 +167,26 @@ class PublicationRuntimeTests(unittest.TestCase):
             result["result"]["cid"],
         )
 
+        with self.runtime.state._connect() as conn:
+            publication = conn.execute(
+                """
+                SELECT publication_id, participant_id, sha256, size_bytes,
+                       media_type, cid, cid_profile, workflow_id, receipt_id,
+                       client_id, authenticated_by, verified
+                  FROM publications
+                 WHERE workflow_id=?
+                """,
+                (result["workflow_id"],),
+            ).fetchone()
+        self.assertIsNotNone(publication)
+        self.assertEqual(publication[0], result["result"]["publication_id"])
+        self.assertEqual(publication[1], "participant:test")
+        self.assertEqual(publication[2], self.artifact["sha256"])
+        self.assertEqual(publication[5], result["result"]["cid"])
+        self.assertEqual(publication[6], CID_PROFILE)
+        self.assertEqual(publication[10], "test-authenticator")
+        self.assertEqual(publication[11], 1)
+
     def test_publication_specific_input_is_validated_before_backend_call(self):
         request = self.request()
         request["input"]["artifact"]["encoding"] = "hex"
@@ -157,27 +198,53 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertFalse(result["side_effects"])
         self.assertEqual(self.client.calls, [])
 
-    def test_bounded_service_failure_becomes_failed_workflow(self):
+    def test_retryable_service_failure_waits_and_can_resume(self):
         self.client.mode = "service-failure"
 
-        status, result = self.runtime.submit(self.request())
+        status, failure = self.runtime.submit(self.request())
 
-        self.assertEqual(status, 200)
-        self.assertEqual(result["status"], "failed")
-        self.assertFalse(result["side_effects"])
+        self.assertEqual(status, 503)
+        self.assertEqual(failure["failure_class"], "backend-unavailable")
+        self.assertFalse(failure["side_effects"])
+        self.assertTrue(failure["retryable"])
+        workflow_id = failure["detail"]["workflow_id"]
+        self.assertEqual(failure["detail"]["workflow_state"], "waiting")
         self.assertEqual(
-            result["result"]["failure_class"],
-            "service-unavailable",
+            failure["detail"]["side_effects_certainty"],
+            "known",
         )
-        self.assertTrue(result["result"]["retryable"])
 
-        _, evidence = self.runtime.workflow_evidence(result["workflow_id"])
-        self.assertEqual(evidence["workflow"]["state"], "failed")
+        _, evidence = self.runtime.workflow_evidence(workflow_id)
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertFalse(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "known",
+        )
+        self.assertEqual(evidence["receipts"], [])
         self.assertEqual(
             evidence["audit_events"][-1]["event_type"],
-            "civic.operation.failed",
+            "civic.operation.waiting",
         )
-        self.assertEqual(evidence["receipts"][0]["outcome"], "failed")
+
+        self.client.mode = "success"
+        retry = self.request()
+        retry["request_id"] = "req:publication-runtime-retry"
+        retry["submitted_at"] = "2026-10-01T17:01:00Z"
+        status, result = self.runtime.submit(retry)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result["workflow_id"], workflow_id)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(len(self.client.calls), 2)
+
+        _, evidence = self.runtime.workflow_evidence(workflow_id)
+        self.assertEqual(evidence["workflow"]["state"], "completed")
+        self.assertEqual(len(evidence["receipts"]), 1)
+        self.assertIn(
+            "civic.operation.resumed",
+            [event["event_type"] for event in evidence["audit_events"]],
+        )
 
     def test_verification_failure_is_conservatively_side_effecting(self):
         def fail_after_publication(workflow_id, artifact):
@@ -208,48 +275,124 @@ class PublicationRuntimeTests(unittest.TestCase):
             "verification-failed",
         )
 
-    def test_transport_failure_becomes_backend_unavailable_workflow(self):
+    def test_connection_refused_is_known_no_effect_waiting_failure(self):
         self.client.mode = "transport-failure"
 
-        status, result = self.runtime.submit(self.request())
+        status, failure = self.runtime.submit(self.request())
 
-        self.assertEqual(status, 200)
-        self.assertEqual(result["status"], "failed")
-        self.assertTrue(result["side_effects"])
+        self.assertEqual(status, 503)
+        self.assertEqual(failure["failure_class"], "backend-unavailable")
+        self.assertFalse(failure["side_effects"])
+        self.assertTrue(failure["retryable"])
         self.assertEqual(
-            result["result"]["failure_class"],
-            "backend-unavailable",
+            failure["detail"]["side_effects_certainty"],
+            "known",
         )
-        self.assertTrue(result["result"]["retryable"])
 
-    def test_protocol_failure_becomes_internal_failed_workflow(self):
+        _, evidence = self.runtime.workflow_evidence(
+            failure["detail"]["workflow_id"]
+        )
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertFalse(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "known",
+        )
+
+    def test_transport_timeout_is_unknown_possible_effect_waiting_failure(self):
+        self.client.mode = "transport-timeout"
+
+        status, failure = self.runtime.submit(self.request())
+
+        self.assertEqual(status, 503)
+        self.assertTrue(failure["side_effects"])
+        self.assertEqual(
+            failure["detail"]["side_effects_certainty"],
+            "unknown",
+        )
+
+        _, evidence = self.runtime.workflow_evidence(
+            failure["detail"]["workflow_id"]
+        )
+        self.assertTrue(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "unknown",
+        )
+
+    def test_protocol_failure_waits_with_unknown_effects(self):
         self.client.mode = "protocol-failure"
 
-        status, result = self.runtime.submit(self.request())
+        status, failure = self.runtime.submit(self.request())
 
-        self.assertEqual(status, 200)
-        self.assertEqual(result["status"], "failed")
-        self.assertTrue(result["side_effects"])
-        self.assertEqual(result["result"]["failure_class"], "internal")
-        self.assertFalse(result["result"]["retryable"])
-
-    def test_unexpected_adapter_failure_is_persisted_as_failed(self):
-        self.client.mode = "unexpected-failure"
-
-        status, result = self.runtime.submit(self.request())
-
-        self.assertEqual(status, 200)
-        self.assertEqual(result["status"], "failed")
-        self.assertTrue(result["side_effects"])
-        self.assertEqual(result["result"]["failure_class"], "internal")
-        self.assertIn(
-            "unexpected publication adapter failure",
-            result["result"]["message"],
+        self.assertEqual(status, 502)
+        self.assertEqual(failure["failure_class"], "internal")
+        self.assertTrue(failure["side_effects"])
+        self.assertTrue(failure["retryable"])
+        self.assertEqual(
+            failure["detail"]["side_effects_certainty"],
+            "unknown",
         )
 
-        _, evidence = self.runtime.workflow_evidence(result["workflow_id"])
-        self.assertEqual(evidence["workflow"]["state"], "failed")
-        self.assertEqual(evidence["receipts"][0]["outcome"], "failed")
+    def test_unexpected_adapter_failure_waits_for_operator_recovery(self):
+        self.client.mode = "unexpected-failure"
+
+        status, failure = self.runtime.submit(self.request())
+
+        self.assertEqual(status, 500)
+        self.assertEqual(failure["failure_class"], "internal")
+        self.assertTrue(failure["side_effects"])
+        self.assertFalse(failure["retryable"])
+        self.assertIn(
+            "unexpected publication adapter failure",
+            failure["message"],
+        )
+
+        _, evidence = self.runtime.workflow_evidence(
+            failure["detail"]["workflow_id"]
+        )
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertEqual(evidence["receipts"], [])
+
+    def test_restart_reconciles_accepted_publication_for_same_workflow_retry(self):
+        request = self.request()
+        descriptor = self.runtime.registry.lookup("publication.publish")
+        start, replayed = self.runtime.state.begin_external_operation(
+            request,
+            descriptor,
+            "publication-policy-v1",
+            "test crash boundary",
+            self.runtime.contracts.validate,
+        )
+        self.assertFalse(replayed)
+        workflow_id = start["workflow_id"]
+
+        restarted_client = FakePublicationClient()
+        restarted = CivicOrchestrator(
+            RuntimePaths(
+                repo_root=ROOT,
+                state_db=Path(self.tmp.name) / "state.sqlite3",
+            ),
+            publication_client=restarted_client,
+        )
+
+        _, evidence = restarted.workflow_evidence(workflow_id)
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertTrue(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "unknown",
+        )
+        self.assertEqual(
+            evidence["audit_events"][-1]["event_type"],
+            "civic.operation.recovery-pending",
+        )
+
+        status, result = restarted.submit(request)
+        self.assertEqual(status, 200)
+        self.assertEqual(result["workflow_id"], workflow_id)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(len(restarted_client.calls), 1)
 
     def test_publication_replay_does_not_call_backend_twice(self):
         request = self.request()

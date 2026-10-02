@@ -21,7 +21,7 @@
     "size_bytes": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 1048576
+      "maximum": 262144
     },
     "sha256": {
       "$ref": "urn:civic-orchestrator:schema:common:v1#/$defs/sha256"

@@ -46,7 +46,7 @@ authenticated Usermin login
         -> command process credentials
 ```
 
-The Civic adapter must derive participant identity from the process or kernel peer credentials.
+The Civic adapter must derive the local account from process or kernel peer credentials, then map that account to a stable, never-recycled Civic participant identifier. Unix username and UID are locators, not permanent publication identity.
 
 The participant must never provide editable values for:
 
@@ -134,6 +134,8 @@ Custom Commands provides a suitable UI and authenticated Unix execution identity
 
 The participant-side adapter must communicate with a local privileged or dedicated Civic broker over an authenticated local IPC boundary.
 
+The privileged broker must never open a participant-supplied pathname. The participant process opens and reads its own Usermin upload under its existing Unix credentials, then sends bounded bytes to the broker. This prevents a privileged path-open race or symlink escape.
+
 Preferred local shape:
 
 ```text
@@ -144,12 +146,15 @@ Usermin Custom Command
 participant adapter
         |
         | Unix-domain socket
+        | bounded artifact bytes
         v
 Civic broker
         |
         | SO_PEERCRED
         | derive peer UID
-        | UID -> Unix participant
+        | UID -> Portal account
+        | account -> stable participant_id
+        | derive size/hash/media type
         | fixed client identity
         | fixed authentication provenance
         v
@@ -183,8 +188,12 @@ The broker must not trust a username supplied in the request body. It must obtai
 The broker must reject peers that:
 
 - cannot be resolved to a Unix account;
+- cannot be mapped to a stable Civic participant identifier;
 - are not members of the authorized participant group;
-- attempt operations outside the broker's fixed operation set.
+- attempt operations outside the broker's fixed operation set;
+- exceed the current artifact-size bound.
+
+The broker receives bytes, not a privileged filesystem pathname.
 
 ## Remote trust boundary
 
@@ -212,13 +221,14 @@ The participant supplies only the file to publish.
 
 The adapter or broker derives or records factual publication metadata, including:
 
-- authenticated participant identity;
+- stable authenticated participant identity;
 - exact bytes;
-- original filename where available;
 - size;
 - SHA-256;
 - media type through bounded mechanical classification, falling back to `application/octet-stream`;
 - fixed client/authentication provenance.
+
+The source filename is not part of the publication contract.
 
 Document purpose, logical path, retention duration, pin duration, supersession, and version intent are not publication prerequisites.
 
@@ -247,9 +257,12 @@ Required:
 - system Unix socket;
 - participant-group socket access;
 - kernel `SO_PEERCRED` UID derivation;
+- stable, never-recycled participant-ID mapping;
+- participant process sends bounded bytes; broker never opens a participant-supplied path;
+- broker derives size, SHA-256, and bounded media type;
 - no caller identity accepted from request payload;
 - no remote Orchestrator side effect yet;
-- tests for impersonation and malformed local requests.
+- tests for impersonation, path/symlink abuse, oversize input, and malformed local requests.
 
 ### U-003 — Authenticated Orchestrator transport
 
@@ -257,8 +270,11 @@ Required:
 
 - broker possesses an adapter credential unavailable to participants;
 - Orchestrator verifies the adapter boundary;
+- each credential maps server-side to a fixed `client.id`, fixed `client.kind`, fixed `authenticated_by`, and allowed subject namespace/mapping;
+- transport-derived adapter identity constrains request-body identity claims; the body can never widen them;
 - participant cannot bypass the broker by directly calling the raw API;
-- authenticated adapter identity is bound to the resulting request provenance.
+- authenticated adapter identity is bound to the resulting request provenance;
+- contradictory body claims are rejected with a diagnostic.
 
 ### U-004 — Validation-only end to end
 
@@ -273,5 +289,7 @@ Required:
 - no Kubo side effect.
 
 Only after U-004 should Usermin publication be considered a production participant route.
+
+U-004 remains validation-only. Real Kubo side effects additionally require every gate in `PHASE4_PUBLICATION_SAFETY_GATES.md`.
 
 Publication/document organization and lifecycle management are deliberately outside the thin Usermin form. Heavy clients consume the participant-linked publication catalog defined in `PUBLICATION_DOCUMENT_MODEL.md`.

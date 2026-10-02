@@ -12,6 +12,7 @@ The independent-operator rule remains: another county may place the same capabil
 
 | Capability / service class | Kane reference placement | Decision |
 |---|---|---|
+| Portal / Usermin + Witness / Hubzilla interaction surfaces | `witness-hubzilla` container | currently co-located; deployment fact recorded in `KANE_DEPLOYMENT_FACTS.md` |
 | Civic Orchestrator | `srv-b` CT105 `civic-orchestrator` | keep isolated |
 | Kane Fabric geographic authority | `srv-b` CT102 `kane-fabric` | retain existing |
 | Secure browser origin / Wiregate | `srv-b` CT103 `kane-wiregate` | retain existing |
@@ -23,6 +24,16 @@ The independent-operator rule remains: another county may place the same capabil
 | Firmware signing authority | `annales` LXD `firmware-authority` software signing authority | retain protected boundary; hardware backing optional, not required |
 | ESP32-S3 management / synchronization | new isolated service node | create after transport contract gate |
 | Physical firmware build / programming | existing `fw` workstation | retain existing |
+
+## 0. Interaction surfaces
+
+### Placement
+
+The current Kane deployment co-locates **Portal/Usermin** and **Witness/Hubzilla** in the container whose hostname is `witness-hubzilla`.
+
+This was confirmed live on 2026-10-02. `usermin.service` is loaded and active in that container. The container also carries the `civic-participants` group used by the Usermin adapter boundary.
+
+This is a deployment fact, not a portability requirement. The physical host and numeric CT/VM identifier are not established by this document and must not be invented. See `KANE_DEPLOYMENT_FACTS.md` for the confirmed evidence.
 
 ## 1. Civic Orchestrator
 

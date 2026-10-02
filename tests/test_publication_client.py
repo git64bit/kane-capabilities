@@ -195,10 +195,24 @@ class PublicationServiceClientTests(unittest.TestCase):
     def test_transport_failure_is_service_unavailable(self):
         with patch(
             "civic_orchestrator.publication.urlopen",
-            side_effect=URLError("connection refused"),
+            side_effect=URLError(ConnectionRefusedError("connection refused")),
         ):
-            with self.assertRaises(PublicationServiceUnavailable):
+            with self.assertRaises(PublicationServiceUnavailable) as caught:
                 self.client.publish(self.workflow_id, self.artifact)
+
+        self.assertFalse(caught.exception.side_effects_possible)
+        self.assertEqual(caught.exception.side_effects_certainty, "known")
+
+    def test_transport_timeout_has_unknown_side_effects(self):
+        with patch(
+            "civic_orchestrator.publication.urlopen",
+            side_effect=TimeoutError("timed out after dispatch"),
+        ):
+            with self.assertRaises(PublicationServiceUnavailable) as caught:
+                self.client.publish(self.workflow_id, self.artifact)
+
+        self.assertTrue(caught.exception.side_effects_possible)
+        self.assertEqual(caught.exception.side_effects_certainty, "unknown")
 
     def test_result_sha256_must_match_submitted_artifact(self):
         result = self.success_result()

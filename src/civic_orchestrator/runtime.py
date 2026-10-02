@@ -55,6 +55,49 @@ class ConflictError(ValueError):
     pass
 
 
+class AdapterIdentityError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class AuthenticatedAdapterBinding:
+    client_id: str
+    client_kind: str
+    authenticated_by: str
+    caller_authority: str
+    subject_prefix: str
+
+    def validate_request(self, request: dict[str, Any]) -> None:
+        caller = request["caller"]
+        client = request["client"]
+
+        if client["id"] != self.client_id:
+            raise AdapterIdentityError(
+                "client.id does not match authenticated adapter"
+            )
+        if client["kind"] != self.client_kind:
+            raise AdapterIdentityError(
+                "client.kind does not match authenticated adapter"
+            )
+        if caller["authenticated_by"] != self.authenticated_by:
+            raise AdapterIdentityError(
+                "caller.authenticated_by does not match authenticated adapter"
+            )
+        if caller.get("authority") != self.caller_authority:
+            raise AdapterIdentityError(
+                "caller.authority does not match authenticated adapter"
+            )
+
+        subject = caller["subject"]
+        if (
+            not subject.startswith(self.subject_prefix)
+            or len(subject) <= len(self.subject_prefix)
+        ):
+            raise AdapterIdentityError(
+                "caller.subject is outside authenticated adapter namespace"
+            )
+
+
 @dataclass(frozen=True)
 class RuntimePaths:
     repo_root: Path
@@ -1620,6 +1663,46 @@ class CivicOrchestrator:
                 for item in available
             ),
         }
+
+    def submit_authenticated(
+        self,
+        request: dict[str, Any],
+        binding: AuthenticatedAdapterBinding,
+    ) -> tuple[int, dict[str, Any]]:
+        """Submit through a transport-authenticated adapter identity binding."""
+        try:
+            canonical_json(request)
+            self.contracts.validate("request-envelope-v1.schema.json", request)
+        except (TypeError, ValueError, ValidationError):
+            # Preserve the ordinary contract failure semantics for malformed
+            # requests; identity binding is meaningful only after the envelope
+            # itself is valid.
+            return self.submit(request)
+
+        try:
+            binding.validate_request(request)
+        except AdapterIdentityError as exc:
+            request_id = request.get("request_id")
+            operation = request.get("operation")
+            caller = request.get("caller", {})
+            client = request.get("client", {})
+            self.state.record_request_diagnostic(
+                "adapter-identity-mismatch",
+                request_id,
+                operation,
+                caller.get("subject"),
+                client.get("id"),
+                exc,
+            )
+            return 403, self.failure(
+                request_id,
+                operation,
+                "unauthorized",
+                str(exc),
+                False,
+            )
+
+        return self.submit(request)
 
     def submit(self, request: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         raw_request_id = request.get("request_id") if isinstance(request, dict) else None

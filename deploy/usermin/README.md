@@ -19,7 +19,7 @@ The production registry is expected at:
 /etc/civic-orchestrator/participants-v1.json
 ```
 
-It must be root-owned and not group/world writable.
+It must remain root-owned and not group/world writable. When the broker runs as the dedicated non-root `civic-usermin-broker` service account, the production file should be `root:civic-usermin-broker 0640` so the broker can read it without gaining write access.
 
 A participant identifier is permanent publication provenance. When an account is retired, its registry entry is retained with:
 

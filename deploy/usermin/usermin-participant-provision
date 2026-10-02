@@ -1,3 +1,0 @@
-#!/bin/sh
-set -eu
-exec /opt/civic-usermin-broker/venv/bin/python -m civic_orchestrator.usermin_provision "$@"

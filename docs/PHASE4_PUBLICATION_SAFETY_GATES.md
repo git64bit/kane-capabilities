@@ -30,7 +30,7 @@ Repository implementation and production acceptance are tracked separately.
 | P4-003 authenticated adapter binding | CT105-side primitive implemented and regression-covered | broker integration and production acceptance pending |
 | P4-004 publication-service authentication | both endpoint/client primitives implemented | credential provisioning and live acceptance pending |
 | P4-005 stable participant identity | registry/mapping model implemented in U-002 code | real Portal mapping deployment and acceptance pending |
-| P4-006 participant publication budget | **not implemented** | pending |
+| P4-006 participant publication budget | implemented and regression-covered; deployment values remain external policy | deployment values and live acceptance pending |
 | P4-007 authoritative publication record | implemented in CT105 SQLite completion path | awaits real successful publication acceptance |
 | P4-008 no original filename | design decision closed | no separate deployment gate |
 | P4-009 side-effect certainty | implemented and regression-covered | awaits live failure-path acceptance where applicable |
@@ -258,7 +258,7 @@ The repository-side corrections above are not a substitute for production accept
 3. deploy and accept the real U-002 Usermin local broker, stable participant mapping, and Custom Command path;
 4. complete U-003 broker-to-CT105 authenticated remote publishing over the production route;
 5. complete U-004 validation-only end to end and verify persisted workflow/audit/receipt evidence with no Kubo side effect;
-6. implement and accept P4-006 participant publication budgeting in CT105 authorization policy;
+6. select Kane deployment values for P4-006, install the integrity-protected policy file on CT105, and accept the live budget behavior;
 7. perform a separate Phase 4 first-side-effect gate before enabling Kubo.
 
 No Kubo side effect is permitted before all applicable gates are accepted.

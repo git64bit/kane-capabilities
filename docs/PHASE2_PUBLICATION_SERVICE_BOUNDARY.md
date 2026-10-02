@@ -321,7 +321,7 @@ Accepted on 2026-10-01:
 9. persisted workflow/audit/receipt evidence for the expected no-side-effect failure;
 10. Kubo and swarm side effects remain disabled.
 
-Phase 4 safety gates are tracked in `PHASE4_PUBLICATION_SAFETY_GATES.md`. Repository implementations now exist for independent CID verification, resumable workflows, authenticated-adapter binding, publication-service authentication, stable participant mapping, atomic publication records, and side-effect certainty. Their production deployment/acceptance components remain gated where applicable. P4-006 participant publication budgeting remains unimplemented and is mandatory before Kubo side effects.
+Phase 4 safety gates are tracked in `PHASE4_PUBLICATION_SAFETY_GATES.md`. Repository implementations now exist for independent CID verification, resumable workflows, authenticated-adapter binding, publication-service authentication, stable participant mapping, participant publication budgeting, atomic publication records, and side-effect certainty. Their production deployment/acceptance components remain gated where applicable. P4-006 still requires Kane deployment values, installation of the integrity-protected CT105 policy file, and live acceptance before Kubo side effects.
 
 No additional capability namespace is introduced by the publication node.
 

@@ -1,6 +1,7 @@
 import http.client
 import importlib.util
 import json
+import tempfile
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
@@ -16,6 +17,65 @@ SPEC = importlib.util.spec_from_file_location(
 publication_service = importlib.util.module_from_spec(SPEC)
 assert SPEC is not None and SPEC.loader is not None
 SPEC.loader.exec_module(publication_service)
+
+
+class PublicationServiceCredentialLoaderTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.credentials_dir = Path(self.tmp.name).resolve()
+        self.credential_name = "publication-service.json"
+        self.token = "S" * 48
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write_credential(self, value):
+        (self.credentials_dir / self.credential_name).write_text(
+            json.dumps(value),
+            encoding="utf-8",
+        )
+
+    def test_loads_service_token_from_systemd_directory(self):
+        self.write_credential(
+            {
+                "version": 1,
+                "token": self.token,
+            }
+        )
+
+        token = publication_service.load_systemd_bearer_token(
+            self.credential_name,
+            credentials_directory=str(self.credentials_dir),
+        )
+
+        self.assertEqual(token, self.token.encode("utf-8"))
+
+    def test_service_credential_name_cannot_escape_directory(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "credential name is invalid",
+        ):
+            publication_service.load_systemd_bearer_token(
+                "../publication.json",
+                credentials_directory=str(self.credentials_dir),
+            )
+
+    def test_service_short_token_is_rejected(self):
+        self.write_credential(
+            {
+                "version": 1,
+                "token": "short",
+            }
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "bearer token is invalid",
+        ):
+            publication_service.load_systemd_bearer_token(
+                self.credential_name,
+                credentials_directory=str(self.credentials_dir),
+            )
 
 
 class PublicationServiceAuthenticationTests(unittest.TestCase):

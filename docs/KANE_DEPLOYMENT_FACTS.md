@@ -457,3 +457,27 @@ response:
 This was not an operator/root connectivity test. It proves that a participant process can traverse the existing Civic WireGuard fabric and the temporary `srv-b` DNAT path to the CT105 private ingress, which then reaches the loopback-only Orchestrator.
 
 Because participant Terminal access is part of the accepted Usermin design, U-003 must now prove that this same participant cannot submit an Orchestrator operation without the broker-held protected adapter credential.
+
+
+### U-003 participant bypass rejection accepted — 2026-10-02
+
+Confirmed from the ordinary participant shell `sase25sep26a@witness-hubzilla` against the live Civic ingress:
+
+```text
+POST http://10.110.0.12:8045/v1/operations
+Authorization header: absent
+
+HTTP/1.0 401 Unauthorized
+
+{
+  "contract_version": 1,
+  "failure_class": "unauthorized",
+  "message": "adapter credential is required",
+  "operation": "audit.invalid_request",
+  "request_id": "invalid:request",
+  "retryable": false,
+  "side_effects": false
+}
+```
+
+This proves the accepted Terminal coexistence invariant: an ordinary participant can reach the Civic network ingress but cannot bypass the Usermin broker and directly exercise an Orchestrator operation without the protected adapter credential.

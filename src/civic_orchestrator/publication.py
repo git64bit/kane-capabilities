@@ -112,9 +112,26 @@ class PublicationServiceClient:
                 expected_workflow_id=workflow_id,
             )
             raise AssertionError("unreachable")
-        except (URLError, TimeoutError, OSError) as exc:
+        except URLError as exc:
+            known_pre_dispatch = isinstance(exc.reason, ConnectionRefusedError)
             raise PublicationServiceUnavailable(
-                f"publication service unavailable: {exc}"
+                f"publication service unavailable: {exc}",
+                side_effects_possible=not known_pre_dispatch,
+                side_effects_certainty=(
+                    "known" if known_pre_dispatch else "unknown"
+                ),
+            ) from exc
+        except ConnectionRefusedError as exc:
+            raise PublicationServiceUnavailable(
+                f"publication service unavailable: {exc}",
+                side_effects_possible=False,
+                side_effects_certainty="known",
+            ) from exc
+        except (TimeoutError, OSError) as exc:
+            raise PublicationServiceUnavailable(
+                f"publication service unavailable: {exc}",
+                side_effects_possible=True,
+                side_effects_certainty="unknown",
             ) from exc
 
         if status_code != 200:

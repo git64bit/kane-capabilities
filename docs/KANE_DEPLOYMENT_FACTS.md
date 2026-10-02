@@ -43,7 +43,7 @@ civic-participants:
 
 The same container also matches the earlier production Usermin discovery recorded in `PHASE3_USERMIN_ADAPTER_BOUNDARY.md`, including Linux AF_UNIX / `SO_PEERCRED`, systemd, Python 3.12, and the `civic-participants` participant boundary.
 
-At the 2026-10-02 pre-deployment check, the Usermin publication broker had **not yet been installed**:
+At the 2026-10-02 pre-deployment check, the Usermin publication broker systemd units had **not yet been installed**:
 
 ```text
 civic-usermin-broker.socket:
@@ -72,3 +72,22 @@ During 2026-10-02 cleanup, the temporary unpublished authentication experiment w
 - service remained active with PID 293 and `NRestarts=0` at the time of verification.
 
 These facts do not establish the final IPFS network topology.
+
+
+### Usermin broker deployment progress — 2026-10-02
+
+Confirmed inside `witness-hubzilla`:
+
+```text
+civic-usermin-broker service account:
+  uid=999
+  gid=988
+  home=/nonexistent
+  shell=/usr/sbin/nologin
+
+created directories:
+  /opt/civic-usermin-broker   root:root 0755
+  /etc/civic-orchestrator     root:root 0755
+```
+
+No Usermin broker systemd unit, socket activation, Orchestrator route, or network change was made by this step.

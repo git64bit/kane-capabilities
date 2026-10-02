@@ -784,3 +784,23 @@ Confirmed on physical host `proxmox1`:
 ```
 
 The rule is live only and is not persisted. It exists solely for the one-shot transfer of the existing CT105 publication-service credential into CT106.
+
+
+### CT106 publication credential installed — 2026-10-02
+
+Confirmed inside `proxmox1` CT106 `publication1`:
+
+```text
+/etc/civic-publication/credentials/publication-service.json
+  owner=root
+  group=root
+  mode=0600
+  size=89 bytes
+
+one-shot receiver:
+  state=INSTALLED
+  receiver process exited after the single transfer
+  listener 192.168.1.106:48046 no longer present
+```
+
+The bearer token was not printed or committed. The temporary network aperture on `proxmox1` remains to be removed before configuring the publication service.

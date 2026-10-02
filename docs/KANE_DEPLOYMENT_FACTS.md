@@ -113,3 +113,16 @@ python3-setuptools-whl installed as dependency
 No packages were upgraded. The install reported 35 packages not upgraded. No Civic service was installed or activated by this package step.
 
 The earlier `/opt/civic-usermin-broker/venv` remains a partial venv created before `python3.12-venv` was available and must be replaced before use.
+
+
+### Usermin broker virtual environment ready — 2026-10-02
+
+Confirmed on `witness-hubzilla` after installing `python3.12-venv`:
+
+```text
+/opt/civic-usermin-broker/venv
+  Python 3.12.3
+  pip 24.0
+```
+
+The earlier partial venv was removed and recreated cleanly. No Civic package, systemd unit, socket, Orchestrator route, or credential was installed by this step.

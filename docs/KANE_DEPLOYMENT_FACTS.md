@@ -162,3 +162,21 @@ civic_orchestrator.usermin_upload
 ```
 
 No systemd unit, broker socket, participant registry, Orchestrator route, or credential was installed or activated by this step.
+
+
+### Usermin participant Unix identity confirmed — 2026-10-02
+
+Confirmed on `witness-hubzilla` immediately before participant-registry provisioning:
+
+```text
+username: sase25sep26a
+uid:      1002
+gid:      1003
+home:     /home/sase25sep26a
+shell:    /bin/bash
+groups:
+  1003 sase25sep26a
+  1004 civic-participants
+```
+
+These Unix identifiers are deployment locators only. The publication registry must assign a separate stable Civic `participant_id` and must not derive permanent publication identity from the username or UID.

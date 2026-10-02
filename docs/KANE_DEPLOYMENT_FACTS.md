@@ -481,3 +481,20 @@ HTTP/1.0 401 Unauthorized
 ```
 
 This proves the accepted Terminal coexistence invariant: an ordinary participant can reach the Civic network ingress but cannot bypass the Usermin broker and directly exercise an Orchestrator operation without the protected adapter credential.
+
+
+### U-003 srv-b route persisted — 2026-10-02
+
+Confirmed on physical Proxmox host `srv-b`:
+
+```text
+/etc/iptables/rules.v4:
+  -A PREROUTING -s 10.110.0.19/32 -d 10.110.0.12/32 -i wg0 -p tcp -m tcp --dport 8045 -j DNAT --to-destination 10.20.0.15:8045
+
+netfilter-persistent:
+  enabled
+```
+
+The identical DNAT rule was already live before persistence, so no firewall reload was required.
+
+This makes the accepted Usermin-to-CT105 Civic fabric route reboot-persistent using the existing `srv-b` network-control mechanism, with no Civic application daemon installed on the Proxmox host.

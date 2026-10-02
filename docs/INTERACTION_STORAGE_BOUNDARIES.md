@@ -158,6 +158,8 @@ Controls should instead rely on:
 
 This boundary does not assert that arbitrary published files are safe. It prevents routine operator inspection of private or opaque participant files from becoming a prerequisite for ordinary storage or publication.
 
+Mechanical publication processing such as byte counting, hashing, encoding, integrity verification, and bounded media-type classification is permitted because it does not require a human moderator to open and interpret the content.
+
 ## Working copy versus publication
 
 Deleting a participant working file is an ordinary storage operation.

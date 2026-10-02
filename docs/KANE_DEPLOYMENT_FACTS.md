@@ -408,3 +408,32 @@ persistence mechanism:
 ```
 
 The host already implements WireGuard-to-private-service-network routing/NAT as infrastructure policy. U-003 can therefore use the same established mechanism without adding a Civic application daemon to the Proxmox host.
+
+
+### srv-b temporary U-003 DNAT installed — 2026-10-02
+
+Confirmed on physical Proxmox host `srv-b`:
+
+```text
+-A PREROUTING
+  -s 10.110.0.19/32
+  -d 10.110.0.12/32
+  -i wg0
+  -p tcp
+  --dport 8045
+  -j DNAT
+  --to-destination 10.20.0.15:8045
+```
+
+This rule is live only and has not yet been persisted to `/etc/iptables/rules.v4`.
+
+Purpose:
+
+```text
+witness-hubzilla 10.110.0.19
+    -> srv-b 10.110.0.12:8045
+    -> DNAT
+    -> CT105 10.20.0.15:8045
+    -> CT105 ingress relay
+    -> Orchestrator 127.0.0.1:8045
+```

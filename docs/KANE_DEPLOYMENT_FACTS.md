@@ -180,3 +180,19 @@ groups:
 ```
 
 These Unix identifiers are deployment locators only. The publication registry must assign a separate stable Civic `participant_id` and must not derive permanent publication identity from the username or UID.
+
+
+### Stable Usermin participant identity provisioned — 2026-10-02
+
+Confirmed on `witness-hubzilla`:
+
+```text
+username:       sase25sep26a
+uid:            1002
+participant_id: participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
+registry:       /etc/civic-orchestrator/participants-v1.json
+```
+
+The participant ID is a stable Civic provenance identifier and is not derived from the Unix username or UID.
+
+Initial registry creation produced `root:root 0600`. Because the production broker service runs as the non-root `civic-usermin-broker` account, deployment must grant that service read access while retaining root ownership and prohibiting group/world write; the intended live mode is therefore `root:civic-usermin-broker 0640`.

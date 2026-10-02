@@ -92,7 +92,7 @@ Publish
 
 No label, purpose, retention period, document path, version relationship, Kubo parameter, HTTP endpoint, Orchestrator identity, service routing, or authentication parameter is exposed to the participant form.
 
-The current v1 `publication.publish` schema still permits an optional descriptive `label`; Usermin does not expose or populate it.
+The `publication.publish` schema contains no descriptive label field. Usermin supplies only the file; descriptive meaning belongs to later document/catalog management.
 
 ## Upload handling
 

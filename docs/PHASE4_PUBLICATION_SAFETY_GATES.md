@@ -129,15 +129,31 @@ Usermin filesystem quota does not bound IPFS storage.
 
 Before real publication, CT105 authorization must enforce a deployment policy that bounds participant use of Civic-controlled publication storage.
 
-The policy may include:
+The initial bounded policy will enforce at least:
 
-- active pinned-byte budget;
-- publication-count budget;
-- rate/burst limits.
+- a maximum participant publication count;
+- a maximum participant publication-byte total.
 
-These numerical limits are deployment policy, not portable Civic contract constants.
+The numerical limits are deployment policy, not portable Civic contract constants. Rate/burst policy may be added later without changing the publication contract.
 
-A historical publication record remains valid after Civic-controlled content is unpinned.
+Budget accounting must use authoritative CT105 state and must remain correct across concurrent requests and crash/retry recovery. A check against completed publication rows alone is insufficient because more than one authorized workflow may be in flight before either completes.
+
+Therefore the initial implementation must reserve budget atomically with publication authorization:
+
+```text
+current completed publication usage
+        +
+current in-flight / conservatively held budget
+        +
+requested publication
+        <= deployment policy
+```
+
+The same workflow retains the same reservation across waiting, restart reconciliation, and semantic retry. A successful publication converts the reservation into the authoritative publication record in the same terminal transaction. A terminal failure known to have produced no external side effect releases the reservation. A waiting workflow, an unknown side-effect outcome, or a terminal failure that may have created publication storage keeps the amount conservatively charged until explicit reconciliation.
+
+A budget denial occurs before backend dispatch and must leave inspectable authorization/diagnostic evidence. It must not create a second publication-service accounting authority.
+
+Until explicit pin/unpin lifecycle state exists, completed publication bytes remain conservatively chargeable. A later lifecycle implementation may release active-byte budget when Civic-controlled pin state is explicitly retired, while the historical publication record remains valid.
 
 ## P4-007 — Authoritative publication record
 

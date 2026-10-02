@@ -1975,8 +1975,6 @@ class CivicOrchestrator:
         )
         return 200, result
 
-        return 200, result
-
     def workflow_evidence(
         self,
         workflow_id: str,

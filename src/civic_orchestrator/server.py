@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import hmac
 import json
+import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -16,6 +18,8 @@ from .runtime import (
 
 
 MAX_OPERATION_REQUEST_BYTES = 1_500_000
+_ADAPTER_CREDENTIAL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+MAX_ADAPTER_CREDENTIAL_BYTES = 16_384
 
 
 class AdapterCredentialError(ValueError):
@@ -56,6 +60,88 @@ class BearerAdapterAuthenticator:
                 return binding
 
         raise AdapterCredentialError("adapter credential is invalid")
+
+
+def load_systemd_adapter_authenticator(
+    credential_name: str,
+    *,
+    credentials_directory: str | None = None,
+) -> BearerAdapterAuthenticator:
+    """Load one adapter credential from systemd's protected credential directory."""
+    if not _ADAPTER_CREDENTIAL_NAME_RE.fullmatch(credential_name):
+        raise ValueError("adapter credential name is invalid")
+
+    directory_value = (
+        credentials_directory
+        if credentials_directory is not None
+        else os.environ.get("CREDENTIALS_DIRECTORY")
+    )
+    if not directory_value:
+        raise ValueError("systemd CREDENTIALS_DIRECTORY is unavailable")
+
+    directory = Path(directory_value)
+    if not directory.is_absolute():
+        raise ValueError("systemd CREDENTIALS_DIRECTORY must be absolute")
+
+    path = directory / credential_name
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise ValueError("adapter credential cannot be read") from exc
+
+    if not raw or len(raw) > MAX_ADAPTER_CREDENTIAL_BYTES:
+        raise ValueError("adapter credential size is invalid")
+
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("adapter credential is not valid JSON") from exc
+
+    if not isinstance(value, dict) or set(value) != {
+        "version",
+        "token",
+        "binding",
+    }:
+        raise ValueError("adapter credential fields are invalid")
+    if value["version"] != 1:
+        raise ValueError("adapter credential version is invalid")
+
+    token = value["token"]
+    if (
+        not isinstance(token, str)
+        or len(token) < 32
+        or len(token) > 4096
+        or any(ch.isspace() for ch in token)
+    ):
+        raise ValueError("adapter bearer token is invalid")
+
+    binding_value = value["binding"]
+    required_binding_fields = {
+        "client_id",
+        "client_kind",
+        "authenticated_by",
+        "caller_authority",
+        "subject_prefix",
+    }
+    if (
+        not isinstance(binding_value, dict)
+        or set(binding_value) != required_binding_fields
+        or any(
+            not isinstance(binding_value[field], str)
+            or not binding_value[field]
+            for field in required_binding_fields
+        )
+    ):
+        raise ValueError("adapter binding fields are invalid")
+
+    binding = AuthenticatedAdapterBinding(
+        client_id=binding_value["client_id"],
+        client_kind=binding_value["client_kind"],
+        authenticated_by=binding_value["authenticated_by"],
+        caller_authority=binding_value["caller_authority"],
+        subject_prefix=binding_value["subject_prefix"],
+    )
+    return BearerAdapterAuthenticator([(token, binding)])
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -254,6 +340,13 @@ def main() -> None:
     parser.add_argument("--listen", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8045)
     parser.add_argument("--publication-base-url")
+    parser.add_argument(
+        "--adapter-credential-name",
+        help=(
+            "systemd credential name containing the adapter bearer token "
+            "and fixed identity binding"
+        ),
+    )
     args = parser.parse_args()
 
     runtime = build_runtime(
@@ -262,6 +355,11 @@ def main() -> None:
         publication_base_url=args.publication_base_url,
     )
     Handler.runtime = runtime
+    Handler.adapter_authenticator = None
+    if args.adapter_credential_name:
+        Handler.adapter_authenticator = load_systemd_adapter_authenticator(
+            args.adapter_credential_name
+        )
     server = ThreadingHTTPServer((args.listen, args.port), Handler)
     server.serve_forever()
 

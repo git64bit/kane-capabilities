@@ -263,7 +263,7 @@ Production discovery of stock Usermin Custom Commands is complete. U-001 is acce
 
 Next gates:
 
-- **U-002:** repository implementation complete; deploy and accept the local peer-credential broker on the real Usermin host. It receives bytes, not privileged paths, maps Unix accounts to stable participant IDs, and has no remote publisher.
+- **U-002:** ACCEPTED on 2026-10-02 on the production Portal/Usermin host (`witness-hubzilla`). The local peer-credential broker received participant-owned bytes over AF_UNIX, derived the real Unix UID through `SO_PEERCRED`, mapped it to the stable Civic participant ID, and returned validation-only evidence with `remote_dispatch=false`.
 - **U-003:** CT105-side authenticated ingress and server-side binding of client/authentication provenance and subject namespace are implemented and regression-tested in the repository; complete the broker's authenticated remote publisher, protected credential provisioning, production routing, and acceptance.
 - **U-004:** validation-only end to end through the real Usermin Custom Command.
 

@@ -1,20 +1,66 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from .publication import PublicationServiceClient
-from .runtime import CivicOrchestrator, RuntimePaths
+from .runtime import (
+    AuthenticatedAdapterBinding,
+    CivicOrchestrator,
+    RuntimePaths,
+)
 
 
 MAX_OPERATION_REQUEST_BYTES = 1_500_000
 
 
+class AdapterCredentialError(ValueError):
+    pass
+
+
+class BearerAdapterAuthenticator:
+    """Resolve an HTTP bearer credential to one fixed adapter binding."""
+
+    def __init__(
+        self,
+        credentials: list[
+            tuple[str, AuthenticatedAdapterBinding]
+        ],
+    ) -> None:
+        if not credentials:
+            raise ValueError("at least one adapter credential is required")
+        normalized: list[tuple[bytes, AuthenticatedAdapterBinding]] = []
+        for token, binding in credentials:
+            if not isinstance(token, str) or not token:
+                raise ValueError("adapter bearer credential is invalid")
+            normalized.append((token.encode("utf-8"), binding))
+        self._credentials = tuple(normalized)
+
+    def authenticate(
+        self,
+        authorization_header: str | None,
+    ) -> AuthenticatedAdapterBinding:
+        if not isinstance(authorization_header, str):
+            raise AdapterCredentialError("adapter credential is required")
+        scheme, sep, token = authorization_header.partition(" ")
+        if sep != " " or scheme != "Bearer" or not token:
+            raise AdapterCredentialError("adapter credential is invalid")
+
+        token_bytes = token.encode("utf-8")
+        for expected, binding in self._credentials:
+            if hmac.compare_digest(token_bytes, expected):
+                return binding
+
+        raise AdapterCredentialError("adapter credential is invalid")
+
+
 class Handler(BaseHTTPRequestHandler):
     runtime: CivicOrchestrator
+    adapter_authenticator: BearerAdapterAuthenticator | None = None
 
     def _send_json(self, status: int, payload: dict) -> None:
         body = json.dumps(
@@ -107,6 +153,28 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
+        if self.adapter_authenticator is None:
+            self._operation_failure(
+                503,
+                "backend-unavailable",
+                "authenticated adapter ingress is not configured",
+                retryable=False,
+            )
+            return
+
+        try:
+            adapter_binding = self.adapter_authenticator.authenticate(
+                self.headers.get("Authorization")
+            )
+        except AdapterCredentialError as exc:
+            self._operation_failure(
+                401,
+                "unauthorized",
+                str(exc),
+                retryable=False,
+            )
+            return
+
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -139,7 +207,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         try:
-            status, payload = self.runtime.submit(request)
+            status, payload = self.runtime.submit_authenticated(
+                request,
+                adapter_binding,
+            )
         except Exception:
             self._operation_failure(
                 500,

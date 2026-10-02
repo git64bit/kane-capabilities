@@ -74,8 +74,8 @@ Phase 4    gated; no Kubo side effects
 Current repository regression suite:
 
 ```text
-71 tests on Python 3.11    PASS
-71 tests on Python 3.13    PASS
+73 tests on Python 3.11    PASS
+73 tests on Python 3.13    PASS
 ```
 
 ## Next review targets

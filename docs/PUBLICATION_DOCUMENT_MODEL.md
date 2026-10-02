@@ -174,12 +174,14 @@ The infrastructure derives or records the rest:
 - original filename where available;
 - byte size;
 - SHA-256;
-- media type where determinable;
+- media type derived mechanically by the adapter, with `application/octet-stream` as the safe fallback when no narrower type is established;
 - workflow/audit/receipt identifiers;
 - timestamp;
 - CID and verification result when publication succeeds.
 
 The participant does not supply publication purpose, retention duration, future-version intent, document path, supersession relationship, or pin duration as part of the thin publication action.
+
+Mechanical processing required to publish exact bytes—reading the bytes, counting them, hashing them, base64 transport, and bounded media-type classification—is not content moderation and must not require a human operator to open or interpret the file.
 
 The current v1 publication schema still permits an optional descriptive `label`. That field is not part of the Usermin thin-client surface and carries no lifecycle semantics. Contract cleanup may remove or supersede it before the first participant-facing side-effect gate.
 

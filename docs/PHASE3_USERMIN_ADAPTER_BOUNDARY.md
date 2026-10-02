@@ -2,7 +2,7 @@
 
 ## Status
 
-**U-001 ACCEPTED — U-002 repository implementation complete, production acceptance pending — U-003 CT105-side authenticated-ingress primitive implemented, broker integration and production acceptance pending — U-004 pending**
+**U-001 ACCEPTED — U-002 repository implementation complete, production acceptance pending — U-003 repository implementation complete, production routing/credential acceptance pending — U-004 pending**
 
 This document records the production Usermin discovery completed on 2026-10-01/02 and the participant-facing adapter boundary together with its staged repository implementation and production-acceptance state.
 
@@ -205,7 +205,7 @@ The raw Civic Orchestrator HTTP API must not be exposed to participants merely b
 
 Before participant traffic is admitted, the Orchestrator must distinguish an authenticated adapter from arbitrary HTTP clients. The repository-side CT105 mechanism now does this with a protected bearer credential resolved server-side to an `AuthenticatedAdapterBinding`.
 
-The remaining U-003 implementation gate is the real Usermin broker integration: the broker must hold the protected adapter credential, construct only the bounded participant publication request, reach CT105 through the production route, and preserve the transport-bound identity constraints. A participant with Terminal access must not be able to bypass the broker and submit arbitrary:
+The repository now contains the U-003 Usermin broker publisher: it loads a protected adapter credential, constructs only the bounded participant `publication.publish` request, and dispatches only when an Orchestrator endpoint is explicitly configured. Production route selection, credential provisioning, and live acceptance remain pending. A participant with Terminal access must not be able to bypass the broker and submit arbitrary:
 
 - caller subjects;
 - authentication provenance;
@@ -303,7 +303,7 @@ Required:
 - authenticated adapter identity is bound to the resulting request provenance;
 - contradictory body claims are rejected with a diagnostic.
 
-**Repository status:** the CT105 HTTP ingress now requires an authenticated adapter credential, maps that credential to a fixed `AuthenticatedAdapterBinding`, constrains caller/client claims to that transport binding, and can load the credential through systemd protected credentials. **Integration status:** the Usermin broker still has no remote publisher configured; broker-to-CT105 credential use, live routing, and production acceptance remain pending.
+**Repository status:** CT105 authenticated ingress and the Usermin broker remote publisher are implemented and regression-tested. The broker remains local-only unless its U-003 overlay explicitly supplies an Orchestrator endpoint and protected adapter credential. **Production status:** route selection, protected credential provisioning, deployment, and live acceptance remain pending.
 
 ### U-004 — Validation-only end to end
 

@@ -1801,11 +1801,8 @@ class CivicOrchestrator:
             start, replayed = self.state.begin_external_operation(
                 request,
                 descriptor,
-                "publication-policy-v1",
-                (
-                    "Bounded publication operation accepted for the "
-                    "configured publication service."
-                ),
+                self.publication_workflow.authorization_policy,
+                self.publication_workflow.authorization_reason,
                 self.contracts.validate,
             )
         except ConflictError as exc:

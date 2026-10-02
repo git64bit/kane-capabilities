@@ -819,3 +819,27 @@ verification:
 ```
 
 The one-time credential-transfer aperture is closed before any publication-service configuration or restart.
+
+
+### CT106 publication authentication overlay staged — 2026-10-02
+
+Confirmed inside `proxmox1` CT106 `publication1`:
+
+```text
+/etc/systemd/system/civic-publication.service.d/20-authentication.conf:
+  owner=root
+  group=root
+  mode=0644
+  size=285 bytes
+
+systemd-analyze verify:
+  clean (no output)
+
+running service before daemon-reload:
+  MainPID=293
+  NRestarts=0
+  ActiveState=active
+  SubState=running
+```
+
+The authentication overlay is staged on disk and has not yet changed the running publication service.

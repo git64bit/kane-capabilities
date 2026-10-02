@@ -115,23 +115,67 @@ Unresolved:
 
 **CT105 application status: DEPLOYED/PARTIALLY ACCEPTED; remediation and final acceptance pending.**
 
-## CT106 known state before re-audit
+## proxmox1 / CT106 re-audit — 2026-10-02
 
-The following observations were established earlier and must be independently re-checked before any CT106 write:
+### proxmox1 host and relay
 
-- service active under the old loaded Python process;
-- listener `192.168.1.106:8046`;
-- reviewed H4-capable script installed on disk;
-- previous script retained as `publication_service.py.pre-h4`;
-- no H4 credential directory/file;
-- no H4 systemd drop-in;
-- Kubo/IPFS services inactive.
+Observed:
 
-Critical restart drift to verify:
+- physical host: `proxmox1`;
+- Proxmox VE 9.2.2, running kernel 7.0.2-2-pve;
+- `wg0 = 10.110.0.21/32`, live WireGuard peer, route `10.110.0.0/22 dev wg0`;
+- `vmbr1 = 192.168.1.1/16`;
+- CT106 is `publication1.internal.diagnostics.kane-il.us`, `192.168.1.106/16`, on `vmbr1`;
+- CT102 is independently identified as `ipfs1.diagnostics.kane-il.us` and is stopped;
+- relay socket is enabled and active on `10.110.0.21:8046`;
+- relay service is active and targets `192.168.1.106:8046`;
+- actual host listener exists on `10.110.0.21:8046`;
+- host NAT contains `192.168.0.0/16 -> vmbr0 MASQUERADE`;
+- that NAT rule is persisted by the `vmbr1` `post-up` / `post-down` configuration in `/etc/network/interfaces`;
+- no `netfilter-persistent` service is installed on this host;
+- `wg-quick@wg0.service` is enabled and active and the protected WireGuard configuration exists.
 
-> The reviewed publication script defaults to loopback, while the existing live unit was previously observed without an explicit `--listen`. If still true, an unplanned restart could change the listener from `192.168.1.106:8046` to loopback.
+**proxmox1 relay/network persistence status: PROVISIONALLY ACCEPTED for the current publication path.**
 
-CT106 is therefore not accepted until its current state and persistence are re-audited on `proxmox1`.
+No routing, NAT, bridge, firewall, or WireGuard change is justified by the evidence collected so far.
+
+### CT106 application state
+
+Observed:
+
+- service is active;
+- PID `1167`;
+- zero service restarts at the audit checkpoint;
+- effective service has no drop-ins;
+- effective `ExecStart` is only:
+  `/usr/bin/python3 /opt/civic-publication/publication_service.py`;
+- live listener is `192.168.1.106:8046`;
+- current on-disk script SHA-256:
+  `43e3ec41d243bd859dff290ae646dcf5a12c72065ffc56e5a4e373ab1a95fdcc`;
+- retained pre-H4 script SHA-256:
+  `9a349b949ec9eae260b88213eacca13c3d852a43441a0501b1728ea79a12c835`;
+- retained pre-H4 script hard-codes `HOST = "192.168.1.106"`, `PORT = 8046`;
+- current on-disk script defines:
+  `DEFAULT_HOST = "127.0.0.1"`,
+  `DEFAULT_PORT = 8046`,
+  and `MAX_ARTIFACT_BYTES = 262144`;
+- current script accepts `--listen`, `--port`, and `--credential-name`;
+- effective systemd unit supplies none of those arguments.
+
+### Confirmed restart drift
+
+The restart defect is now proved directly from production:
+
+1. PID 1167 is an older loaded implementation whose server is currently bound to `192.168.1.106:8046`.
+2. The effective systemd unit supplies no explicit listen address.
+3. The replacement file already present at the same path defaults to `127.0.0.1`.
+4. Therefore a restart under the current unit would execute the replacement file with its loopback default and would no longer satisfy the relay target `192.168.1.106:8046`.
+
+This is **restart drift**, not current runtime failure.
+
+**CT106 application status: RUNNING BUT NOT RESTART-SAFE; production acceptance is blocked until this drift is repaired and verified.**
+
+No intentional CT106 restart is permitted before the unit is made restart-safe.
 
 ## Remaining acceptance order
 

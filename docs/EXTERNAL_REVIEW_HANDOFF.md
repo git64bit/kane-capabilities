@@ -71,12 +71,14 @@ Phase 3    U-001 accepted; U-002 repo implementation complete / production pendi
 Phase 4    gated; no Kubo side effects
 ```
 
-Current repository regression suite:
+Regression evidence at the `v0.1.0-alpha.3` checkpoint:
 
 ```text
 73 tests on Python 3.11    PASS
 73 tests on Python 3.13    PASS
 ```
+
+Subsequent cleanup commits add regression coverage. Treat the 73-test count as checkpoint evidence rather than the current test inventory; run the full Python 3.11/3.13 matrix before the next acceptance tag.
 
 ## Next review targets
 

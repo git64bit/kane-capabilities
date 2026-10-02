@@ -95,7 +95,7 @@ class ServerContractTests(unittest.TestCase):
             payload,
             {
                 "status": "ok",
-                "phase": "2",
+                "available_operations": 1,
                 "side_effects": True,
             },
         )
@@ -114,7 +114,7 @@ class ServerContractTests(unittest.TestCase):
             payload,
             {
                 "status": "ok",
-                "phase": "1H",
+                "available_operations": 0,
                 "side_effects": False,
             },
         )

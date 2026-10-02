@@ -67,13 +67,13 @@ The Orchestrator remains loopback-only. No participant-facing Orchestrator ingre
 
 ## Health
 
-Observed:
+Observed at the Phase 2 acceptance checkpoint:
 
 ```json
 {"phase":"2","side_effects":true,"status":"ok"}
 ```
 
-Here `side_effects=true` means the active registry now contains an available operation whose effect scope permits external effects. It does not assert that any specific workflow produced an external side effect.
+This is historical acceptance evidence from the deployed Phase 2 runtime. The current portable runtime no longer exports Kane project-phase labels through `/healthz`; it reports the count of available operations instead. Here `side_effects=true` means the active registry contains an available operation whose effect scope permits external effects. It does not assert that any specific workflow produced an external side effect.
 
 ## Real validation-only workflow
 

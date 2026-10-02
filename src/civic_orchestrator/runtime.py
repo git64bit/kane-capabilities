@@ -1657,7 +1657,7 @@ class CivicOrchestrator:
         ]
         return {
             "status": "ok",
-            "phase": "2" if available else "1H",
+            "available_operations": len(available),
             "side_effects": any(
                 item["effect_scope"] != "none"
                 for item in available

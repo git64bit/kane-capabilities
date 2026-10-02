@@ -11,6 +11,7 @@
     "sha256",
     "size_bytes",
     "cid",
+    "cid_profile",
     "pinned",
     "verified"
   ],
@@ -30,7 +31,7 @@
     "size_bytes": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 1048576
+      "maximum": 262144
     },
     "cid": {
       "type": "string",
@@ -43,6 +44,9 @@
     },
     "verified": {
       "const": true
+    },
+    "cid_profile": {
+      "const": "civic-ipfs-kubo-v1"
     }
   }
 }

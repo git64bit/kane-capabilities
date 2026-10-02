@@ -589,3 +589,8 @@ one-shot credential receiver:
 ```
 
 The credential was transferred directly from CT105 over the existing WireGuard fabric without printing the bearer token, committing it to Git, or creating a persistent administrative transport service.
+
+
+### witness-hubzilla broker U-003 readiness — 2026-10-02
+
+Confirmed on witness-hubzilla: the installed broker CLI supports `--orchestrator-base-url` and `--adapter-credential-name`, and `civic_orchestrator.usermin_remote` is installed. The live service remains configured for U-002 local-only operation. `/etc/civic-orchestrator/usermin-broker.env` and `/etc/systemd/system/civic-usermin-broker.service.d/30-remote.conf` were absent at this checkpoint. No broker package upgrade is required before enabling U-003 remote dispatch.

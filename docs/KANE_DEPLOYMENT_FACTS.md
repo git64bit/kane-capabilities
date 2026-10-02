@@ -381,3 +381,30 @@ CT105 / 10.20.0.15:8045
 ```
 
 The virtualization host remains network/hypervisor substrate rather than an application host.
+
+
+### srv-b U-003 network-policy baseline — 2026-10-02
+
+Confirmed on physical Proxmox host `srv-b` before adding the Usermin U-003 route:
+
+```text
+net.ipv4.ip_forward = 1
+
+FORWARD policy = ACCEPT
+
+existing WireGuard -> vmbr1 DNAT pattern:
+  10.110.0.1 -> 10.110.0.12:8300
+      DNAT -> 10.20.0.14:3000
+
+  10.110.0.1 -> 10.110.0.12:8770
+      DNAT -> 10.20.0.10:8770
+
+POSTROUTING:
+  10.20.0.0/24 -> wg0 MASQUERADE
+
+persistence mechanism:
+  iptables-persistent / netfilter-persistent
+  /etc/iptables/rules.v4
+```
+
+The host already implements WireGuard-to-private-service-network routing/NAT as infrastructure policy. U-003 can therefore use the same established mechanism without adding a Civic application daemon to the Proxmox host.

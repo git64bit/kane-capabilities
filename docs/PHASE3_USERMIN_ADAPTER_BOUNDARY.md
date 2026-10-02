@@ -2,9 +2,11 @@
 
 ## Status
 
-**DESIGN FROZEN — implementation pending**
+**U-001 ACCEPTED — U-002 implementation pending**
 
-This document records the production Usermin discovery completed on 2026-10-01 and fixes the participant-facing adapter boundary before implementation.
+This document records the production Usermin discovery completed on 2026-10-01/02 and fixes the participant-facing adapter boundary before implementation.
+
+The Usermin surface is intentionally a thin client. A participant deciding to publish a file is not required to describe its purpose, retention, document/version relationships, or future intent.
 
 The Usermin interaction surface is not an authority and must not be allowed to invent Civic caller identity.
 
@@ -79,14 +81,18 @@ file:
     type:       Upload
     required:   YES
     quote:      YES
-
-label:
-    type:       Text
-    required:   NO
-    quote:      YES
 ```
 
-No Kubo, HTTP, Orchestrator identity, service routing, or authentication parameter is exposed to the participant form.
+The participant-facing form is therefore conceptually:
+
+```text
+Choose file
+Publish
+```
+
+No label, purpose, retention period, document path, version relationship, Kubo parameter, HTTP endpoint, Orchestrator identity, service routing, or authentication parameter is exposed to the participant form.
+
+The current v1 `publication.publish` schema still permits an optional descriptive `label`; Usermin does not expose or populate it.
 
 ## Upload handling
 
@@ -202,10 +208,19 @@ The Usermin adapter is permitted to construct only the semantic operation:
 publication.publish
 ```
 
-The participant supplies only:
+The participant supplies only the file to publish.
 
-- the artifact bytes;
-- an optional human-readable label.
+The adapter or broker derives or records factual publication metadata, including:
+
+- authenticated participant identity;
+- exact bytes;
+- original filename where available;
+- size;
+- SHA-256;
+- media type where determinable;
+- fixed client/authentication provenance.
+
+Document purpose, logical path, retention duration, pin duration, supersession, and version intent are not publication prerequisites.
 
 The adapter or broker derives and fixes everything else required by the Civic request envelope.
 
@@ -222,6 +237,8 @@ Accepted when:
 - Terminal coexistence is explicitly accounted for.
 
 **Status: ACCEPTED.**
+
+Production discovery also proved the kernel identity primitive directly: an AF_UNIX connection from the participant process returned the actual participant PID/UID/GID through `SO_PEERCRED`, resolving UID 1002 to `sase25sep26a`. This proves the local broker can derive peer identity without trusting a username in request data.
 
 ### U-002 — Local peer-credential broker
 
@@ -256,3 +273,5 @@ Required:
 - no Kubo side effect.
 
 Only after U-004 should Usermin publication be considered a production participant route.
+
+Publication/document organization and lifecycle management are deliberately outside the thin Usermin form. Heavy clients consume the participant-linked publication catalog defined in `PUBLICATION_DOCUMENT_MODEL.md`.

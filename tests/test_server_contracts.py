@@ -6,8 +6,16 @@ import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
-from civic_orchestrator.server import Handler, build_runtime
+from civic_orchestrator.runtime import (
+    AuthenticatedAdapterBinding,
+    CivicOrchestrator,
+    RuntimePaths,
+)
+from civic_orchestrator.server import (
+    BearerAdapterAuthenticator,
+    Handler,
+    build_runtime,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +31,21 @@ class ServerContractTests(unittest.TestCase):
             )
         )
         Handler.runtime = self.runtime
+        self.adapter_token = "test-adapter-secret"
+        Handler.adapter_authenticator = BearerAdapterAuthenticator(
+            [
+                (
+                    self.adapter_token,
+                    AuthenticatedAdapterBinding(
+                        client_id="test-client",
+                        client_kind="test",
+                        authenticated_by="test-auth",
+                        caller_authority="test-authority",
+                        subject_prefix="participant:",
+                    ),
+                )
+            ]
+        )
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(
             target=self.server.serve_forever,
@@ -37,13 +60,27 @@ class ServerContractTests(unittest.TestCase):
         self.thread.join(timeout=2)
         self.tmp.cleanup()
 
-    def request(self, method, path, body=None, headers=None):
+    def request(
+        self,
+        method,
+        path,
+        body=None,
+        headers=None,
+        *,
+        authenticate=True,
+    ):
         conn = http.client.HTTPConnection(
             self.host,
             self.port,
             timeout=5,
         )
-        conn.request(method, path, body=body, headers=headers or {})
+        request_headers = dict(headers or {})
+        if authenticate and method == "POST":
+            request_headers.setdefault(
+                "Authorization",
+                f"Bearer {self.adapter_token}",
+            )
+        conn.request(method, path, body=body, headers=request_headers)
         response = conn.getresponse()
         payload = json.loads(response.read().decode("utf-8"))
         status = response.status
@@ -81,6 +118,90 @@ class ServerContractTests(unittest.TestCase):
                 "side_effects": False,
             },
         )
+
+    def test_operation_post_requires_adapter_credential(self):
+        body = json.dumps({
+            "contract_version": 1,
+            "request_id": "req:no-adapter-credential",
+            "operation": "repository.fetch_exact",
+            "caller": {
+                "subject": "participant:test",
+                "authority": "test-authority",
+                "authenticated_by": "test-auth",
+            },
+            "client": {
+                "id": "test-client",
+                "kind": "test",
+            },
+            "submitted_at": "2026-10-02T10:00:00Z",
+            "input": {},
+        })
+        status, payload = self.request(
+            "POST",
+            "/v1/operations",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body.encode("utf-8"))),
+            },
+            authenticate=False,
+        )
+
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["failure_class"], "unauthorized")
+
+    def test_wrong_adapter_credential_is_rejected(self):
+        body = "{}"
+        status, payload = self.request(
+            "POST",
+            "/v1/operations",
+            body=body,
+            headers={
+                "Authorization": "Bearer wrong-secret",
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body)),
+            },
+            authenticate=False,
+        )
+
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["failure_class"], "unauthorized")
+
+    def test_authenticated_adapter_cannot_widen_subject_identity(self):
+        request = {
+            "contract_version": 1,
+            "request_id": "req:http-adapter-forgery",
+            "operation": "repository.fetch_exact",
+            "caller": {
+                "subject": "operator:root",
+                "authority": "test-authority",
+                "authenticated_by": "test-auth",
+            },
+            "client": {
+                "id": "test-client",
+                "kind": "test",
+            },
+            "submitted_at": "2026-10-02T10:01:00Z",
+            "input": {},
+        }
+        body = json.dumps(request)
+        status, payload = self.request(
+            "POST",
+            "/v1/operations",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body.encode("utf-8"))),
+            },
+        )
+
+        self.assertEqual(status, 403)
+        self.assertEqual(payload["failure_class"], "unauthorized")
+        with self.runtime.state._connect() as conn:
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM workflows").fetchone()[0],
+                0,
+            )
 
     def test_bad_json_returns_failure_envelope(self):
         status, payload = self.request(
@@ -126,12 +247,12 @@ class ServerContractTests(unittest.TestCase):
         self.assertFalse(payload["side_effects"])
 
     def test_unexpected_submit_exception_returns_internal_failure(self):
-        original = self.runtime.submit
+        original = self.runtime.submit_authenticated
 
-        def explode(_request):
+        def explode(_request, _binding):
             raise RuntimeError("synthetic server test")
 
-        self.runtime.submit = explode
+        self.runtime.submit_authenticated = explode
         try:
             body = json.dumps({
                 "contract_version": 1,
@@ -139,6 +260,7 @@ class ServerContractTests(unittest.TestCase):
                 "operation": "publication.publish",
                 "caller": {
                     "subject": "participant:test",
+                    "authority": "test-authority",
                     "authenticated_by": "test-auth",
                 },
                 "client": {
@@ -158,7 +280,7 @@ class ServerContractTests(unittest.TestCase):
                 },
             )
         finally:
-            self.runtime.submit = original
+            self.runtime.submit_authenticated = original
 
         self.assertEqual(status, 500)
         self.runtime.contracts.validate(
@@ -204,6 +326,7 @@ class ServerContractTests(unittest.TestCase):
             '"request_id":"req:http-nan",'
             '"operation":"publication.publish",'
             '"caller":{"subject":"participant:test",'
+            '"authority":"test-authority",'
             '"authenticated_by":"test-auth"},'
             '"client":{"id":"test-client","kind":"test"},'
             '"submitted_at":"2026-10-01T08:00:00Z",'
@@ -239,6 +362,7 @@ class ServerContractTests(unittest.TestCase):
             "operation": "publication.publish",
             "caller": {
                 "subject": "participant:test",
+                "authority": "test-authority",
                 "authenticated_by": "test-auth",
             },
             "client": {

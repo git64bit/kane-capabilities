@@ -1,0 +1,24 @@
+[Unit]
+Description=Civic Orchestrator WireGuard Relay
+Requires=civic-orchestrator-relay.socket
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/lib/systemd/systemd-socket-proxyd 10.20.0.15:8045
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native

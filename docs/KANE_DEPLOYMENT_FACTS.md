@@ -437,3 +437,23 @@ witness-hubzilla 10.110.0.19
     -> CT105 ingress relay
     -> Orchestrator 127.0.0.1:8045
 ```
+
+
+### U-003 Civic fabric path verified from participant shell — 2026-10-02
+
+Confirmed from the ordinary participant shell:
+
+```text
+account: sase25sep26a
+host: witness-hubzilla
+source WireGuard identity: 10.110.0.19
+destination: http://10.110.0.12:8045/healthz
+HTTP status: 200
+
+response:
+{"available_operations":1,"side_effects":true,"status":"ok"}
+```
+
+This was not an operator/root connectivity test. It proves that a participant process can traverse the existing Civic WireGuard fabric and the temporary `srv-b` DNAT path to the CT105 private ingress, which then reaches the loopback-only Orchestrator.
+
+Because participant Terminal access is part of the accepted Usermin design, U-003 must now prove that this same participant cannot submit an Orchestrator operation without the broker-held protected adapter credential.

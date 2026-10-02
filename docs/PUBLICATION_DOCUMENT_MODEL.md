@@ -183,7 +183,7 @@ The participant does not supply publication purpose, retention duration, future-
 
 Mechanical processing required to publish exact bytes—reading the bytes, counting them, hashing them, base64 transport, and bounded media-type classification—is not content moderation and must not require a human operator to open or interpret the file.
 
-The current v1 publication schema still permits an optional descriptive `label`. That field is not part of the Usermin thin-client surface and carries no lifecycle semantics. Contract cleanup may remove or supersede it before the first participant-facing side-effect gate.
+The publication contract contains no descriptive label field. Publication records only factual ingress and publication metadata; descriptive meaning is added later, if the participant chooses, through document/catalog management.
 
 ## Pinning and removal semantics
 

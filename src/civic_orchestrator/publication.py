@@ -37,7 +37,16 @@ class PublicationServiceFailure(Exception):
 
 
 class PublicationServiceUnavailable(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        side_effects_possible: bool = True,
+        side_effects_certainty: str = "unknown",
+    ) -> None:
+        super().__init__(message)
+        self.side_effects_possible = bool(side_effects_possible)
+        self.side_effects_certainty = side_effects_certainty
 
 
 class PublicationServiceProtocolError(RuntimeError):

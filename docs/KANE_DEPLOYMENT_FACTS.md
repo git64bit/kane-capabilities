@@ -215,3 +215,16 @@ The non-root `civic-usermin-broker` account successfully read the registry. The 
 sase25sep26a / uid 1002
   -> participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
 ```
+
+
+### Usermin broker socket unit installed — 2026-10-02
+
+Confirmed on `witness-hubzilla`:
+
+```text
+/etc/systemd/system/civic-usermin-broker.socket
+```
+
+The unit matches the repository deployment asset and has not yet been enabled or started.
+
+A standalone `systemd-analyze verify` reported that the matching `civic-usermin-broker.service` was not loaded, so the socket could not yet be validated as a startable pair. This is expected until the service unit is installed.

@@ -2,80 +2,93 @@
 
 ## Review point
 
-Repository state after Phase 1H acceptance on 2026-10-01.
+Repository state after the third independent review of the Phase 2/3 publication path.
 
-This is the preferred starting point for an independent cold review before Phase 2.
+Phase 1/1H remain closed. Phase 2 has one available bounded operation, `publication.publish`, routed to a validation-only publication service. Kubo/IPFS side effects remain disabled.
 
-## Architectural scope
+The current correction authority is:
 
-The Kane Civic Orchestrator is **not** the universal orchestrator for every Civic Infrastructure application.
+- `PHASE4_PUBLICATION_SAFETY_GATES.md`;
+- `PHASE3_USERMIN_ADAPTER_BOUNDARY.md`;
+- `PHASE2_PUBLICATION_SERVICE_BOUNDARY.md`;
+- `PUBLICATION_DOCUMENT_MODEL.md`;
+- `ROADMAP.md`.
 
-It coordinates one bounded Kane authority/workflow domain.
+## Current architecture
 
-Other applications may instantiate their own orchestrators modeled after this architecture when they own different domain state, membership, policy, trust roots, or workflow authority.
+The Kane Civic Orchestrator coordinates one bounded Kane authority/workflow domain. It is not a universal orchestrator or datastore.
 
-Authority: `docs/ORCHESTRATOR_SCOPE.md`.
+The participant publication model remains deliberately narrow:
 
-## What changed after the first external review
+```text
+authenticated participant
+    -> exact file bytes
+    -> publication.publish
+    -> immutable publication evidence
+    -> later optional document/catalog management
+```
 
-- corrected stale hardware-signer assumption to the current software-signer baseline;
-- clarified that Phase 7 is Orchestrator signing integration, not signer construction order;
-- removed the fixed application-name interface enum;
-- separated authenticated caller identity from extensible client identity;
-- required `authenticated_by`;
-- implemented request replay/idempotency semantics;
-- normalized and schema-validated failure envelopes;
-- made HTTP parser/internal failures contract-valid;
-- enforced RFC 3339 timestamps;
-- validated operation registry and stub workflow definitions at startup;
-- added explicit monotonic audit sequence numbers;
-- made normal accepted stub-request persistence transactional;
-- replaced ambiguous side-effect classification with effect scope;
-- moved JSON Schema resolution to absolute Civic URNs and `referencing.Registry`;
-- narrowed the former interface-equivalence claim to what it actually proves;
-- added Python cache exclusions and corrected stale README text.
+Publication-time input does not include label, purpose, source filename, retention duration, logical path, pin duration, supersession, or version intent.
+
+## Accepted third-review corrections
+
+The current branch/release line incorporates or gates:
+
+- independent CT105 CID calculation and comparison;
+- explicit `cid_profile`;
+- temporary 262,144-byte single-raw-block publication limit;
+- resumable retryable publication workflows;
+- startup reconciliation of accepted external workflows after process restart;
+- side-effect certainty evidence;
+- atomic immutable publication records in the Orchestrator SQLite completion transaction;
+- PostgreSQL as a rebuildable publication projection / later mutable document-management store;
+- stable, never-recycled participant identity as a requirement before U-002 acceptance;
+- U-002 byte transfer rather than privileged broker path opening;
+- U-003 transport-bound adapter identity constraints;
+- CT105-to-publication-service authentication as a Phase 4 gate;
+- participant publication budget as a Phase 4 gate.
 
 ## Deliberate non-changes
 
-The repository does **not** add:
+The repository still does **not**:
 
-- Mechanical Compiler-specific operations;
-- 3D-printer membership/group state;
-- a universal Civic Infrastructure membership database;
-- production service adapters;
-- production side effects;
-- external CT105 network exposure.
+- enable Kubo publication or swarm participation;
+- expose the raw Orchestrator HTTP API to participants;
+- implement `document.*`;
+- make Hubzilla an arbitrary file store;
+- make Gitea the universal participant filesystem;
+- infer document meaning or version relationships from filenames or chronology;
+- make PostgreSQL the authoritative origin of immutable publication evidence.
 
 ## Acceptance state
 
 ```text
-Phase 0   COMPLETE
-Phase 1   COMPLETE
-Phase 1H  COMPLETE
-Phase 2   NOT STARTED
+Phase 0    COMPLETE
+Phase 1    COMPLETE
+Phase 1H   COMPLETE
+Phase 2    publication validation path accepted
+Phase 3    U-001 accepted; U-002/U-003/U-004 pending
+Phase 4    gated; no Kubo side effects
 ```
 
-The current persistent CT105 runtime passed:
+Current repository regression suite:
 
 ```text
-21 regression tests
-Phase 1H persistent-state acceptance harness
-loopback-only listener verification
-side_effects=false
+71 tests on Python 3.11    PASS
+71 tests on Python 3.13    PASS
 ```
 
-## Review request
+## Next review targets
 
-Review this repository as an independent prospective consumer of the **orchestrator architectural pattern**, not as though every Civic Infrastructure application must connect to this Kane CT105 instance.
+Useful independent review targets now are:
 
-Useful review targets include:
+- resumable external-workflow semantics under process failure;
+- publication-record atomicity;
+- CID-profile and CID-verification correctness;
+- adapter credential to caller/client binding;
+- stable participant-identity mapping;
+- publication-service authentication;
+- participant publication budgets;
+- preservation of thin-client semantics through U-002/U-003 implementation.
 
-- contract portability;
-- domain-boundary leakage;
-- replay/idempotency semantics;
-- transactional evidence guarantees;
-- authentication provenance;
-- schema interoperability;
-- service-authority separation;
-- unintentional coupling to Kane-specific applications or deployment details;
-- remaining claims that exceed what tests actually prove.
+The next implementation step should not reopen the file-only publication model unless new evidence demonstrates a concrete defect.

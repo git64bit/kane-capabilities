@@ -40,7 +40,17 @@ class FakePublicationClient:
                 },
             )
         if self.mode == "transport-failure":
-            raise PublicationServiceUnavailable("connection refused")
+            raise PublicationServiceUnavailable(
+                "connection refused",
+                side_effects_possible=False,
+                side_effects_certainty="known",
+            )
+        if self.mode == "transport-timeout":
+            raise PublicationServiceUnavailable(
+                "timed out after dispatch",
+                side_effects_possible=True,
+                side_effects_certainty="unknown",
+            )
         if self.mode == "protocol-failure":
             raise PublicationServiceProtocolError("invalid service result")
         if self.mode == "unexpected-failure":
@@ -265,15 +275,37 @@ class PublicationRuntimeTests(unittest.TestCase):
             "verification-failed",
         )
 
-    def test_transport_failure_is_waiting_with_unknown_effects(self):
+    def test_connection_refused_is_known_no_effect_waiting_failure(self):
         self.client.mode = "transport-failure"
 
         status, failure = self.runtime.submit(self.request())
 
         self.assertEqual(status, 503)
         self.assertEqual(failure["failure_class"], "backend-unavailable")
-        self.assertTrue(failure["side_effects"])
+        self.assertFalse(failure["side_effects"])
         self.assertTrue(failure["retryable"])
+        self.assertEqual(
+            failure["detail"]["side_effects_certainty"],
+            "known",
+        )
+
+        _, evidence = self.runtime.workflow_evidence(
+            failure["detail"]["workflow_id"]
+        )
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertFalse(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "known",
+        )
+
+    def test_transport_timeout_is_unknown_possible_effect_waiting_failure(self):
+        self.client.mode = "transport-timeout"
+
+        status, failure = self.runtime.submit(self.request())
+
+        self.assertEqual(status, 503)
+        self.assertTrue(failure["side_effects"])
         self.assertEqual(
             failure["detail"]["side_effects_certainty"],
             "unknown",
@@ -282,7 +314,6 @@ class PublicationRuntimeTests(unittest.TestCase):
         _, evidence = self.runtime.workflow_evidence(
             failure["detail"]["workflow_id"]
         )
-        self.assertEqual(evidence["workflow"]["state"], "waiting")
         self.assertTrue(evidence["workflow"]["side_effects"])
         self.assertEqual(
             evidence["workflow"]["side_effects_certainty"],

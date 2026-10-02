@@ -688,3 +688,34 @@ GET http://10.110.0.21:8046/healthz:
 ```
 
 Therefore CT105 has the expected publication-service credential source and can reach CT106. The remaining failure must be resolved at the CT106 authentication state or credential match, not at Usermin transport.
+
+
+### CT106 publication authentication defect identified — 2026-10-02
+
+Confirmed inside `proxmox1` CT106 `publication1`:
+
+```text
+civic-publication.service:
+  ActiveState=active
+  SubState=running
+  MainPID=293
+  NRestarts=0
+  effective drop-ins:
+    10-listen.conf only
+
+effective ExecStart:
+  /usr/bin/python3 /opt/civic-publication/publication_service.py
+    --listen 192.168.1.106
+    --port 8046
+
+/etc/civic-publication/credentials/publication-service.json:
+  ABSENT
+
+effective service contains no:
+  LoadCredential=publication-service.json:...
+  --credential-name publication-service.json
+```
+
+This explains the authenticated Usermin dispatch failure. The CT106 publication service has no bearer credential configured, so its current implementation returns a pre-request authentication/service failure using `workflow_id=wf:invalid`. CT105 then correctly rejects that response because it cannot correlate `wf:invalid` to the real workflow.
+
+The Usermin U-003 broker/network/authentication path is therefore proven; the remaining blocker is the previously pending CT106 publication-service authentication gate.

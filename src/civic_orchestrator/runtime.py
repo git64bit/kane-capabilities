@@ -22,6 +22,11 @@ from .publication import (
     PublicationServiceUnavailable,
     validate_artifact_integrity,
 )
+from .publication_budget import (
+    PublicationBudgetExceeded,
+    PublicationBudgetPolicy,
+    PublicationBudgetUsage,
+)
 
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,159}$")
@@ -308,6 +313,17 @@ class StateStore:
                     client_id TEXT,
                     detail TEXT
                 );
+
+                CREATE TABLE IF NOT EXISTS publication_budget_holds (
+                    workflow_id TEXT PRIMARY KEY,
+                    participant_id TEXT NOT NULL,
+                    size_bytes INTEGER NOT NULL CHECK(size_bytes >= 0),
+                    hold_state TEXT NOT NULL
+                        CHECK(hold_state IN ('reserved','uncertain')),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
+                );
                 """
             )
 
@@ -347,6 +363,10 @@ class StateStore:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS publications_participant_idx "
                 "ON publications(participant_id, published_at)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS publication_budget_holds_participant_idx "
+                "ON publication_budget_holds(participant_id, created_at)"
             )
 
             workflows = conn.execute(
@@ -493,6 +513,179 @@ class StateStore:
                 ),
             )
         return diagnostic_id
+
+    @staticmethod
+    def _publication_budget_usage_conn(
+        conn: sqlite3.Connection,
+        participant_id: str,
+    ) -> PublicationBudgetUsage:
+        completed = conn.execute(
+            """
+            SELECT COUNT(*), COALESCE(SUM(size_bytes), 0)
+              FROM publications
+             WHERE participant_id=?
+            """,
+            (participant_id,),
+        ).fetchone()
+        held = conn.execute(
+            """
+            SELECT COUNT(*), COALESCE(SUM(size_bytes), 0)
+              FROM publication_budget_holds
+             WHERE participant_id=?
+            """,
+            (participant_id,),
+        ).fetchone()
+        return PublicationBudgetUsage(
+            completed_publications=int(completed[0]),
+            completed_bytes=int(completed[1]),
+            held_publications=int(held[0]),
+            held_bytes=int(held[1]),
+        )
+
+    def publication_budget_usage(
+        self,
+        participant_id: str,
+    ) -> PublicationBudgetUsage:
+        with self._connect() as conn:
+            return self._publication_budget_usage_conn(conn, participant_id)
+
+    @classmethod
+    def _reserve_publication_budget_conn(
+        cls,
+        conn: sqlite3.Connection,
+        *,
+        workflow_id: str,
+        participant_id: str,
+        size_bytes: int,
+        policy: PublicationBudgetPolicy,
+    ) -> PublicationBudgetUsage:
+        if (
+            not isinstance(size_bytes, int)
+            or isinstance(size_bytes, bool)
+            or size_bytes < 0
+        ):
+            raise ValueError("publication budget size_bytes is invalid")
+
+        usage = cls._publication_budget_usage_conn(conn, participant_id)
+        requested_count = usage.charged_publications + 1
+        requested_bytes = usage.charged_bytes + size_bytes
+
+        if requested_count > policy.max_publications:
+            raise PublicationBudgetExceeded(
+                usage=usage,
+                policy=policy,
+                requested_bytes=size_bytes,
+                reason=(
+                    "publication count budget exceeded: "
+                    f"{requested_count}>{policy.max_publications}"
+                ),
+            )
+        if requested_bytes > policy.max_publication_bytes:
+            raise PublicationBudgetExceeded(
+                usage=usage,
+                policy=policy,
+                requested_bytes=size_bytes,
+                reason=(
+                    "publication byte budget exceeded: "
+                    f"{requested_bytes}>{policy.max_publication_bytes}"
+                ),
+            )
+
+        now = utc_now()
+        conn.execute(
+            """
+            INSERT INTO publication_budget_holds
+                (workflow_id, participant_id, size_bytes, hold_state,
+                 created_at, updated_at)
+            VALUES (?,?,?,?,?,?)
+            """,
+            (
+                workflow_id,
+                participant_id,
+                size_bytes,
+                "reserved",
+                now,
+                now,
+            ),
+        )
+
+        return PublicationBudgetUsage(
+            completed_publications=usage.completed_publications,
+            completed_bytes=usage.completed_bytes,
+            held_publications=usage.held_publications + 1,
+            held_bytes=usage.held_bytes + size_bytes,
+        )
+
+    def reserve_publication_budget(
+        self,
+        *,
+        workflow_id: str,
+        participant_id: str,
+        size_bytes: int,
+        policy: PublicationBudgetPolicy,
+    ) -> PublicationBudgetUsage:
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            return self._reserve_publication_budget_conn(
+                conn,
+                workflow_id=workflow_id,
+                participant_id=participant_id,
+                size_bytes=size_bytes,
+                policy=policy,
+            )
+
+    @staticmethod
+    def _mark_publication_budget_hold_conn(
+        conn: sqlite3.Connection,
+        workflow_id: str,
+        hold_state: str,
+    ) -> None:
+        if hold_state not in {"reserved", "uncertain"}:
+            raise ValueError("invalid publication budget hold state")
+        updated = conn.execute(
+            """
+            UPDATE publication_budget_holds
+               SET hold_state=?, updated_at=?
+             WHERE workflow_id=?
+            """,
+            (hold_state, utc_now(), workflow_id),
+        )
+        if updated.rowcount != 1:
+            raise ValueError(
+                f"publication budget hold not found: {workflow_id}"
+            )
+
+    def mark_publication_budget_hold(
+        self,
+        workflow_id: str,
+        hold_state: str,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._mark_publication_budget_hold_conn(
+                conn,
+                workflow_id,
+                hold_state,
+            )
+
+    @staticmethod
+    def _release_publication_budget_hold_conn(
+        conn: sqlite3.Connection,
+        workflow_id: str,
+    ) -> None:
+        deleted = conn.execute(
+            "DELETE FROM publication_budget_holds WHERE workflow_id=?",
+            (workflow_id,),
+        )
+        if deleted.rowcount != 1:
+            raise ValueError(
+                f"publication budget hold not found: {workflow_id}"
+            )
+
+    def release_publication_budget_hold(self, workflow_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._release_publication_budget_hold_conn(conn, workflow_id)
 
     @staticmethod
     def request_fingerprint(request: dict[str, Any]) -> str:

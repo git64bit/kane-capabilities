@@ -340,3 +340,23 @@ The intended relay boundary is:
 ```
 
 The units had not yet been started at this checkpoint.
+
+
+### CT105 U-003 private ingress activated and verified — 2026-10-02
+
+Confirmed inside `srv-b` CT105 `civic-orchestrator`:
+
+```text
+civic-orchestrator-ingress.socket:
+  ActiveState=active
+  SubState=listening
+
+listener:
+  10.20.0.15:8045
+  owner process: systemd socket activation
+
+GET http://10.20.0.15:8045/healthz:
+  {"available_operations":1,"side_effects":true,"status":"ok"}
+```
+
+This proves the CT105 private ingress relay reaches the existing loopback-only Orchestrator service. The Orchestrator itself remains bound to `127.0.0.1:8045`.

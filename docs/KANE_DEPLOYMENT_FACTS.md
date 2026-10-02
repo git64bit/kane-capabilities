@@ -719,3 +719,18 @@ effective service contains no:
 This explains the authenticated Usermin dispatch failure. The CT106 publication service has no bearer credential configured, so its current implementation returns a pre-request authentication/service failure using `workflow_id=wf:invalid`. CT105 then correctly rejects that response because it cannot correlate `wf:invalid` to the real workflow.
 
 The Usermin U-003 broker/network/authentication path is therefore proven; the remaining blocker is the previously pending CT106 publication-service authentication gate.
+
+
+### CT106 one-shot publication credential receiver ready — 2026-10-02
+
+Confirmed inside `proxmox1` CT106 `publication1`:
+
+```text
+temporary receiver:
+  192.168.1.106:48046
+  process=python3
+  state=LISTEN
+  log state=READY
+```
+
+The receiver exists only inside CT106 and is intended to accept a single publication-service credential transfer, validate it, install it root-owned mode 0600, and exit. The publication service itself has not yet been reconfigured or restarted.

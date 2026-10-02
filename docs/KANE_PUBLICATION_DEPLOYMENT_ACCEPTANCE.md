@@ -191,6 +191,19 @@ This is **restart drift**, not current runtime failure.
 
 No intentional CT106 restart is permitted before the unit is made restart-safe.
 
+### CT106 restart-safety repair in progress
+
+First production writes completed and verified:
+
+1. created `/etc/systemd/system/civic-publication.service.d` as `root:root`, mode `0755`;
+2. created `10-listen.conf` as `root:root`, mode `0644`, containing only the explicit restart-safe ExecStart override:
+   `/usr/bin/python3 /opt/civic-publication/publication_service.py --listen 192.168.1.106 --port 8046`;
+3. static `systemd-analyze verify` completed without reported errors;
+4. running PID remained `1167`, `NRestarts=0`, service active/running;
+5. live listener remained `192.168.1.106:8046`.
+
+At this checkpoint the drop-in exists on disk but the systemd manager has not yet been reloaded. The next bounded write is `systemctl daemon-reload`; service restart remains a separate later gate.
+
 ## Remaining acceptance order
 
 1. finish read-only `proxmox1` and CT106 audit;

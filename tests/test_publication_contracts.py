@@ -3,6 +3,8 @@ import hashlib
 import json
 import tempfile
 import unittest
+
+import yaml
 from pathlib import Path
 
 from civic_orchestrator.runtime import ContractStore
@@ -106,6 +108,22 @@ class PublicationContractTests(unittest.TestCase):
                 value,
             )
 
+    def test_publication_workflow_definition_validates(self):
+        value = yaml.safe_load(
+            (ROOT / "workflows" / "publication-publish-v1.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.contracts.validate(
+            "publication-workflow-definition-v1.schema.json",
+            value,
+        )
+        self.assertEqual(value["operation"], "publication.publish")
+        self.assertEqual(
+            value["authorization_policy"],
+            "publication-policy-v1",
+        )
+
     def test_catalog_contains_publication_contracts(self):
         catalog = json.loads(
             (ROOT / "schemas" / "catalog-v1.json").read_text(encoding="utf-8")
@@ -117,6 +135,7 @@ class PublicationContractTests(unittest.TestCase):
             "urn:civic-orchestrator:schema:publication-service-request:v1",
             "urn:civic-orchestrator:schema:publication-service-result:v1",
             "urn:civic-orchestrator:schema:publication-service-failure:v1",
+            "urn:civic-orchestrator:schema:publication-workflow-definition:v1",
         }:
             self.assertIn(required, ids)
 

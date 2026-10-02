@@ -91,3 +91,10 @@ created directories:
 ```
 
 No Usermin broker systemd unit, socket activation, Orchestrator route, or network change was made by this step.
+
+
+### Usermin broker Python prerequisite — 2026-10-02
+
+On `witness-hubzilla`, creating `/opt/civic-usermin-broker/venv` with Python 3.12.3 failed because `ensurepip` is unavailable. The host requires the Debian/Ubuntu `python3.12-venv` package before the broker virtual environment can be completed.
+
+The failed attempt created only a partial `/opt/civic-usermin-broker/venv` directory; no Civic package, systemd unit, or service was installed or activated.

@@ -68,3 +68,12 @@ Checked-in deployment assets define the intended restart-safe target state. A li
 - deployed source/package revision.
 
 A repository update is not production acceptance, and a running old process does not prove that the files on disk are restart-safe.
+
+
+## Mandatory deployment procedure
+
+All Kane production deployments follow `DEPLOYMENT_ACCEPTANCE_PROTOCOL.md`.
+
+In particular, operational instructions are scoped to exactly one physical host per execution step. A response or runbook step must never present executable command blocks for two different production hosts. Host transitions are explicit, separate steps after the preceding host's evidence has been reviewed.
+
+The publication stack's first deployment is the reference implementation of this procedure. Its accumulated acceptance record is maintained in `KANE_PUBLICATION_DEPLOYMENT_ACCEPTANCE.md`.

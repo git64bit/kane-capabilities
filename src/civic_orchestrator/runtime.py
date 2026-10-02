@@ -1547,6 +1547,7 @@ class CivicOrchestrator:
                 "sha256": service_result["sha256"],
                 "size_bytes": service_result["size_bytes"],
                 "cid": service_result["cid"],
+                "cid_profile": service_result["cid_profile"],
                 "pinned": service_result["pinned"],
                 "verified": service_result["verified"],
             },

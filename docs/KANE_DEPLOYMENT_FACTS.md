@@ -534,3 +534,17 @@ binding:
 The participant-shell negative test already returned `401 adapter credential is required`, which proves the running Orchestrator is enforcing the configured adapter authentication boundary.
 
 At this checkpoint `civic-orchestrator-ingress.socket` was active but not enabled for boot persistence.
+
+
+### CT105 U-003 ingress persistence accepted — 2026-10-02
+
+Confirmed inside `srv-b` CT105 `civic-orchestrator`:
+
+```text
+civic-orchestrator-ingress.socket:
+  enabled
+  ActiveState=active
+  SubState=listening
+```
+
+The CT105 private ingress is now reboot-persistent and remains active without restarting the Civic Orchestrator.

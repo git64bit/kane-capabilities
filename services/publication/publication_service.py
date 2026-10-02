@@ -124,7 +124,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path != "/healthz":
-            self.send_json(404, {"status": "not-found"})
+            self.send_json(
+                404,
+                failure(
+                    "wf:invalid",
+                    "invalid-request",
+                    "endpoint not found",
+                    False,
+                ),
+            )
             return
         self.send_json(
             200,
@@ -139,7 +147,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if self.path != "/v1/publications":
-            self.send_json(404, {"status": "not-found"})
+            self.send_json(
+                404,
+                failure(
+                    "wf:invalid",
+                    "invalid-request",
+                    "endpoint not found",
+                    False,
+                ),
+            )
             return
 
         workflow_id = "wf:invalid"

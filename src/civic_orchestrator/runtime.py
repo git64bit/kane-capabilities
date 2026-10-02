@@ -133,6 +133,23 @@ class StubWorkflowDefinition:
         return namespace in self.accepted_namespaces
 
 
+class PublicationWorkflowDefinition:
+    def __init__(self, path: Path, contracts: ContractStore) -> None:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        contracts.validate(
+            "publication-workflow-definition-v1.schema.json",
+            raw,
+        )
+        self.workflow = raw["workflow"]
+        self.version = raw["version"]
+        self.operation = raw["operation"]
+        self.authorization_policy = raw["authorization_policy"]
+        self.authorization_reason = raw["authorization_reason"]
+        self.service_capability = raw["service_capability"]
+        self.steps = tuple(raw["steps"])
+        self.constraints = raw["constraints"]
+
+
 class StateStore:
     ALLOWED_TRANSITIONS = {
         "received": {"validated", "rejected", "failed"},
@@ -1542,6 +1559,23 @@ class CivicOrchestrator:
             paths.repo_root / "workflows" / "stub-operation-v1.yaml",
             self.contracts,
         )
+        self.publication_workflow = PublicationWorkflowDefinition(
+            paths.repo_root / "workflows" / "publication-publish-v1.yaml",
+            self.contracts,
+        )
+
+        publication_descriptor = self.registry.lookup(
+            self.publication_workflow.operation
+        )
+        if publication_descriptor is None:
+            raise ValueError("publication workflow operation is not registered")
+        if (
+            publication_descriptor["service_capability"]
+            != self.publication_workflow.service_capability
+        ):
+            raise ValueError(
+                "publication workflow service capability does not match registry"
+            )
 
         for operation in self.registry.operations:
             if not self.workflow.accepts(operation):
@@ -1767,11 +1801,8 @@ class CivicOrchestrator:
             start, replayed = self.state.begin_external_operation(
                 request,
                 descriptor,
-                "publication-policy-v1",
-                (
-                    "Bounded publication operation accepted for the "
-                    "configured publication service."
-                ),
+                self.publication_workflow.authorization_policy,
+                self.publication_workflow.authorization_reason,
                 self.contracts.validate,
             )
         except ConflictError as exc:

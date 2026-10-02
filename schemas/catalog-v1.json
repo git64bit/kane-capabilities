@@ -85,6 +85,10 @@
     {
       "id": "urn:civic-orchestrator:schema:publication-service-failure:v1",
       "path": "publication-service-failure-v1.schema.json"
+    },
+    {
+      "id": "urn:civic-orchestrator:schema:publication-workflow-definition:v1",
+      "path": "publication-workflow-definition-v1.schema.json"
     }
   ]
 }

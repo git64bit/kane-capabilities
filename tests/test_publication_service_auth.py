@@ -78,6 +78,23 @@ class PublicationServiceCredentialLoaderTests(unittest.TestCase):
             )
 
 
+
+class PublicationServiceArgumentTests(unittest.TestCase):
+    def test_default_bind_is_loopback(self):
+        args = publication_service.parse_args([])
+
+        self.assertEqual(args.listen, "127.0.0.1")
+        self.assertEqual(args.port, 8046)
+
+    def test_bind_can_be_set_by_deployment(self):
+        args = publication_service.parse_args(
+            ["--listen", "192.168.1.106", "--port", "9000"]
+        )
+
+        self.assertEqual(args.listen, "192.168.1.106")
+        self.assertEqual(args.port, 9000)
+
+
 class PublicationServiceAuthenticationTests(unittest.TestCase):
     def start_server(self, bearer_token):
         class TestHandler(publication_service.Handler):

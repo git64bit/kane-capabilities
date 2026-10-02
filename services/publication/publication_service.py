@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 
-HOST = "192.168.1.106"
-PORT = 8046
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8046
 MAX_ARTIFACT_BYTES = 262_144
 _CREDENTIAL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 MAX_CREDENTIAL_BYTES = 4_096
@@ -308,8 +308,19 @@ class Handler(BaseHTTPRequestHandler):
         )
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--listen",
+        default=DEFAULT_HOST,
+        help="address for the bounded publication HTTP service",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=DEFAULT_PORT,
+        help="TCP port for the bounded publication HTTP service",
+    )
     parser.add_argument(
         "--credential-name",
         help=(
@@ -317,7 +328,11 @@ def main() -> None:
             "service bearer token"
         ),
     )
-    args = parser.parse_args()
+    return parser.parse_args(argv)
+
+
+def main() -> None:
+    args = parse_args()
 
     Handler.bearer_token = None
     if args.credential_name:
@@ -325,7 +340,7 @@ def main() -> None:
             args.credential_name
         )
 
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    server = ThreadingHTTPServer((args.listen, args.port), Handler)
     server.serve_forever()
 
 

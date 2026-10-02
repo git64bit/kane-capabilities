@@ -53,6 +53,8 @@ Deployment-specific publication client configuration:
 --publication-base-url http://10.110.0.21:8046
 ```
 
+This is the CT105-facing routed endpoint, not the publication process's local bind address. In the Kane reference route, `10.110.0.21:8046` is forwarded/proxied to the publication service at its private CT address `192.168.1.106:8046`. Both addresses are deployment locators rather than Civic contract values.
+
 ## Listener boundary
 
 Observed:

@@ -302,7 +302,7 @@ GET  /healthz
 POST /v1/publications
 ```
 
-The bounded publication service binds only to its private CT address. The initial network rule permits Kane CT105 to reach that service endpoint and does not expose the Kubo API publicly. Kubo itself remains loopback-only inside the publication CT.
+The portable publication-service implementation defaults to loopback and accepts deployment-controlled `--listen` and `--port` values. The Kane reference systemd unit explicitly binds the service to the publication CT's private `192.168.1.106:8046` address. CT105 reaches the service through the existing routed/proxied endpoint `10.110.0.21:8046`. These addresses are deployment locators, not Civic contract values. The network rule permits Kane CT105 to reach that bounded service endpoint and does not expose the Kubo API publicly. Kubo itself remains loopback-only inside the publication CT.
 
 The repository implementation now requires a CT105-only bearer credential before `POST /v1/publications` processes a publication payload. Both CT105 and the publication service can load that credential through systemd `CREDENTIALS_DIRECTORY`; production secret generation, provisioning, and live acceptance remain pending. Kubo publication remains disabled.
 

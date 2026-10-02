@@ -1559,6 +1559,23 @@ class CivicOrchestrator:
             paths.repo_root / "workflows" / "stub-operation-v1.yaml",
             self.contracts,
         )
+        self.publication_workflow = PublicationWorkflowDefinition(
+            paths.repo_root / "workflows" / "publication-publish-v1.yaml",
+            self.contracts,
+        )
+
+        publication_descriptor = self.registry.lookup(
+            self.publication_workflow.operation
+        )
+        if publication_descriptor is None:
+            raise ValueError("publication workflow operation is not registered")
+        if (
+            publication_descriptor["service_capability"]
+            != self.publication_workflow.service_capability
+        ):
+            raise ValueError(
+                "publication workflow service capability does not match registry"
+            )
 
         for operation in self.registry.operations:
             if not self.workflow.accepts(operation):

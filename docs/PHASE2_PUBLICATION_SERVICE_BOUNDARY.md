@@ -147,14 +147,13 @@ artifact.size_bytes
 artifact.sha256
 artifact.encoding = base64
 artifact.content
-optional label   # current v1 compatibility field; not used by the Usermin thin client
 ```
 
 Authority:
 
 `schemas/publication-publish-input-v1.schema.json`
 
-The current v1 label is descriptive only and does not participate in content identity. It is not purpose, retention, path, version, or lifecycle metadata. The thin Usermin adapter does not expose or populate it; contract cleanup may remove or supersede it before participant-facing side effects are enabled.
+The publication input intentionally contains no descriptive label, purpose, retention, path, version, or lifecycle metadata. Those concerns belong to later participant management, not the act of publishing exact bytes.
 
 ### CT105 -> publication-service request
 

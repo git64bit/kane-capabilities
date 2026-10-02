@@ -228,3 +228,15 @@ Confirmed on `witness-hubzilla`:
 The unit matches the repository deployment asset and has not yet been enabled or started.
 
 A standalone `systemd-analyze verify` reported that the matching `civic-usermin-broker.service` was not loaded, so the socket could not yet be validated as a startable pair. This is expected until the service unit is installed.
+
+
+### Usermin broker service unit installed and pair verified — 2026-10-02
+
+Confirmed on `witness-hubzilla`:
+
+```text
+/etc/systemd/system/civic-usermin-broker.socket
+/etc/systemd/system/civic-usermin-broker.service
+```
+
+`systemd-analyze verify` completed with no output when both units were checked together, indicating the pair is syntactically and structurally valid. Neither unit had yet been enabled or started at this point.

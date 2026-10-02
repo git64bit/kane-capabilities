@@ -19,7 +19,11 @@ from .runtime import (
 
 MAX_OPERATION_REQUEST_BYTES = 1_500_000
 _ADAPTER_CREDENTIAL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+_PUBLICATION_CREDENTIAL_NAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+)
 MAX_ADAPTER_CREDENTIAL_BYTES = 16_384
+MAX_PUBLICATION_CREDENTIAL_BYTES = 4_096
 
 
 class AdapterCredentialError(ValueError):
@@ -142,6 +146,58 @@ def load_systemd_adapter_authenticator(
         subject_prefix=binding_value["subject_prefix"],
     )
     return BearerAdapterAuthenticator([(token, binding)])
+
+
+def load_systemd_publication_bearer_token(
+    credential_name: str,
+    *,
+    credentials_directory: str | None = None,
+) -> str:
+    """Load the CT105 -> publication-service bearer token from systemd."""
+    if not _PUBLICATION_CREDENTIAL_NAME_RE.fullmatch(credential_name):
+        raise ValueError("publication credential name is invalid")
+
+    directory_value = (
+        credentials_directory
+        if credentials_directory is not None
+        else os.environ.get("CREDENTIALS_DIRECTORY")
+    )
+    if not directory_value:
+        raise ValueError("systemd CREDENTIALS_DIRECTORY is unavailable")
+
+    directory = Path(directory_value)
+    if not directory.is_absolute():
+        raise ValueError("systemd CREDENTIALS_DIRECTORY must be absolute")
+
+    path = directory / credential_name
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise ValueError("publication credential cannot be read") from exc
+
+    if not raw or len(raw) > MAX_PUBLICATION_CREDENTIAL_BYTES:
+        raise ValueError("publication credential size is invalid")
+
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("publication credential is not valid JSON") from exc
+
+    if not isinstance(value, dict) or set(value) != {"version", "token"}:
+        raise ValueError("publication credential fields are invalid")
+    if value["version"] != 1:
+        raise ValueError("publication credential version is invalid")
+
+    token = value["token"]
+    if (
+        not isinstance(token, str)
+        or len(token) < 32
+        or len(token) > 4096
+        or any(ch.isspace() for ch in token)
+    ):
+        raise ValueError("publication bearer token is invalid")
+
+    return token
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -318,6 +374,7 @@ def build_runtime(
     repo_root: Path,
     state_db: Path,
     publication_base_url: str | None = None,
+    publication_bearer_token: str | None = None,
 ) -> CivicOrchestrator:
     runtime = CivicOrchestrator(
         RuntimePaths(
@@ -329,6 +386,7 @@ def build_runtime(
         runtime.publication_client = PublicationServiceClient(
             publication_base_url,
             runtime.contracts.validate,
+            bearer_token=publication_bearer_token,
         )
     return runtime
 
@@ -341,6 +399,13 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8045)
     parser.add_argument("--publication-base-url")
     parser.add_argument(
+        "--publication-credential-name",
+        help=(
+            "systemd credential name containing the CT105-to-publication "
+            "service bearer token"
+        ),
+    )
+    parser.add_argument(
         "--adapter-credential-name",
         help=(
             "systemd credential name containing the adapter bearer token "
@@ -349,10 +414,17 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    publication_bearer_token = None
+    if args.publication_credential_name:
+        publication_bearer_token = load_systemd_publication_bearer_token(
+            args.publication_credential_name
+        )
+
     runtime = build_runtime(
         repo_root=Path(args.repo_root),
         state_db=Path(args.state_db),
         publication_base_url=args.publication_base_url,
+        publication_bearer_token=publication_bearer_token,
     )
     Handler.runtime = runtime
     Handler.adapter_authenticator = None

@@ -240,3 +240,43 @@ Confirmed on `witness-hubzilla`:
 ```
 
 `systemd-analyze verify` completed with no output when both units were checked together, indicating the pair is syntactically and structurally valid. Neither unit had yet been enabled or started at this point.
+
+
+### Usermin U-002 production acceptance — 2026-10-02
+
+U-002 was accepted on the real production Portal/Usermin host `witness-hubzilla`.
+
+Observed acceptance evidence:
+
+```text
+civic-usermin-broker.socket:
+  ActiveState=active
+  SubState=listening
+
+/run/civic-orchestrator/usermin.sock:
+  owner=civic-usermin-broker
+  group=civic-participants
+  mode=0660
+
+participant:
+  sase25sep26a
+  uid=1002
+  participant_id=participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
+
+artifact:
+  size_bytes=33
+  sha256=f93c8e21400f06755c4965593a81b24d6dcc6ca6b4abab17e71896133149156e
+  media_type=application/octet-stream
+
+broker result:
+  status=validated
+  remote_dispatch=false
+
+civic-usermin-broker.service:
+  ActiveState=active
+  SubState=running
+  MainPID=716923
+  NRestarts=0
+```
+
+This acceptance proves the deployed participant-byte -> AF_UNIX -> `SO_PEERCRED` -> stable participant-ID path with no remote Orchestrator dispatch and no publication side effect.

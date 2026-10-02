@@ -56,7 +56,7 @@ Start with:
 15. [docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md](docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md)
 16. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
 
-The repository contains the accepted Phase 1 contract-bearing runtime and the accepted Phase 2 validation-only `publication.publish` path. The publication backend is reachable through the bounded service adapter, but Kubo/IPFS side effects remain disabled. Phase 3 is establishing the first trusted participant adapter boundary.
+The repository contains the accepted Phase 1 contract-bearing runtime and the accepted Phase 2 validation-only `publication.publish` path. The publication backend is reachable through the bounded service adapter, but Kubo/IPFS side effects remain disabled. Phase 3 is in staged implementation and production acceptance: U-001 is accepted; the U-002 local broker is implemented in the repository but is not yet production-accepted; CT105 authenticated-adapter ingress and separate CT105-to-publication-service authentication primitives are implemented in the repository; broker-to-CT105 integration, live credential provisioning, and U-004 validation-only end-to-end acceptance remain pending.
 
 The Civic Infrastructure Demonstrator is a parallel deployment profile for grant evaluation and conformance. It uses synthetic/resettable data but the same public contracts as the production architecture.
 

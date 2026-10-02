@@ -304,7 +304,7 @@ POST /v1/publications
 
 The bounded publication service binds only to its private CT address. The initial network rule permits Kane CT105 to reach that service endpoint and does not expose the Kubo API publicly. Kubo itself remains loopback-only inside the publication CT.
 
-The current validation-only service may remain unauthenticated while it is incapable of publication side effects. A CT105-only service credential is mandatory before Kubo publication is enabled.
+The repository implementation now requires a CT105-only bearer credential before `POST /v1/publications` processes a publication payload. Both CT105 and the publication service can load that credential through systemd `CREDENTIALS_DIRECTORY`; production secret generation, provisioning, and live acceptance remain pending. Kubo publication remains disabled.
 
 ## Validation-only acceptance state
 

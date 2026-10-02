@@ -116,7 +116,9 @@ client.kind
 
 `client.id` is intentionally not a fixed enum of known applications. New software that legitimately belongs to the same orchestrator domain can identify itself without revising the v1 schema merely to add another program name.
 
-`caller.authenticated_by` is an assertion carried by the trusted adapter boundary. Phase 1 validates that the field is present and records it as provenance; Phase 1 does **not** independently authenticate the subject or cryptographically bind a client to its declared `client.id`. That binding belongs to the production adapter/authentication work before those adapters are trusted.
+`caller.authenticated_by` is an assertion carried by the trusted adapter boundary. Phase 1 validates that the field is present and records it as provenance; Phase 1 does **not** independently authenticate the subject or cryptographically bind a client to its declared `client.id`.
+
+The current HTTP ingress adds the repository-side authenticated-adapter primitive that Phase 1 intentionally lacked. An adapter bearer credential resolves server-side to a fixed `client.id`, fixed `client.kind`, fixed `caller.authenticated_by`, fixed caller authority, and allowed subject namespace. Requests that contradict that transport binding are rejected before workflow creation. This repository implementation does not by itself establish production acceptance: the real adapter path, protected credential provisioning, and deployment route must still be installed and accepted.
 
 Client extensibility does not imply admission to CT105. Admission remains governed by `ORCHESTRATOR_SCOPE.md`.
 

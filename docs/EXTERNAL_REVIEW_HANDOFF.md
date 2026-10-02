@@ -67,7 +67,7 @@ Phase 0    COMPLETE
 Phase 1    COMPLETE
 Phase 1H   COMPLETE
 Phase 2    publication validation path accepted
-Phase 3    U-001 accepted; U-002/U-003/U-004 pending
+Phase 3    U-001 accepted; U-002 repo implementation complete / production pending; U-003 CT105 ingress primitive implemented / integration and production pending; U-004 pending
 Phase 4    gated; no Kubo side effects
 ```
 
@@ -89,6 +89,6 @@ Useful independent review targets now are:
 - stable participant-identity mapping;
 - publication-service authentication;
 - participant publication budgets;
-- preservation of thin-client semantics through U-002/U-003 implementation.
+- preservation of thin-client semantics through U-002 production acceptance and U-003 broker integration/production acceptance.
 
 The next implementation step should not reopen the file-only publication model unless new evidence demonstrates a concrete defect.

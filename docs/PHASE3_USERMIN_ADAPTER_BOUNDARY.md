@@ -2,9 +2,9 @@
 
 ## Status
 
-**U-001 ACCEPTED — U-002 repository implementation complete; production acceptance pending**
+**U-001 ACCEPTED — U-002 repository implementation complete, production acceptance pending — U-003 CT105-side authenticated-ingress primitive implemented, broker integration and production acceptance pending — U-004 pending**
 
-This document records the production Usermin discovery completed on 2026-10-01/02 and fixes the participant-facing adapter boundary before implementation.
+This document records the production Usermin discovery completed on 2026-10-01/02 and the participant-facing adapter boundary together with its staged repository implementation and production-acceptance state.
 
 The Usermin surface is intentionally a thin client. A participant deciding to publish a file is not required to describe its purpose, retention, document/version relationships, or future intent.
 
@@ -298,6 +298,8 @@ Required:
 - participant cannot bypass the broker by directly calling the raw API;
 - authenticated adapter identity is bound to the resulting request provenance;
 - contradictory body claims are rejected with a diagnostic.
+
+**Repository status:** the CT105 HTTP ingress now requires an authenticated adapter credential, maps that credential to a fixed `AuthenticatedAdapterBinding`, constrains caller/client claims to that transport binding, and can load the credential through systemd protected credentials. **Integration status:** the Usermin broker still has no remote publisher configured; broker-to-CT105 credential use, live routing, and production acceptance remain pending.
 
 ### U-004 — Validation-only end to end
 

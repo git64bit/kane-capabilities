@@ -219,6 +219,24 @@ class StateStore:
                     FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id)
                 );
 
+                CREATE TABLE IF NOT EXISTS publications (
+                    publication_id TEXT PRIMARY KEY,
+                    workflow_id TEXT NOT NULL UNIQUE,
+                    receipt_id TEXT NOT NULL,
+                    participant_id TEXT NOT NULL,
+                    sha256 TEXT NOT NULL,
+                    size_bytes INTEGER NOT NULL,
+                    media_type TEXT NOT NULL,
+                    cid TEXT NOT NULL,
+                    cid_profile TEXT NOT NULL,
+                    published_at TEXT NOT NULL,
+                    client_id TEXT NOT NULL,
+                    authenticated_by TEXT NOT NULL,
+                    verified INTEGER NOT NULL CHECK(verified IN (0,1)),
+                    FOREIGN KEY(workflow_id) REFERENCES workflows(workflow_id),
+                    FOREIGN KEY(receipt_id) REFERENCES receipts(receipt_id)
+                );
+
                 CREATE TABLE IF NOT EXISTS request_diagnostics (
                     diagnostic_id TEXT PRIMARY KEY,
                     recorded_at TEXT NOT NULL,
@@ -244,6 +262,12 @@ class StateStore:
             if "client_id" not in workflow_columns:
                 conn.execute("ALTER TABLE workflows ADD COLUMN client_id TEXT")
 
+            if "side_effects_certainty" not in workflow_columns:
+                conn.execute(
+                    "ALTER TABLE workflows ADD COLUMN "
+                    "side_effects_certainty TEXT NOT NULL DEFAULT 'known'"
+                )
+
             audit_columns = self._columns(conn, "audit_events")
             if "sequence" not in audit_columns:
                 conn.execute(
@@ -257,6 +281,11 @@ class StateStore:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS workflows_idempotency_scope_idx "
                 "ON workflows(client_id, caller_subject, idempotency_key)"
+            )
+
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS publications_participant_idx "
+                "ON publications(participant_id, published_at)"
             )
 
             workflows = conn.execute(

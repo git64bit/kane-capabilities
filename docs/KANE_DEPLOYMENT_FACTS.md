@@ -594,3 +594,31 @@ The credential was transferred directly from CT105 over the existing WireGuard f
 ### witness-hubzilla broker U-003 readiness — 2026-10-02
 
 Confirmed on witness-hubzilla: the installed broker CLI supports `--orchestrator-base-url` and `--adapter-credential-name`, and `civic_orchestrator.usermin_remote` is installed. The live service remains configured for U-002 local-only operation. `/etc/civic-orchestrator/usermin-broker.env` and `/etc/systemd/system/civic-usermin-broker.service.d/30-remote.conf` were absent at this checkpoint. No broker package upgrade is required before enabling U-003 remote dispatch.
+
+
+### witness-hubzilla U-003 broker overlay verified — 2026-10-02
+
+Confirmed on `witness-hubzilla` before broker restart:
+
+```text
+/etc/civic-orchestrator/usermin-broker.env:
+  CIVIC_ORCHESTRATOR_BASE_URL=http://10.110.0.12:8045
+  owner=root
+  mode=0600
+
+/etc/systemd/system/civic-usermin-broker.service.d/30-remote.conf:
+  EnvironmentFile=/etc/civic-orchestrator/usermin-broker.env
+  LoadCredential=usermin-adapter.json:/etc/civic-orchestrator/credentials/usermin-adapter.json
+  ExecStart includes --orchestrator-base-url and --adapter-credential-name
+  RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+credential source:
+  /etc/civic-orchestrator/credentials/usermin-adapter.json
+  root:root 0600
+  279 bytes
+
+systemd-analyze verify:
+  clean (no output)
+```
+
+The broker had not yet been restarted at this checkpoint.

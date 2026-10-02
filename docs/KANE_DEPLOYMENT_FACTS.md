@@ -662,3 +662,29 @@ broker result:
 ```
 
 This proves the U-003 authenticated path through the local broker, protected adapter credential, Civic network route, CT105 ingress, and Orchestrator. The remaining failure is downstream in the Orchestrator-to-publication-service workflow contract, not in Usermin transport or broker authentication.
+
+
+### CT105 publication-client credential state confirmed — 2026-10-02
+
+Confirmed inside `srv-b` CT105 `civic-orchestrator` after the first authenticated Usermin dispatch reached the publication boundary:
+
+```text
+30-authenticated-publication.conf:
+  LoadCredential=usermin-adapter.json
+  LoadCredential=publication-service.json
+  publication-base-url=http://10.110.0.21:8046
+  publication-credential-name=publication-service.json
+
+/etc/civic-orchestrator/credentials/publication-service.json:
+  owner=root
+  group=root
+  mode=0600
+  size=89 bytes
+  version=1
+  token_length=64
+
+GET http://10.110.0.21:8046/healthz:
+  {"kubo_enabled":false,"phase":"validation-only","service":"civic-publication","status":"ok","swarm_enabled":false}
+```
+
+Therefore CT105 has the expected publication-service credential source and can reach CT106. The remaining failure must be resolved at the CT106 authentication state or credential match, not at Usermin transport.

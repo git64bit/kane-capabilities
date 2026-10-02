@@ -734,3 +734,23 @@ temporary receiver:
 ```
 
 The receiver exists only inside CT106 and is intended to accept a single publication-service credential transfer, validate it, install it root-owned mode 0600, and exit. The publication service itself has not yet been reconfigured or restarted.
+
+
+### proxmox1 H4 credential-transfer network baseline — 2026-10-02
+
+Confirmed read-only on physical Proxmox host `proxmox1` before temporary CT106 credential transfer:
+
+```text
+net.ipv4.ip_forward = 1
+FORWARD policy = ACCEPT
+PREROUTING policy = ACCEPT
+POSTROUTING policy = ACCEPT
+
+POSTROUTING:
+  -s 192.168.0.0/16 -o vmbr0 -j MASQUERADE
+
+PREROUTING:
+  no rules present at this checkpoint
+```
+
+The attempted combined `ip -brief addr show wg0 vmbr1` command was rejected by `ip` syntax and made no change.

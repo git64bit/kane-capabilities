@@ -10,9 +10,13 @@ A namespace is a semantic boundary, not permission to implement every conceivabl
 
 ### `publication.*`
 
-Intended for exact-artifact publication, verification, pin/distribution requests, and receipts.
+Intended for exact-artifact publication, verification, participant-linked publication records, Civic-controlled pin/unpin/retire lifecycle requests, and receipts.
 
-Must not expose arbitrary Kubo/IPFS RPC.
+`publication.publish` must not require purpose, retention duration, version intent, logical document path, or supersession metadata merely to publish exact bytes.
+
+The same CID may legitimately appear in multiple distinct publication records because provenance belongs to the publication event, not to the CID alone.
+
+Must not expose arbitrary Kubo/IPFS RPC or promise global deletion from IPFS.
 
 ### `geography.*`
 
@@ -26,9 +30,19 @@ Intended for bounded participant-publication workflows, validation, discovery, a
 
 Participant identity must remain separate from physical edge identity.
 
+### Planned `document.*`
+
+Reserved for future participant-managed logical document, path, and generation semantics once that contract is frozen.
+
+Examples may eventually include logical create/move/rename operations, explicit generation relationships, and links between managed generations and immutable publications.
+
+This namespace is **not yet admitted to the active runtime registry**. Document management must not be approximated by exposing arbitrary filesystem, SQL, or Git commands.
+
 ### `repository.*`
 
-Intended for exact Gitea repository/commit/path references, approved source retrieval, controlled metadata callbacks, and publication record integration.
+Intended for exact Gitea repository/commit/path references, approved source retrieval, controlled metadata callbacks, revision relationships, and publication record integration.
+
+Repository identity is not universal document identity. A participant-managed logical document may reference a Gitea revision without requiring every document or binary artifact to live in Git.
 
 Must not expose a generic Git shell.
 

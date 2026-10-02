@@ -28,12 +28,22 @@ class PublicationContractTests(unittest.TestCase):
     def test_publication_input_validates(self):
         value = {
             "artifact": self.artifact(),
-            "label": "policy fixture",
         }
         self.contracts.validate(
             "publication-publish-input-v1.schema.json",
             value,
         )
+
+    def test_publication_label_is_rejected(self):
+        value = {
+            "artifact": self.artifact(),
+            "label": "descriptive scope is not accepted at publication time",
+        }
+        with self.assertRaises(Exception):
+            self.contracts.validate(
+                "publication-publish-input-v1.schema.json",
+                value,
+            )
 
     def test_publication_service_request_validates(self):
         value = {

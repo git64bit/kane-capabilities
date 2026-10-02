@@ -804,3 +804,18 @@ one-shot receiver:
 ```
 
 The bearer token was not printed or committed. The temporary network aperture on `proxmox1` remains to be removed before configuring the publication service.
+
+
+### proxmox1 temporary H4 transfer DNAT removed — 2026-10-02
+
+Confirmed on physical host `proxmox1` after CT106 received the publication credential:
+
+```text
+temporary PREROUTING rule for TCP/48046:
+  removed
+
+verification:
+  no PREROUTING entry matching 48046 remains
+```
+
+The one-time credential-transfer aperture is closed before any publication-service configuration or restart.

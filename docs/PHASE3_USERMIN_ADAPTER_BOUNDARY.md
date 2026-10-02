@@ -217,7 +217,7 @@ The adapter or broker derives or records factual publication metadata, including
 - original filename where available;
 - size;
 - SHA-256;
-- media type where determinable;
+- media type through bounded mechanical classification, falling back to `application/octet-stream`;
 - fixed client/authentication provenance.
 
 Document purpose, logical path, retention duration, pin duration, supersession, and version intent are not publication prerequisites.

@@ -6,6 +6,10 @@
 
 This document records the production Usermin discovery completed on 2026-10-01/02 and the participant-facing adapter boundary together with its staged repository implementation and production-acceptance state.
 
+### Confirmed production placement
+
+As of 2026-10-02, the production Portal/Usermin surface is running in the same container as Witness/Hubzilla. The container hostname is `witness-hubzilla`; `usermin.service` was confirmed loaded and active there. The numeric CT/VM identifier and physical host are not established by this document. See `KANE_DEPLOYMENT_FACTS.md`.
+
 The Usermin surface is intentionally a thin client. A participant deciding to publish a file is not required to describe its purpose, retention, document/version relationships, or future intent.
 
 The Usermin interaction surface is not an authority and must not be allowed to invent Civic caller identity.

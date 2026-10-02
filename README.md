@@ -47,16 +47,17 @@ Start with:
 6. [docs/PORTABILITY_AND_TRUST.md](docs/PORTABILITY_AND_TRUST.md)
 7. [docs/REFERENCE_TOPOLOGY.md](docs/REFERENCE_TOPOLOGY.md)
 8. [docs/KANE_NODE_PLACEMENT.md](docs/KANE_NODE_PLACEMENT.md)
-9. [docs/DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
-10. [docs/ORCHESTRATOR_SCOPE.md](docs/ORCHESTRATOR_SCOPE.md)
-11. [docs/PHASE1H_HARDENING.md](docs/PHASE1H_HARDENING.md)
-12. [docs/PUBLICATION_DOCUMENT_MODEL.md](docs/PUBLICATION_DOCUMENT_MODEL.md)
-13. [docs/INTERACTION_STORAGE_BOUNDARIES.md](docs/INTERACTION_STORAGE_BOUNDARIES.md)
-14. [docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md](docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md)
-15. [docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md](docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md)
-16. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
+9. [docs/KANE_DEPLOYMENT_FACTS.md](docs/KANE_DEPLOYMENT_FACTS.md)
+10. [docs/DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
+11. [docs/ORCHESTRATOR_SCOPE.md](docs/ORCHESTRATOR_SCOPE.md)
+12. [docs/PHASE1H_HARDENING.md](docs/PHASE1H_HARDENING.md)
+13. [docs/PUBLICATION_DOCUMENT_MODEL.md](docs/PUBLICATION_DOCUMENT_MODEL.md)
+14. [docs/INTERACTION_STORAGE_BOUNDARIES.md](docs/INTERACTION_STORAGE_BOUNDARIES.md)
+15. [docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md](docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md)
+16. [docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md](docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md)
+17. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
 
-The repository contains the accepted Phase 1 contract-bearing runtime and the accepted Phase 2 validation-only `publication.publish` path. The publication backend is reachable through the bounded service adapter, but Kubo/IPFS side effects remain disabled. Phase 3 is in staged implementation and production acceptance: U-001 is accepted; the U-002 local broker is implemented in the repository but is not yet production-accepted; CT105 authenticated-adapter ingress and separate CT105-to-publication-service authentication primitives are implemented in the repository; broker-to-CT105 integration, live credential provisioning, and U-004 validation-only end-to-end acceptance remain pending. The Phase 4 participant publication budget control is also implemented in the repository with atomic CT105 accounting and deployment-policy loading, while Kane-specific limits and live acceptance remain pending.
+The repository contains the accepted Phase 1 contract-bearing runtime and the accepted Phase 2 validation-only `publication.publish` path. The publication backend is reachable through the bounded service adapter, but Kubo/IPFS side effects remain disabled. Phase 3 is in staged implementation and production acceptance: U-001 is accepted; the U-002 local broker is implemented in the repository but is not yet production-accepted; CT105 authenticated-adapter ingress and separate CT105-to-publication-service authentication primitives are implemented in the repository; the Usermin broker-to-Orchestrator publisher is implemented in the repository; live route selection, protected credential provisioning, production acceptance, and U-004 validation-only end-to-end acceptance remain pending. The Phase 4 participant publication budget control is also implemented in the repository with atomic CT105 accounting and deployment-policy loading, while Kane-specific limits and live acceptance remain pending.
 
 The Civic Infrastructure Demonstrator is a parallel deployment profile for grant evaluation and conformance. It uses synthetic/resettable data but the same public contracts as the production architecture.
 

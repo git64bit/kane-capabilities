@@ -133,6 +133,23 @@ class StubWorkflowDefinition:
         return namespace in self.accepted_namespaces
 
 
+class PublicationWorkflowDefinition:
+    def __init__(self, path: Path, contracts: ContractStore) -> None:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        contracts.validate(
+            "publication-workflow-definition-v1.schema.json",
+            raw,
+        )
+        self.workflow = raw["workflow"]
+        self.version = raw["version"]
+        self.operation = raw["operation"]
+        self.authorization_policy = raw["authorization_policy"]
+        self.authorization_reason = raw["authorization_reason"]
+        self.service_capability = raw["service_capability"]
+        self.steps = tuple(raw["steps"])
+        self.constraints = raw["constraints"]
+
+
 class StateStore:
     ALLOWED_TRANSITIONS = {
         "received": {"validated", "rejected", "failed"},

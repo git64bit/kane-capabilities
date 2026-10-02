@@ -77,3 +77,20 @@ All Kane production deployments follow `DEPLOYMENT_ACCEPTANCE_PROTOCOL.md`.
 In particular, operational instructions are scoped to exactly one physical host per execution step. A response or runbook step must never present executable command blocks for two different production hosts. Host transitions are explicit, separate steps after the preceding host's evidence has been reviewed.
 
 The publication stack's first deployment is the reference implementation of this procedure. Its accumulated acceptance record is maintained in `KANE_PUBLICATION_DEPLOYMENT_ACCEPTANCE.md`.
+
+
+## Virtualization-host application boundary
+
+Physical virtualization hosts remain infrastructure substrate.
+
+They may own:
+
+- hypervisor/container control;
+- bridges and routing;
+- firewall/NAT policy;
+- WireGuard host membership;
+- host management and monitoring.
+
+They must not acquire Civic application daemons, application credentials, participant-facing services, or Orchestrator relay processes merely to connect guest workloads.
+
+For `srv-b`, U-003 uses the existing host network-control plane to carry a narrowly scoped flow from the WireGuard/CPE fabric to CT105. The application ingress relay remains inside CT105.

@@ -864,3 +864,26 @@ running service:
 However, `systemctl cat civic-publication.service` showed only the path header for `20-authentication.conf` and no effective contents from that file. The effective ExecStart remained the unauthenticated `10-listen.conf` command, with no visible `LoadCredential` or `--credential-name`.
 
 No restart was performed. CT106 is therefore not yet restart-ready for authenticated publication.
+
+
+### CT106 authenticated unit manager state verified — 2026-10-02
+
+Confirmed inside `publication1` after daemon-reload:
+
+```text
+effective ExecStart:
+  /usr/bin/python3 /opt/civic-publication/publication_service.py
+    --listen 192.168.1.106
+    --port 8046
+    --credential-name publication-service.json
+
+DropInPaths:
+  10-listen.conf
+  20-authentication.conf
+
+LoadCredential:
+  present in systemd manager state
+  displayed by systemctl as [unprintable]
+```
+
+The service had not yet been restarted at this checkpoint. The authenticated CT106 unit is ready for a controlled restart.

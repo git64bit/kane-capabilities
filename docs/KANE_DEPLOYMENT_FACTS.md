@@ -298,3 +298,23 @@ TCP connect to 10.20.0.15:8045
 This confirms that a network route toward CT105's deployment address exists from `witness-hubzilla`, but the Civic Orchestrator is not reachable there on port 8045. This is consistent with the accepted CT105 invariant that the Orchestrator listener remains bound to `127.0.0.1:8045`.
 
 U-003 therefore still requires an explicit authenticated ingress/transport path; direct participant-host access to the raw CT105 listener is not available.
+
+
+### Usermin to srv-b Civic fabric reachability — 2026-10-02
+
+Confirmed from the production participant account on `witness-hubzilla`:
+
+```text
+witness-hubzilla wg0: 10.110.0.19/22
+
+route to srv-b:
+  destination 10.110.0.12
+  dev wg0
+  source 10.110.0.19
+
+ICMP:
+  2/2 replies from 10.110.0.12
+  0% packet loss
+```
+
+This confirms that `witness-hubzilla` and `srv-b` already share the established witness/CPE WireGuard fabric `10.110.0.0/22`. U-003 does not require routing between the separate diagnostics `10.0.0.0/24` WireGuard fabric and the witness/CPE fabric.

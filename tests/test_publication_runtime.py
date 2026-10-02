@@ -410,6 +410,51 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(len(restarted_client.calls), 1)
 
+    def test_restart_after_backend_success_redispatches_same_workflow(self):
+        request = self.request()
+        descriptor = self.runtime.registry.lookup("publication.publish")
+        start, replayed = self.runtime.state.begin_external_operation(
+            request,
+            descriptor,
+            "publication-policy-v1",
+            "test crash after backend success",
+            self.runtime.contracts.validate,
+        )
+        self.assertFalse(replayed)
+        workflow_id = start["workflow_id"]
+
+        # Simulate the exact crash window: the publication service accepted the
+        # workflow and returned success, but CT105 died before terminal evidence
+        # was committed.
+        service_result = self.client.publish(workflow_id, self.artifact)
+        self.assertEqual(service_result["workflow_id"], workflow_id)
+        self.assertEqual(len(self.client.calls), 1)
+
+        restarted_client = FakePublicationClient()
+        restarted = CivicOrchestrator(
+            RuntimePaths(
+                repo_root=ROOT,
+                state_db=Path(self.tmp.name) / "state.sqlite3",
+            ),
+            publication_client=restarted_client,
+        )
+
+        _, evidence = restarted.workflow_evidence(workflow_id)
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertTrue(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "unknown",
+        )
+
+        status, result = restarted.submit(request)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result["workflow_id"], workflow_id)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(len(restarted_client.calls), 1)
+        self.assertEqual(restarted_client.calls[0][0], workflow_id)
+
     def test_publication_replay_does_not_call_backend_twice(self):
         request = self.request()
         status, first = self.runtime.submit(request)

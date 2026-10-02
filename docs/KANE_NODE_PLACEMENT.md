@@ -29,9 +29,9 @@ The independent-operator rule remains: another county may place the same capabil
 
 ### Placement
 
-The current Kane deployment co-locates **Portal/Usermin** and **Witness/Hubzilla** in the container whose hostname is `witness-hubzilla`.
+The current Kane deployment co-locates **Portal/Usermin** and **Witness/Hubzilla** in the `witness-hubzilla` container on the physical host `annales`.
 
-This was confirmed live on 2026-10-02. `usermin.service` is loaded and active in that container. The container also carries the `civic-participants` group used by the Usermin adapter boundary.
+This placement was confirmed by the operator on 2026-10-02. `usermin.service` is loaded and active in that container. The container also carries the `civic-participants` group used by the Usermin adapter boundary.
 
 This is a deployment fact, not a portability requirement. The physical host and numeric CT/VM identifier are not established by this document and must not be invented. See `KANE_DEPLOYMENT_FACTS.md` for the confirmed evidence.
 

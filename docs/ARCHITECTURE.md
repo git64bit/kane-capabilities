@@ -9,9 +9,9 @@ It is neither the universal datastore nor the universal authority.
 ```text
 Interaction surfaces                  Civic Orchestrator                 Service / trust plane
 
-Usermin CLI/TUI -----------+
+Usermin thin publication --+
 Hubzilla addon ------------+
-Kane Fabric browser -------+------> contract validation -----------> Kane Fabric authority
+Kane Fabric heavy client --+------> contract validation -----------> Kane Fabric authority
 Gitea integration ---------+        authorization                  -> IPFS/Kubo
 mail-driven adapter -------+        workflow transitions           -> RAG/retrieval
 future clients ------------+        routing                        -> annales inference

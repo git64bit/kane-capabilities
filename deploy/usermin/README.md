@@ -1,8 +1,8 @@
-# Usermin U-002 Deployment Assets
+# Usermin U-002 / U-003 Deployment Assets
 
 ## Status
 
-Repository implementation only. These files do not establish production acceptance until the real Portal/Usermin host passes the U-002 acceptance checks.
+Repository implementation only. These files do not establish production acceptance until the real Portal/Usermin host (`witness-hubzilla` in the current Kane deployment) passes the staged U-002/U-003 acceptance checks.
 
 ## Components
 
@@ -48,7 +48,7 @@ The participant-side helper:
 
 The broker derives peer UID with `SO_PEERCRED`, resolves the stable participant identifier, and derives artifact size, SHA-256, and the safe media type `application/octet-stream`.
 
-U-002 has no remote publisher configured. A successful local response therefore contains:
+The base U-002 service has no remote publisher configured. A successful local-only response therefore contains:
 
 ```json
 {
@@ -57,7 +57,7 @@ U-002 has no remote publisher configured. A successful local response therefore 
 }
 ```
 
-The CT105-side authenticated-ingress primitive for U-003 is already implemented. U-003 remains incomplete here because this local broker has no authenticated remote publisher configured; protected credential use, broker-to-CT105 routing, and production acceptance are later deployment/integration work.
+The U-003 remote publisher and CT105 authenticated-ingress boundary are implemented in the repository. Remote dispatch remains disabled in the base U-002 unit and is enabled only through the explicit U-003 deployment overlay (`20-orchestrator.conf.example`) together with a protected adapter credential and deployment-specific Orchestrator endpoint. Live route selection, credential provisioning, deployment, and production acceptance remain pending.
 
 ## Usermin Custom Command target
 

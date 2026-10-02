@@ -57,7 +57,7 @@ U-002 has no remote publisher configured. A successful local response therefore 
 }
 ```
 
-U-003 adds authenticated remote Orchestrator transport later.
+The CT105-side authenticated-ingress primitive for U-003 is already implemented. U-003 remains incomplete here because this local broker has no authenticated remote publisher configured; protected credential use, broker-to-CT105 routing, and production acceptance are later deployment/integration work.
 
 ## Usermin Custom Command target
 

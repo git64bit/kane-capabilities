@@ -199,9 +199,9 @@ The broker receives bytes, not a privileged filesystem pathname.
 
 The raw Civic Orchestrator HTTP API must not be exposed to participants merely because the local broker exists.
 
-Before participant traffic is admitted, the Orchestrator must have a way to distinguish an authenticated adapter from arbitrary HTTP clients.
+Before participant traffic is admitted, the Orchestrator must distinguish an authenticated adapter from arbitrary HTTP clients. The repository-side CT105 mechanism now does this with a protected bearer credential resolved server-side to an `AuthenticatedAdapterBinding`.
 
-The remote adapter credential and transport mechanism remain an implementation gate. Whatever mechanism is selected must ensure that a participant with Terminal access cannot bypass the broker and submit arbitrary:
+The remaining U-003 implementation gate is the real Usermin broker integration: the broker must hold the protected adapter credential, construct only the bounded participant publication request, reach CT105 through the production route, and preserve the transport-bound identity constraints. A participant with Terminal access must not be able to bypass the broker and submit arbitrary:
 
 - caller subjects;
 - authentication provenance;

@@ -2,7 +2,7 @@
 
 ## Status
 
-**U-001 ACCEPTED — U-002 implementation pending**
+**U-001 ACCEPTED — U-002 repository implementation complete; production acceptance pending**
 
 This document records the production Usermin discovery completed on 2026-10-01/02 and fixes the participant-facing adapter boundary before implementation.
 
@@ -250,6 +250,27 @@ Accepted when:
 
 Production discovery also proved the kernel identity primitive directly: an AF_UNIX connection from the participant process returned the actual participant PID/UID/GID through `SO_PEERCRED`, resolving UID 1002 to `sase25sep26a`. This proves the local broker can derive peer identity without trusting a username in request data.
 
+### U-002 repository implementation
+
+The repository now contains the validation-only local adapter implementation:
+
+```text
+src/civic_orchestrator/usermin_adapter.py
+src/civic_orchestrator/usermin_broker.py
+src/civic_orchestrator/usermin_upload.py
+deploy/usermin/
+```
+
+The participant helper opens the Usermin upload under the participant UID with `O_NOFOLLOW`, requires a participant-owned regular file, enforces the current artifact bound, and sends only bytes over AF_UNIX.
+
+The broker derives the peer UID through `SO_PEERCRED`, checks current `civic-participants` membership, maps the Unix account through a provisioning-owned stable participant registry, and derives the content evidence.
+
+The local request framing contains only a 32-bit byte length followed by artifact bytes. It has no pathname, username, participant identifier, caller, client, or authentication-provenance field.
+
+The U-002 service is deliberately restricted to `AF_UNIX` and has no remote publisher configured. Successful repository-level execution therefore returns `remote_dispatch=false`.
+
+Production acceptance still requires deployment through the real Usermin Custom Command and verification under the real Portal account/service identities.
+
 ### U-002 — Local peer-credential broker
 
 Required:
@@ -263,6 +284,8 @@ Required:
 - no caller identity accepted from request payload;
 - no remote Orchestrator side effect yet;
 - tests for impersonation, path/symlink abuse, oversize input, and malformed local requests.
+
+**Repository status:** IMPLEMENTED and regression-tested. **Production status:** NOT YET ACCEPTED.
 
 ### U-003 — Authenticated Orchestrator transport
 

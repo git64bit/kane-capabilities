@@ -19,6 +19,24 @@ The review did not reopen the core publication model. The following decisions re
 - the local Usermin broker derives the peer through `SO_PEERCRED`;
 - Kubo remains disabled until the gates below are accepted.
 
+## Current gate state
+
+Repository implementation and production acceptance are tracked separately.
+
+| Gate | Repository state | Production acceptance state |
+| --- | --- | --- |
+| P4-001 independent CID verification | implemented and regression-covered | awaits real side-effect gate |
+| P4-002 resumable external workflow | implemented and regression-covered | awaits real side-effect gate |
+| P4-003 authenticated adapter binding | CT105-side primitive implemented and regression-covered | broker integration and production acceptance pending |
+| P4-004 publication-service authentication | both endpoint/client primitives implemented | credential provisioning and live acceptance pending |
+| P4-005 stable participant identity | registry/mapping model implemented in U-002 code | real Portal mapping deployment and acceptance pending |
+| P4-006 participant publication budget | **not implemented** | pending |
+| P4-007 authoritative publication record | implemented in CT105 SQLite completion path | awaits real successful publication acceptance |
+| P4-008 no original filename | design decision closed | no separate deployment gate |
+| P4-009 side-effect certainty | implemented and regression-covered | awaits live failure-path acceptance where applicable |
+
+A repository implementation marked complete here does not authorize Kubo. The corresponding production path must still be deployed and accepted where the gate has a deployment component.
+
 ## P4-001 — Independent CID verification
 
 A publication result is not accepted merely because the publication service echoes the submitted SHA-256 and size.
@@ -205,19 +223,16 @@ The broker derives:
 
 The broker enforces the current artifact limit before remote dispatch.
 
-## Acceptance order
+## Remaining acceptance sequence
 
-The remaining publication sequence is:
+The repository-side corrections above are not a substitute for production acceptance. The remaining sequence is:
 
-1. implement and test independent CID verification;
-2. implement resumable external workflow/reconciliation;
-3. persist publication records atomically in SQLite;
-4. define and enforce stable participant mapping;
-5. implement U-002 byte-stream broker;
-6. implement U-003 authenticated adapter identity binding;
-7. authenticate CT105 to the publication service;
-8. implement participant publication budget;
-9. complete U-004 validation-only end to end;
-10. perform a separate Phase 4 gate before enabling Kubo.
+1. deploy and accept the authenticated CT105 ingress and protected CT105 credentials on `srv-b / CT105 / civic-orchestrator`;
+2. deploy and accept the matching CT105-to-publication-service credential on the publication-service host while the backend remains validation-only;
+3. deploy and accept the real U-002 Usermin local broker, stable participant mapping, and Custom Command path;
+4. complete U-003 broker-to-CT105 authenticated remote publishing over the production route;
+5. complete U-004 validation-only end to end and verify persisted workflow/audit/receipt evidence with no Kubo side effect;
+6. implement and accept P4-006 participant publication budgeting in CT105 authorization policy;
+7. perform a separate Phase 4 first-side-effect gate before enabling Kubo.
 
 No Kubo side effect is permitted before all applicable gates are accepted.

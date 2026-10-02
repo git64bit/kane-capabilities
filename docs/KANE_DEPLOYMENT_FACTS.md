@@ -887,3 +887,25 @@ LoadCredential:
 ```
 
 The service had not yet been restarted at this checkpoint. The authenticated CT106 unit is ready for a controlled restart.
+
+
+### CT106 authenticated validation-only service accepted — 2026-10-02
+
+Confirmed after controlled restart inside `publication1`:
+
+```text
+civic-publication.service:
+  MainPID=429
+  Result=success
+  NRestarts=0
+  ActiveState=active
+  SubState=running
+
+listener:
+  192.168.1.106:8046
+
+GET /healthz:
+  {"kubo_enabled":false,"phase":"validation-only","service":"civic-publication","status":"ok","swarm_enabled":false}
+```
+
+The CT106 publication service is now running with its protected publication-service credential while remaining explicitly validation-only; Kubo and swarm are still disabled.

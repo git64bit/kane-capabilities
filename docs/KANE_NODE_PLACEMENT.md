@@ -17,7 +17,7 @@ The independent-operator rule remains: another county may place the same capabil
 | Secure browser origin / Wiregate | `srv-b` CT103 `kane-wiregate` | retain existing |
 | Gitea source/revision authority | `srv-b` CT104 `civic-gitea` | retain existing; use for suitable document generations/revisions |
 | Publication/document catalog | existing PostgreSQL service available to the Orchestrator | structured catalog only; not artifact-byte custody |
-| Publication / IPFS backend | isolated Trixie-based CT on the OVH Proxmox 9 host, **not `srv-b`** | deployed validation-only; Kubo side effects remain disabled |
+| Publication / IPFS backend | `proxmox1` CT106 `publication1.internal.diagnostics.kane-il.us` (`192.168.1.106`) | deployed validation-only; Kubo side effects remain disabled |
 | RAG state / retrieval / indexes | new isolated stateful service node on `srv-b` | create after contract gate |
 | Model inference | existing `annales` inference service/container | retain separate |
 | Firmware signing authority | `annales` LXD `firmware-authority` software signing authority | retain protected boundary; hardware backing optional, not required |
@@ -151,7 +151,7 @@ Structured catalog state and immutable artifact custody are different responsibi
 
 ### Placement
 
-The isolated Trixie-based publication CT has been deployed on the OVH Proxmox 9 host. The publication/IPFS backend is explicitly **not hosted on `srv-b`**.
+The isolated Trixie-based publication CT is `proxmox1 / CT106 / publication1.internal.diagnostics.kane-il.us` at private address `192.168.1.106`. The publication/IPFS backend is explicitly **not hosted on `srv-b`**.
 
 The current service is validation-only. Kubo publication and swarm participation remain disabled until the participant trust and first-side-effect gates are accepted.
 
@@ -167,7 +167,7 @@ publication service
   no participant-facing shell
 ```
 
-CT number and hostname remain deployment locators rather than public Civic identity and are intentionally not made part of this portable contract document.
+These CT, hostname, and address values are Kane deployment locators rather than public Civic identity.
 
 ### Do not place in CT105
 

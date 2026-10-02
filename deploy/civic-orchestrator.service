@@ -1,6 +1,7 @@
 [Unit]
-Description=Civic Orchestrator Phase 2
-After=network.target
+Description=Civic Orchestrator
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -8,11 +9,17 @@ User=civic-orchestrator
 Group=civic-orchestrator
 WorkingDirectory=/opt/civic-orchestrator/current
 Environment=PYTHONUNBUFFERED=1
+LoadCredential=usermin-adapter.json:/etc/civic-orchestrator/credentials/usermin-adapter.json
+LoadCredential=publication-service.json:/etc/civic-orchestrator/credentials/publication-service.json
 ExecStart=/opt/civic-orchestrator/venv/bin/python -m civic_orchestrator.server \
   --repo-root /opt/civic-orchestrator/current \
   --state-db /var/lib/civic-orchestrator/state/orchestrator.sqlite3 \
   --listen 127.0.0.1 \
-  --port 8045
+  --port 8045 \
+  --publication-base-url http://10.110.0.21:8046 \
+  --publication-budget-policy /etc/civic-orchestrator/publication-budget-v1.json \
+  --publication-credential-name publication-service.json \
+  --adapter-credential-name usermin-adapter.json
 Restart=on-failure
 RestartSec=2
 NoNewPrivileges=true

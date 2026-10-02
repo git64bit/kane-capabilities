@@ -5,9 +5,11 @@ import unittest
 from pathlib import Path
 
 from civic_orchestrator.publication import (
+    CID_PROFILE,
     PublicationServiceFailure,
     PublicationServiceProtocolError,
     PublicationServiceUnavailable,
+    expected_single_raw_cid,
 )
 from civic_orchestrator.runtime import CivicOrchestrator, RuntimePaths
 
@@ -50,7 +52,8 @@ class FakePublicationClient:
             "operation": "publication.publish",
             "sha256": artifact["sha256"],
             "size_bytes": artifact["size_bytes"],
-            "cid": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            "cid": expected_single_raw_cid(artifact["sha256"]),
+            "cid_profile": CID_PROFILE,
             "pinned": True,
             "verified": True,
         }
@@ -112,8 +115,9 @@ class PublicationRuntimeTests(unittest.TestCase):
         self.assertEqual(result["result"]["sha256"], self.artifact["sha256"])
         self.assertEqual(
             result["result"]["cid"],
-            "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylzgf4p5l2h4q",
+            expected_single_raw_cid(self.artifact["sha256"]),
         )
+        self.assertEqual(result["result"]["cid_profile"], CID_PROFILE)
         self.assertTrue(result["result"]["pinned"])
         self.assertTrue(result["result"]["verified"])
         self.assertEqual(len(self.client.calls), 1)

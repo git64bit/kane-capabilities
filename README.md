@@ -13,12 +13,12 @@ The reference orchestrator is CT105 `civic-orchestrator` on `srv-b`.
 ## Architectural position
 
 ```text
-Usermin shell / TUI ----+
-Hubzilla addon ---------+
-Kane Fabric browser ----+----> Civic Orchestrator ----> specialized services
-Gitea ------------------+
-mail-driven adapters ---+
-future interfaces ------+
+Usermin thin publication ----+
+Hubzilla addon ---------------+
+Kane Fabric heavy client -----+----> Civic Orchestrator ----> specialized services
+Gitea integration ------------+
+mail-driven adapters ---------+
+future interfaces ------------+
 ```
 
 The orchestrator is the fusebox between interaction surfaces and service/trust nodes. It owns cross-cutting workflow semantics, not the local responsibilities of those systems.
@@ -28,7 +28,7 @@ The orchestrator is the fusebox between interaction surfaces and service/trust n
 1. **Civic operations, not remote commands.** Callers request operations such as publication, verification, promotion, retrieval, signing, or edge lifecycle actions. They do not request arbitrary shell commands, SSH sessions, Kubo RPC methods, SQL statements, or backend-specific procedures.
 2. **Reuse mature protocols.** The project does not invent a new network protocol merely to serialize JSON. HTTP, OpenAPI, JSON Schema, and CloudEvents are the initial standards baseline.
 3. **Fail closed.** Unknown operations, unavailable backends, missing authority, invalid state transitions, and unimplemented adapters must not produce side effects.
-4. **Keep edges thin but capable.** Usermin, Hubzilla, Kane Fabric, Gitea, and later clients retain their local UI, identity, storage, and domain behavior. Shared policy and cross-service workflow logic belong centrally.
+4. **Keep client roles explicit.** Usermin remains a thin quota-bounded working-storage/publication surface; Hubzilla remains a social/image surface; Kane Fabric may be a heavy management client; Gitea remains a revision mechanism. Shared policy, publication/document catalog semantics, and cross-service workflow logic belong centrally.
 5. **Separate workflow authority from service authority.** The orchestrator may coordinate signing, publication, geographic promotion, inference, or edge updates without possessing every backend's private authority.
 6. **No implementation technology becomes civic identity.** Hostnames, ESP32 hardware identity, Git repositories, Unix accounts, service URLs, and transport endpoints are locators or implementation details unless an explicit civic contract says otherwise.
 7. **Kane County is the reference deployment, not the product boundary.** Public contracts must be implementable by an independent operator in another jurisdiction without Kane County private infrastructure.
@@ -50,9 +50,13 @@ Start with:
 9. [docs/DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
 10. [docs/ORCHESTRATOR_SCOPE.md](docs/ORCHESTRATOR_SCOPE.md)
 11. [docs/PHASE1H_HARDENING.md](docs/PHASE1H_HARDENING.md)
-12. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
+12. [docs/PUBLICATION_DOCUMENT_MODEL.md](docs/PUBLICATION_DOCUMENT_MODEL.md)
+13. [docs/INTERACTION_STORAGE_BOUNDARIES.md](docs/INTERACTION_STORAGE_BOUNDARIES.md)
+14. [docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md](docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md)
+15. [docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md](docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md)
+16. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
 
-The repository now contains the accepted Phase 1 contract-bearing stub runtime. Production service adapters and production side effects remain disabled until their later acceptance gates.
+The repository contains the accepted Phase 1 contract-bearing runtime and the accepted Phase 2 validation-only `publication.publish` path. The publication backend is reachable through the bounded service adapter, but Kubo/IPFS side effects remain disabled. Phase 3 is establishing the first trusted participant adapter boundary.
 
 The Civic Infrastructure Demonstrator is a parallel deployment profile for grant evaluation and conformance. It uses synthetic/resettable data but the same public contracts as the production architecture.
 

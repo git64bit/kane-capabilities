@@ -1422,7 +1422,8 @@ class StateStore:
             workflow = conn.execute(
                 """
                 SELECT workflow_id, request_id, operation, state,
-                       created_at, updated_at, side_effects
+                       created_at, updated_at, side_effects,
+                       side_effects_certainty
                   FROM workflows
                  WHERE workflow_id=?
                 """,
@@ -1472,6 +1473,7 @@ class StateStore:
             "created_at": workflow["created_at"],
             "updated_at": workflow["updated_at"],
             "side_effects": bool(workflow["side_effects"]),
+            "side_effects_certainty": workflow["side_effects_certainty"],
         }
 
         decision_objs = []
@@ -1521,6 +1523,7 @@ class StateStore:
             "audit_events": event_objs,
             "receipts": receipt_objs,
             "side_effects": bool(workflow["side_effects"]),
+            "side_effects_certainty": workflow["side_effects_certainty"],
         }
 
 
@@ -1547,6 +1550,12 @@ class CivicOrchestrator:
                 )
 
         self.state = StateStore(paths.state_db)
+        self.reconciled_external_workflows = (
+            self.state.reconcile_external_workflows(
+                {"publication.publish"},
+                self.contracts.validate,
+            )
+        )
         self.publication_client = publication_client
 
     def capabilities(self) -> dict[str, Any]:
@@ -1924,6 +1933,8 @@ class CivicOrchestrator:
         failure_class: str,
         message: Any,
         retryable: bool,
+        side_effects: bool = False,
+        detail: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         normalized_request_id = (
             request_id
@@ -1950,7 +1961,9 @@ class CivicOrchestrator:
             "failure_class": failure_class,
             "message": normalized_message,
             "retryable": bool(retryable),
-            "side_effects": False,
+            "side_effects": bool(side_effects),
         }
+        if detail is not None:
+            failure["detail"] = detail
         self.contracts.validate("failure-envelope-v1.schema.json", failure)
         return failure

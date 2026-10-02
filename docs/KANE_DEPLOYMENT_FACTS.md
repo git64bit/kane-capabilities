@@ -139,3 +139,26 @@ content type: application/x-gzip
 ```
 
 GitHub Actions for that exact revision completed successfully before installation was attempted.
+
+
+### Usermin broker code installed — 2026-10-02
+
+Confirmed on `witness-hubzilla`:
+
+```text
+venv: /opt/civic-usermin-broker/venv
+source revision: 3ea891a0e0e5d361ac8380f8b0dd41e7d5a42ab1
+package: civic-orchestrator 0.1.0
+```
+
+The package and its Python dependencies installed successfully from the exact pinned GitHub revision. These modules imported successfully from the production venv:
+
+```text
+civic_orchestrator
+civic_orchestrator.usermin_adapter
+civic_orchestrator.usermin_broker
+civic_orchestrator.usermin_remote
+civic_orchestrator.usermin_upload
+```
+
+No systemd unit, broker socket, participant registry, Orchestrator route, or credential was installed or activated by this step.

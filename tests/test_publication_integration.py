@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class PublicationFixtureHandler(BaseHTTPRequestHandler):
     mode = "success"
     requests = []
+    bearer_token = "I" * 48
 
     def log_message(self, format, *args):
         return
@@ -28,6 +29,13 @@ class PublicationFixtureHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/v1/publications":
             self.send_response(404)
+            self.end_headers()
+            return
+
+        if self.headers.get("Authorization") != (
+            f"Bearer {type(self).bearer_token}"
+        ):
+            self.send_response(401)
             self.end_headers()
             return
 
@@ -96,6 +104,7 @@ class PublicationIntegrationTests(unittest.TestCase):
         runtime.publication_client = PublicationServiceClient(
             f"http://{host}:{port}",
             runtime.contracts.validate,
+            bearer_token=PublicationFixtureHandler.bearer_token,
         )
         runtime.registry.operations["publication.publish"][
             "implementation"

@@ -548,3 +548,22 @@ civic-orchestrator-ingress.socket:
 ```
 
 The CT105 private ingress is now reboot-persistent and remains active without restarting the Civic Orchestrator.
+
+
+### U-003 network path clean and persistent — 2026-10-02
+
+Confirmed on physical Proxmox host `srv-b`:
+
+```text
+live DNAT rule count for 10.110.0.19 -> 10.110.0.12:8045 = 1
+persistent /etc/iptables/rules.v4 entries for that route = 1
+```
+
+The live and reboot-persistent states now match exactly:
+
+```text
+10.110.0.19 -> 10.110.0.12:8045
+    DNAT -> 10.20.0.15:8045
+```
+
+No duplicate live rule exists.

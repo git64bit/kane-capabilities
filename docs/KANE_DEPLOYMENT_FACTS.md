@@ -280,3 +280,21 @@ civic-usermin-broker.service:
 ```
 
 This acceptance proves the deployed participant-byte -> AF_UNIX -> `SO_PEERCRED` -> stable participant-ID path with no remote Orchestrator dispatch and no publication side effect.
+
+
+### Usermin-to-CT105 route probe — 2026-10-02
+
+Confirmed from `witness-hubzilla`:
+
+```text
+ip route get 10.20.0.15
+  via 10.56.172.1 dev eth0
+  source 10.56.172.200
+
+TCP connect to 10.20.0.15:8045
+  result: TimeoutError
+```
+
+This confirms that a network route toward CT105's deployment address exists from `witness-hubzilla`, but the Civic Orchestrator is not reachable there on port 8045. This is consistent with the accepted CT105 invariant that the Orchestrator listener remains bound to `127.0.0.1:8045`.
+
+U-003 therefore still requires an explicit authenticated ingress/transport path; direct participant-host access to the raw CT105 listener is not available.

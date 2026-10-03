@@ -16,7 +16,7 @@ The Usermin interaction surface is not an authority and must not be allowed to i
 
 ## Installed Usermin mechanism
 
-The production portal exposes Webmin/Usermin **Custom Commands**.
+The production portal has the Webmin/Usermin **Custom Commands** implementation installed, but as confirmed on 2026-10-03 it did **not yet have any Custom Command definitions configured**.
 
 The Usermin `commands` module consumes commands defined by Webmin's `custom` module and explicitly marked for Usermin use.
 
@@ -66,6 +66,39 @@ Package inventory exposed the ordinary Usermin shell module under:
 but the Custom Commands Perl implementation was located only by direct filesystem/module inspection under `/usr/share/usermin/commands`.
 
 For future maintenance or bounded Usermin extensions, begin investigation at the `commands` module above. The Webmin-side command definitions remain under `/etc/webmin/custom`. This distinction is a confirmed deployment fact and should not be rediscovered from naming assumptions.
+
+
+### Live Custom Command definition state — 2026-10-03
+
+The effective Usermin commands configuration was inspected directly:
+
+```text
+/etc/usermin/commands/config:
+  webmin_config=/etc/webmin/custom
+  columns=2
+  params_cmd=0
+  params_file=0
+  access=*: *
+  display_mode=0
+
+/usr/share/usermin/commands/config:
+  webmin_config=/etc/webmin/custom
+
+/usr/share/usermin/commands/config-ALL-linux:
+  webmin_config=/etc/webmin/custom
+```
+
+The referenced Webmin configuration directory contained only:
+
+```text
+/etc/webmin/custom/config
+```
+
+and no `*.cmd` files existed anywhere under either `/etc/webmin` or `/etc/usermin`.
+
+Therefore, at this checkpoint there was **no existing Usermin-visible Custom Command definition** and no Civic publication command to replace or switch. U-004 must be treated as deployment of the first real Civic Usermin Custom Command definition against the already accepted backend path.
+
+Any earlier wording that implied an already-configured visible Usermin publication command should be read as architectural intent, not observed production state.
 
 The installed Usermin command runner supports:
 

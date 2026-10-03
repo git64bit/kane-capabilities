@@ -363,8 +363,10 @@ This validation service is intentionally more constrained than U-003:
 - no Orchestrator endpoint;
 - no adapter credential;
 - no remote publisher;
-- command/help contracts must validate before service startup;
+- command/help/access contracts must validate before service startup;
 - participant identity still comes from kernel peer credentials;
+- ordinary list/help output is filtered by explicit discovery grants;
+- invocation requires an explicit per-Participant invoke grant;
 - only registry-callable commands can reach a local command handler;
 - `water-ants` remains a stub returning `remote_dispatch=false` and `side_effects=false`.
 

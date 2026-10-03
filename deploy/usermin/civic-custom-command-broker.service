@@ -12,7 +12,9 @@ ExecStart=/opt/civic-custom-command-broker/venv/bin/python -m civic_orchestrator
   --command-registry /etc/civic-orchestrator/custom-command-registry-v1.yaml \
   --command-schema /etc/civic-orchestrator/custom-command-registry-v1.schema.json \
   --help-catalog /etc/civic-orchestrator/custom-command-help-v1.yaml \
-  --help-schema /etc/civic-orchestrator/custom-command-help-v1.schema.json
+  --help-schema /etc/civic-orchestrator/custom-command-help-v1.schema.json \
+  --access-policy /etc/civic-orchestrator/custom-command-access-v1.yaml \
+  --access-schema /etc/civic-orchestrator/custom-command-access-v1.schema.json
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true

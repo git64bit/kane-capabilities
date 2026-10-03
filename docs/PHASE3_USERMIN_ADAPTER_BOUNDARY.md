@@ -565,3 +565,35 @@ Source inspection of `save_cmd.cgi` established these relevant behaviors:
 - when remote hosts are selected, `save_cmd.cgi` rejects the command if it is also marked for Usermin.
 
 Therefore the stock Webmin editor already enforces an important Civic invariant: a command designated for Usermin cannot simultaneously be configured for Webmin cluster-host execution. U-004 should still verify the resulting `.cmd` and absence of a `.hosts` file after creation.
+
+
+### Custom Command on-disk serialization — 2026-10-03
+
+Live inspection of Webmin's `custom/save_cmd.cgi`, `custom/edit_cmd.cgi`, and the shared `custom-lib.pl` established the exact persisted command model consumed by Usermin.
+
+A normal Custom Command is stored as:
+
+```text
+/etc/webmin/custom/<id>.cmd
+```
+
+with this line-oriented representation:
+
+```text
+line 1: command string
+line 2: description
+line 3: user raw su order noshow usermin timeout clear format
+line 4+: name:type:opts:quote,must:description
+```
+
+Relevant editor/save semantics:
+
+- default execution user serializes as `*`, which Usermin resolves to the authenticated `remote_user`;
+- `su` is an explicit stored flag;
+- `usermin` is an explicit stored flag;
+- local/default host selection removes the `hosts` field;
+- Usermin-visible commands are rejected if remote cluster hosts are selected;
+- timeout, environment-clearing, raw-output and output-format behavior are explicitly persisted;
+- argument records persist type, options, quoting, required/optional state, and human description.
+
+This representation is sufficiently simple to verify byte-for-byte after U-004 creation. Before creating the first Civic command, the available stock argument types must be checked to determine whether the explicit participant acknowledgement can be represented without modifying the Perl module.

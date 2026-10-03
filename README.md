@@ -56,6 +56,7 @@ Start with:
 15. [docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md](docs/PHASE3_USERMIN_ADAPTER_BOUNDARY.md)
 16. [docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md](docs/CT105_PHASE2_PUBLICATION_ACCEPTANCE.md)
 17. [docs/EXTERNAL_REVIEW_HANDOFF.md](docs/EXTERNAL_REVIEW_HANDOFF.md)
+18. [docs/HANDOFF_U004_REMOTE_INTEGRATION.md](docs/HANDOFF_U004_REMOTE_INTEGRATION.md)
 
 The repository contains the accepted Phase 1 contract-bearing runtime and the accepted Phase 2 validation-only `publication.publish` path. The publication backend is reachable through the bounded service adapter, but Kubo/IPFS side effects remain disabled. Phase 3 production acceptance has advanced through U-001, U-002, and U-003. The first real Usermin Custom Command, `water-ants` / **Publish File**, is now accepted through the real Participant UI to the generic local validation broker, including explicit acknowledgement, stable Participant identity, curated access, upload cleanup, `remote_dispatch=false`, and `side_effects=false`. The remaining U-004 work is the separate remote-integration step from the generic Custom Command broker to the already accepted authenticated Orchestrator `publication.publish` path; real IPFS publication remains disabled. The Phase 4 participant publication budget control is implemented in the repository with atomic CT105 accounting and deployment-policy loading, while Kane-specific limits and live acceptance remain pending.
 

@@ -85,7 +85,7 @@ python -m civic_orchestrator.usermin_command help water-ants
 python -m civic_orchestrator.usermin_command run water-ants --file <path> --confirm
 ```
 
-The `list` and `help` paths are local and registry-backed. They do not require the broker or Orchestrator.
+The ordinary Participant `list` and `help` paths are broker-resolved so discovery can be filtered by stable Participant identity and explicit access grants. They require the local AF_UNIX broker but no Orchestrator or external network service.
 
 The helper validates both:
 
@@ -147,7 +147,7 @@ The generic service:
 
 This is a repository deployment asset only. It does **not** replace `/run/civic-orchestrator/usermin.sock`, does not modify `usermin-publication-upload`, and does not change the current Usermin Custom Command mapping.
 
-Production-host validation is currently paused until the generic runtime enforces the curated per-Participant access policy. After that prerequisite is implemented and accepted, a later production-host validation step may install and start this parallel socket/service and invoke it manually as the specifically granted Participant account. Switching the visible Usermin Publish command remains a separate acceptance decision.
+The generic runtime now enforces the curated per-Participant access policy. Production-host validation may resume only with an explicit deployment-local access record for the specifically granted Participant. Switching the visible Usermin Publish command remains a separate acceptance decision.
 
 
 ## Kane production-host validation

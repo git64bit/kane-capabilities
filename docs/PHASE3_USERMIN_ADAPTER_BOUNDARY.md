@@ -483,3 +483,26 @@ Only after U-004 should Usermin publication be considered a production participa
 U-004 remains validation-only. Real Kubo side effects additionally require every gate in `PHASE4_PUBLICATION_SAFETY_GATES.md`.
 
 Publication/document organization and lifecycle management are deliberately outside the thin Usermin form. Heavy clients consume the participant-linked publication catalog defined in `PUBLICATION_DOCUMENT_MODEL.md`.
+
+
+### Usermin module-restriction semantics — 2026-10-03
+
+Live source inspection established that `/etc/usermin/usermin.mods` is an additional module-restriction layer, not a standalone allow-list.
+
+The reference rule is:
+
+```text
+@civic-participants:-:htaccess language theme chfn shell quota fetchmail filter tunnel cshrc mailcap usermount mysql procmail proc at schedule spam man
+```
+
+The parser interprets the middle field as:
+
+```text
++      add listed modules
+-      remove listed modules
+empty  replace the current module set with the listed modules
+```
+
+`get_available_module_infos()` first applies normal Usermin ACL and operating-system/readonly checks, then calls `available_usermods()`, and only afterward applies theme and licence vetoes. Therefore the `-` rule above removes the listed modules from the participant's otherwise-authorized Usermin module set; it does not itself grant all unlisted modules.
+
+The `commands` module is not in the subtraction list, so `usermin.mods` does not remove it. Whether a participant can actually use `commands` still depends on the normal Usermin ACL and later visibility vetoes. U-004 must verify effective module availability rather than inferring access from `usermin.mods` alone.

@@ -229,6 +229,82 @@ class PublicationBudgetStateTests(unittest.TestCase):
             ).fetchone()
         self.assertEqual(row[0], "uncertain")
 
+    def test_reconcile_no_effect_restores_reserved_hold_and_known_state(self):
+        workflow_id = self.workflow("req:budget-reconcile")
+        self.state.reserve_publication_budget(
+            workflow_id=workflow_id,
+            participant_id="participant:test",
+            size_bytes=25,
+            policy=self.policy,
+        )
+        self.state.transition(workflow_id, "authorized")
+        self.state.transition(workflow_id, "accepted")
+        self.state.pause_external_operation(
+            workflow_id=workflow_id,
+            failure_class="internal",
+            message="uncertain dispatch",
+            retryable=True,
+            side_effects=True,
+            side_effects_certainty="unknown",
+            validate_contract=lambda *_: None,
+        )
+
+        event_id = self.state.reconcile_publication_no_effect(
+            workflow_id,
+            actor="operator:test",
+            reason="backend was proved incapable of side effects",
+            validate_contract=lambda *_: None,
+        )
+
+        evidence = self.state.get_workflow_evidence(workflow_id)
+        self.assertIsNotNone(evidence)
+        self.assertEqual(evidence["workflow"]["state"], "waiting")
+        self.assertFalse(evidence["workflow"]["side_effects"])
+        self.assertEqual(
+            evidence["workflow"]["side_effects_certainty"],
+            "known",
+        )
+        self.assertEqual(
+            evidence["audit_events"][-1]["event_id"],
+            event_id,
+        )
+        self.assertEqual(
+            evidence["audit_events"][-1]["event_type"],
+            "civic.operation.reconciled",
+        )
+        self.assertEqual(
+            evidence["audit_events"][-1]["data"]["resolution"],
+            "no-external-side-effect",
+        )
+
+        with self.state._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT hold_state
+                  FROM publication_budget_holds
+                 WHERE workflow_id=?
+                """,
+                (workflow_id,),
+            ).fetchone()
+        self.assertEqual(row[0], "reserved")
+
+    def test_reconcile_no_effect_rejects_non_waiting_workflow(self):
+        workflow_id = self.workflow("req:budget-reconcile-invalid")
+        self.state.reserve_publication_budget(
+            workflow_id=workflow_id,
+            participant_id="participant:test",
+            size_bytes=25,
+            policy=self.policy,
+        )
+
+        with self.assertRaisesRegex(ValueError, "not waiting"):
+            self.state.reconcile_publication_no_effect(
+                workflow_id,
+                actor="operator:test",
+                reason="should fail",
+                validate_contract=lambda *_: None,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

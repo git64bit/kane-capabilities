@@ -1033,3 +1033,28 @@ No Custom Commands implementation or definition was found under `/etc/usermin`. 
 The Webmin-side command definitions remain associated with `/etc/webmin/custom`, while the Usermin execution/UI Perl implementation is under `/usr/share/usermin/commands`.
 
 Future U-004 work or any narrowly bounded Perl extension to Custom Commands should begin with these confirmed paths rather than repeating filesystem discovery.
+
+
+### No live Usermin Custom Command definitions yet — 2026-10-03
+
+Confirmed on `witness-hubzilla` from a root shell.
+
+The effective Usermin `commands` module configuration points to:
+
+```text
+webmin_config=/etc/webmin/custom
+```
+
+This value was present in the live `/etc/usermin/commands/config` and in the packaged Usermin commands defaults.
+
+At the same checkpoint:
+
+```text
+/etc/webmin/custom/config
+```
+
+was the only regular file in `/etc/webmin/custom`, and no `*.cmd` files existed anywhere under `/etc/webmin` or `/etc/usermin`.
+
+Therefore the production host had the Usermin Custom Commands implementation installed, but **no Custom Command definitions were configured**. There was no existing visible Civic publication command to switch.
+
+U-004 should be approached as the first real Usermin Custom Command definition and participant-facing UI deployment, while preserving the already accepted broker and Orchestrator paths.

@@ -81,6 +81,14 @@ class DeploymentAssetTests(unittest.TestCase):
         )
         self.assertIn("--command-registry", unit)
         self.assertIn("--help-catalog", unit)
+        self.assertIn(
+            "--access-policy /etc/civic-orchestrator/custom-command-access-v1.yaml",
+            unit,
+        )
+        self.assertIn(
+            "--access-schema /etc/civic-orchestrator/custom-command-access-v1.schema.json",
+            unit,
+        )
         self.assertNotIn("--orchestrator-base-url", unit)
         self.assertNotIn("--adapter-credential-name", unit)
         self.assertNotIn("LoadCredential=", unit)

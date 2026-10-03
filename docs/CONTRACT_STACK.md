@@ -69,11 +69,15 @@ Initial schema families:
 - audit;
 - receipt;
 - service capability;
-- Custom Command registry for the bounded participant interaction-adapter surface.
+- Custom Command registry for the bounded participant interaction-adapter surface;
+- Custom Command help catalog;
+- deployment-local Custom Command access policy for explicit Participant discovery/invocation grants.
 
 The Custom Command registry is an adapter contract rather than an Orchestrator operation namespace. It uses opaque two-token codenames and binds commands to fixed semantic operations only after those operations exist. A declared command with a pending binding is not callable.
 
-Authority: `CUSTOM_COMMAND_ARCHITECTURE.md`; `../contracts/custom-command-registry-v1.yaml`.
+The access policy is deliberately default-deny and manually curated. Qualifications are recorded as descriptive context and do not automatically expand authority.
+
+Authority: `CUSTOM_COMMAND_ARCHITECTURE.md`; `../contracts/custom-command-registry-v1.yaml`; `../schemas/custom-command-access-v1.schema.json`.
 
 ## Workflow definitions
 

@@ -35,6 +35,10 @@
       "path": "operation-registry-v1.schema.json"
     },
     {
+      "id": "urn:civic-orchestrator:schema:custom-command-registry:v1",
+      "path": "custom-command-registry-v1.schema.json"
+    },
+    {
       "id": "urn:civic-orchestrator:schema:authorization-decision:v1",
       "path": "authorization-decision-v1.schema.json"
     },

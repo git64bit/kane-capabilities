@@ -68,7 +68,12 @@ Initial schema families:
 - workflow;
 - audit;
 - receipt;
-- service capability.
+- service capability;
+- Custom Command registry for the bounded participant interaction-adapter surface.
+
+The Custom Command registry is an adapter contract rather than an Orchestrator operation namespace. It uses opaque two-token codenames and binds commands to fixed semantic operations only after those operations exist. A declared command with a pending binding is not callable.
+
+Authority: `CUSTOM_COMMAND_ARCHITECTURE.md`; `../contracts/custom-command-registry-v1.yaml`.
 
 ## Workflow definitions
 

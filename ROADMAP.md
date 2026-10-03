@@ -292,7 +292,7 @@ Examples of the identifier shape include `water-ants`, `navy-roots`, and `next-p
 
 The codename is opaque and must not encode authority, order, implementation technology, deployment location, or lifecycle state. Once assigned, a codename is never recycled for a different command. A later serial/index may be added for documentation or presentation, but it does not replace the canonical codename.
 
-The initial registry must reserve bounded utilities in these families while leaving them stubbed until their own contracts and authority gates are accepted:
+The initial registry must reserve bounded utilities in these families as declared/non-callable entries. Individual commands advance to stub, validation, or available only after their own contracts and authority gates are accepted:
 
 | Family | Initial participant utility candidates |
 |---|---|
@@ -307,7 +307,7 @@ The initial registry must reserve bounded utilities in these families while leav
 | Firmware | Show authorized firmware; request authorized edge update; inspect update/rollback state |
 | Departure continuity | Pre-departure continuity audit and final active-participation synchronization |
 
-The first implemented Custom Command remains **Publish File**. Its codename is frozen when the command registry contract is created; it is not assigned a serial such as `CC-001`.
+The first implemented Custom Command remains **Publish File**. The v1 registry freezes its canonical codename as `water-ants`; it is not assigned a serial such as `CC-001`.
 
 Publish File remains deliberately minimal:
 
@@ -337,6 +337,8 @@ The Custom Command framework must not implement or expose:
 - a replacement implementation of Hubzilla nomadic identity, email storage, ordinary Usermin file management, or IPFS itself.
 
 When a requested utility would require one of these behaviors, implementation stops at the architecture boundary until a new bounded semantic operation and explicit authority/resource model are designed.
+
+Authority: `docs/CUSTOM_COMMAND_ARCHITECTURE.md`; `contracts/custom-command-registry-v1.yaml`.
 
 ### Participant storage and continuity backplanes
 

@@ -151,6 +151,24 @@ For Upload arguments, Usermin:
 
 The production Usermin process currently uses umask `0022`, so upload files may be mode `0644`.
 
+Live source inspection on 2026-10-03 established the relevant shared-library behavior. Usermin and Webmin carry byte-identical copies of the inspected `web-lib-funcs.pl` and `proc/proc-lib.pl` files. In the normal Custom Command path with `su=NO`, `safe_process_exec()` receives the selected participant UID with an undefined GID. It resolves that UID with `getpwuid()` and calls `switch_to_unix_user()`, which installs the account's primary GID plus supplementary groups returned by `other_groups()` before changing UID. The command is then executed as:
+
+```text
+/bin/sh -c <configured command>
+```
+
+This is real Unix credential switching, but it is not a login-shell reconstruction. The inspected switch routine does not set `HOME`, `USER`, `LOGNAME`, `PATH`, or source participant shell startup files. Civic Custom Commands therefore must not depend on aliases, profile changes, or bash-specific behavior; use absolute Civic executable paths and explicit arguments.
+
+The shared `other_groups()` implementation enumerates the system group database and returns groups that explicitly list the username. For the reference participant this preserves the supplementary `civic-participants` membership needed to reach the Civic AF_UNIX socket.
+
+The shared `tempname_dir()` implementation prefers:
+
+```text
+$HOME/.tmp
+```
+
+when `remote_user_info` identifies a writable participant home and `nohometemp` is not set. Otherwise it falls back to a configured/shared temp base with a user-specific suffix. This explains the observed Usermin upload staging under the participant home.
+
 Participant homes use a non-world-traversable parent directory and private primary group. The observed participant home was mode `0750`, so unrelated local accounts cannot traverse into the participant's `.tmp` directory even when the file itself is `0644`.
 
 This deployment invariant must be preserved for participant accounts.

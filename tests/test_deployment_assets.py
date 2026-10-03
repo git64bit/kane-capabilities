@@ -68,6 +68,14 @@ class DeploymentAssetTests(unittest.TestCase):
         self.assertIn("SocketMode=0660", socket_unit)
         self.assertIn("RestrictAddressFamilies=AF_UNIX", unit)
         self.assertIn(
+            "/opt/civic-custom-command-broker/venv/bin/python",
+            unit,
+        )
+        self.assertNotIn(
+            "/opt/civic-usermin-broker/venv/bin/python",
+            unit,
+        )
+        self.assertIn(
             "-m civic_orchestrator.custom_command_broker",
             unit,
         )

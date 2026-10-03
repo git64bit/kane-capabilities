@@ -265,13 +265,13 @@ Next gates:
 
 - **U-002:** ACCEPTED on 2026-10-02 on the production Portal/Usermin host (`witness-hubzilla`). The local peer-credential broker received participant-owned bytes over AF_UNIX, derived the real Unix UID through `SO_PEERCRED`, mapped it to the stable Civic participant ID, and returned validation-only evidence with `remote_dispatch=false`.
 - **U-003:** ACCEPTED on 2026-10-03 in production. The broker-to-Orchestrator route now uses protected adapter credentials, server-side fixed client/authentication provenance, private routing, and rejection of direct participant API bypass.
-- **U-004:** validation-only end to end through the real Usermin Custom Command remains pending.
+- **U-004:** the real Usermin Participant-facing slice is ACCEPTED on 2026-10-03 through `water-ants` to the generic local validation broker. Negative and positive acknowledgement paths, stable Participant identity, curated access, upload cleanup, `remote_dispatch=false`, and `side_effects=false` are proven. The remaining U-004 gate is remote integration from that generic broker to the already accepted authenticated Orchestrator `publication.publish` path, still validation-only and with Kubo disabled.
 
 ### Custom Command architecture and initial utility registry
 
 Usermin Custom Commands are a bounded participant control surface, not a second application server and not a generic remote-execution facility.
 
-Before the first production Custom Command is enabled, Phase 3 must freeze a reusable Custom Command contract that can be shared by independent Civic Infrastructure owner-operators.
+The reusable Custom Command contract was frozen before the first production-facing command was exposed. The first command is now live only in validation/stub form and remains subject to the same portable contract for independent Civic Infrastructure owner-operators.
 
 The command registry follows the same discipline as the Orchestrator operation registry:
 

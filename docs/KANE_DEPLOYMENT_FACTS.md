@@ -1100,3 +1100,17 @@ exit status: 0
 The Webmin `custom` module therefore edits and persists the same command model that Usermin's `commands` module reads.
 
 Inspection of Webmin `save_cmd.cgi` also showed that commands marked for Usermin cannot be saved with remote cluster hosts selected. The local-host selection removes the `hosts` field. This provides a stock-implementation local-only guard for Usermin-visible Custom Commands, subject to live verification of the created definition during U-004.
+
+
+### U-004 Usermin local command path accepted — 2026-10-03
+
+Accepted on live `witness-hubzilla` through the real Usermin session for `sase25sep26a`.
+
+The first Civic Custom Command, **Publish File** / `water-ants`, successfully exercised both:
+
+- rejection without explicit acknowledgement, with `remote_dispatch=false` and `side_effects=false`;
+- confirmed invocation, returning the correct stable Participant ID, `publication.publish` binding, artifact metadata, `status=stub`, `remote_dispatch=false`, and `side_effects=false`.
+
+Usermin cleaned its `/tmp/.webmin/` staged upload after both failed and successful executions.
+
+The local Participant-facing Usermin -> generic broker path is therefore accepted. No Usermin Perl changes were required. Remote Orchestrator dispatch and IPFS publication are not part of this acceptance.

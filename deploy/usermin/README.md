@@ -118,6 +118,14 @@ group: civic-participants
 mode: 0660
 ```
 
+The generic service uses a **separate Python environment**:
+
+```text
+/opt/civic-custom-command-broker/venv
+```
+
+It does not replace or upgrade the accepted publication broker environment at `/opt/civic-usermin-broker/venv`.
+
 The generic service:
 
 - is restricted to `AF_UNIX`;

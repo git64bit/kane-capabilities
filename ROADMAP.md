@@ -283,7 +283,11 @@ The command registry follows the same discipline as the Orchestrator operation r
 - keep backend topology, credentials, service names, URLs, container identities, and private-network details out of participant-controlled input;
 - require companion plain-language help for every registered command, covering preflight checks, significant effects, consequences, and incident guidance;
 - keep help locally readable without the broker or Civic network;
-- allow high-consequence commands to require explicit acknowledgement as a usability barrier, never as authorization.
+- allow high-consequence commands to require explicit acknowledgement as a usability barrier, never as authorization;
+- treat `civic-participants` as a coarse broker-admission group only, never as entitlement to the full command inventory;
+- keep per-Participant command discovery and invocation default-deny and explicitly curated by stable Participant identity;
+- record qualifications for human/operator context without automatic qualification-to-command inheritance;
+- preserve the Participant's ordinary shell/profile/home conventions unless a Participant intentionally uses a utility-specific resource.
 
 Custom Command identifiers are **non-serialized codenames**. The canonical identifier is two lowercase alphabetic tokens separated by one hyphen:
 
@@ -310,7 +314,7 @@ The initial registry must reserve bounded utilities in these families as declare
 | Firmware | Show authorized firmware; request authorized edge update; inspect update/rollback state |
 | Departure continuity | Pre-departure continuity audit and final active-participation synchronization |
 
-The first implemented Custom Command remains **Publish File**. The v1 registry freezes its canonical codename as `water-ants`; it is not assigned a serial such as `CC-001`. Repository status: `water-ants` has advanced to a generic local `stub`, and a separate AF_UNIX-only validation socket/service is now defined for the generic protocol. The production Usermin mapping has not yet been switched to that path.
+The first implemented Custom Command remains **Publish File**. The v1 registry freezes its canonical codename as `water-ants`; it is not assigned a serial such as `CC-001`. Repository status: `water-ants` has advanced to a generic local `stub`, and a separate AF_UNIX-only validation socket/service is defined for the generic protocol. Live installation of that generic path is now paused until the runtime enforces the curated per-Participant access policy. The production Usermin mapping has not been switched.
 
 Publish File remains deliberately minimal:
 

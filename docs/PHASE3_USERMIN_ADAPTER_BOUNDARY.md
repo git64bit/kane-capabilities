@@ -26,6 +26,47 @@ Production configuration points Usermin to:
 /etc/webmin/custom
 ```
 
+### Live Usermin module filesystem discovery — 2026-10-03
+
+Confirmed on the production `witness-hubzilla` container from a root shell.
+
+The Usermin-facing **Custom Commands** implementation is the Usermin module named `commands`. Do not look for a functional Usermin module named `custom`, and do not expect its implementation under `/etc/usermin`.
+
+Observed implementation files:
+
+```text
+/usr/share/usermin/commands/module.info
+/usr/share/usermin/commands/custom-lib.pl
+/usr/share/usermin/commands/form.cgi
+/usr/share/usermin/commands/index.cgi
+```
+
+Direct inspection also found:
+
+```text
+/usr/share/usermin/gray-theme/custom
+```
+
+That path is a theme asset, not the Custom Commands implementation.
+
+A search below `/etc/usermin` found no Custom Commands definition or Civic command implementation there. The only Civic-specific Usermin configuration observed in that tree at this checkpoint was the module-access rule in:
+
+```text
+/etc/usermin/usermin.mods
+```
+
+for `@civic-participants`.
+
+Package inventory exposed the ordinary Usermin shell module under:
+
+```text
+/usr/share/usermin/shell
+```
+
+but the Custom Commands Perl implementation was located only by direct filesystem/module inspection under `/usr/share/usermin/commands`.
+
+For future maintenance or bounded Usermin extensions, begin investigation at the `commands` module above. The Webmin-side command definitions remain under `/etc/webmin/custom`. This distinction is a confirmed deployment fact and should not be rediscovered from naming assumptions.
+
 The installed Usermin command runner supports:
 
 - Usermin-visible command gating;

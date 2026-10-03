@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
+from .custom_command_access import CustomCommandAccessPolicy
 from .usermin_adapter import (
     LocalAdapterError,
     ParticipantIdentity,
@@ -139,6 +140,10 @@ class CustomCommandRegistry:
 
         return cls(registry_value, help_value)
 
+    @property
+    def codenames(self) -> set[str]:
+        return set(self._commands)
+
     def lookup(self, codename: str) -> dict[str, Any]:
         try:
             return self._commands[codename]
@@ -266,9 +271,11 @@ class LocalCustomCommandAdapter:
         self,
         participant_registry: ParticipantRegistry,
         command_registry: CustomCommandRegistry,
+        access_policy: CustomCommandAccessPolicy,
     ) -> None:
         self.participant_registry = participant_registry
         self.command_registry = command_registry
+        self.access_policy = access_policy
 
     def _validate_input(
         self,
@@ -301,6 +308,10 @@ class LocalCustomCommandAdapter:
         invocation: CommandInvocation,
     ) -> dict[str, Any]:
         participant = self.participant_registry.resolve(peer_uid)
+        self.access_policy.require_invoke(
+            participant.participant_id,
+            invocation.codename,
+        )
         command = self.command_registry.require_callable(invocation.codename)
         self._validate_input(command, invocation)
 

@@ -126,6 +126,14 @@ The generic service uses a **separate Python environment**:
 
 It does not replace or upgrade the accepted publication broker environment at `/opt/civic-usermin-broker/venv`.
 
+Before live installation, the generic service must also load a deployment-local, root/operator-maintained access policy conforming to:
+
+```text
+schemas/custom-command-access-v1.schema.json
+```
+
+The policy defaults discovery and invocation to deny. Membership in `civic-participants` alone does not grant any Custom Command. Qualifications are human-curated context and create no automatic grants.
+
 The generic service:
 
 - is restricted to `AF_UNIX`;
@@ -139,7 +147,7 @@ The generic service:
 
 This is a repository deployment asset only. It does **not** replace `/run/civic-orchestrator/usermin.sock`, does not modify `usermin-publication-upload`, and does not change the current Usermin Custom Command mapping.
 
-A later production-host validation step may install and start this parallel socket/service and invoke it manually as the Participant account. Switching the visible Usermin Publish command remains a separate acceptance decision.
+Production-host validation is currently paused until the generic runtime enforces the curated per-Participant access policy. After that prerequisite is implemented and accepted, a later production-host validation step may install and start this parallel socket/service and invoke it manually as the specifically granted Participant account. Switching the visible Usermin Publish command remains a separate acceptance decision.
 
 
 ## Kane production-host validation
@@ -151,3 +159,8 @@ docs/KANE_CUSTOM_COMMAND_VALIDATION_ACCEPTANCE.md
 ```
 
 That runbook pins an exact repository revision, preserves the accepted publication broker process and venv, and stops before any Usermin mapping or remote Orchestrator dispatch is enabled.
+
+
+## Participant account preservation
+
+The Custom Command system does not standardize Participant shell environments. It must not require edits to shell profiles, aliases, PATH, home-directory layout, or automatic per-Participant agents. Manual qualification and command-access curation belong to operator-maintained Civic policy, not Participant dotfiles.

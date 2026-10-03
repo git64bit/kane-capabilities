@@ -77,19 +77,49 @@ def recv_command_invocation(conn: socket.socket) -> CommandInvocation:
 
     if not isinstance(metadata, dict):
         raise BrokerProtocolError("Custom Command metadata must be an object")
-    if set(metadata) != {"protocol_version", "codename", "arguments"}:
+    if set(metadata) != {
+        "protocol_version",
+        "request_kind",
+        "codename",
+        "arguments",
+    }:
         raise BrokerProtocolError("Custom Command metadata fields are invalid")
-    if metadata["protocol_version"] != 1:
+    if metadata["protocol_version"] != 2:
         raise BrokerProtocolError("unsupported Custom Command protocol version")
-    if not isinstance(metadata["codename"], str):
-        raise BrokerProtocolError("Custom Command codename must be a string")
+
+    request_kind = metadata["request_kind"]
+    if request_kind not in {"list", "help", "invoke"}:
+        raise BrokerProtocolError("unsupported Custom Command request kind")
+
+    codename = metadata["codename"]
+    if request_kind == "list":
+        if codename is not None:
+            raise BrokerProtocolError(
+                "list request must not include a codename"
+            )
+    elif not isinstance(codename, str):
+        raise BrokerProtocolError(
+            "help/invoke request requires a codename"
+        )
+
     if not isinstance(metadata["arguments"], dict):
         raise BrokerProtocolError("Custom Command arguments must be an object")
 
+    if request_kind in {"list", "help"}:
+        if metadata["arguments"]:
+            raise BrokerProtocolError(
+                "list/help requests do not accept arguments"
+            )
+        if payload:
+            raise BrokerProtocolError(
+                "list/help requests do not accept a payload"
+            )
+
     return CommandInvocation(
-        codename=metadata["codename"],
+        codename=codename,
         arguments=metadata["arguments"],
         payload=payload,
+        request_kind=request_kind,
     )
 
 

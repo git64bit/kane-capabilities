@@ -86,6 +86,21 @@ class DeploymentAssetTests(unittest.TestCase):
         self.assertNotIn("LoadCredential=", unit)
         self.assertNotIn("AF_INET", unit)
 
+    def test_custom_command_wrapper_uses_isolated_venv(self):
+        wrapper = self.read("deploy/usermin/civic-custom-command")
+        self.assertIn(
+            "/opt/civic-custom-command-broker/venv/bin/python",
+            wrapper,
+        )
+        self.assertNotIn(
+            "/opt/civic-usermin-broker/venv/bin/python",
+            wrapper,
+        )
+        self.assertIn(
+            "-m civic_orchestrator.usermin_command",
+            wrapper,
+        )
+
     def test_custom_command_validation_service_does_not_replace_production_socket(self):
         publication_socket = self.read(
             "deploy/usermin/civic-usermin-broker.socket"

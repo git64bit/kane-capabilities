@@ -21,6 +21,9 @@ class CustomCommandBrokerTests(unittest.TestCase):
                 command_schema_path=ROOT / "schemas" / "custom-command-registry-v1.schema.json",
                 help_catalog_path=ROOT / "contracts" / "custom-command-help-v1.yaml",
                 help_schema_path=ROOT / "schemas" / "custom-command-help-v1.schema.json",
+                access_policy_path=ROOT / "deploy" / "usermin" / "custom-command-access-v1.example.yaml",
+                access_schema_path=ROOT / "schemas" / "custom-command-access-v1.schema.json",
+                require_secure_access_file=False,
             )
 
         water = adapter.command_registry.lookup("water-ants")
@@ -30,6 +33,11 @@ class CustomCommandBrokerTests(unittest.TestCase):
             "publication.publish",
         )
         self.assertFalse(water["side_effects_enabled"])
+        grant = adapter.access_policy.require_invoke(
+            "participant:550e8400-e29b-41d4-a716-446655440000",
+            "water-ants",
+        )
+        self.assertTrue(grant["invoke"])
 
 
 if __name__ == "__main__":

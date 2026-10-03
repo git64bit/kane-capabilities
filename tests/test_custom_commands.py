@@ -36,13 +36,17 @@ class StaticAccessPolicy:
     def __init__(self, allowed=True, discoverable=None):
         self.allowed = allowed
         self.calls = []
-        self.discoverable = discoverable or [
-            {
-                "codename": "water-ants",
-                "discover": True,
-                "invoke": allowed,
-            }
-        ]
+        self.discoverable = (
+            [
+                {
+                    "codename": "water-ants",
+                    "discover": True,
+                    "invoke": allowed,
+                }
+            ]
+            if discoverable is None
+            else discoverable
+        )
 
     def discoverable_grants(self, participant_id):
         self.calls.append((participant_id, "list"))

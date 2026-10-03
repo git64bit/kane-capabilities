@@ -73,3 +73,33 @@ file:
 ```
 
 The command wrapper receives the Usermin temporary file path only because it runs as that participant. That path is consumed locally by the participant helper and is never forwarded to the broker or Orchestrator.
+
+
+## Generic Custom Command helper — repository stage
+
+The repository now contains a generic participant helper:
+
+```text
+python -m civic_orchestrator.usermin_command list
+python -m civic_orchestrator.usermin_command help water-ants
+python -m civic_orchestrator.usermin_command run water-ants --file <path> --confirm
+```
+
+The `list` and `help` paths are local and registry-backed. They do not require the broker or Orchestrator.
+
+The helper validates both:
+
+```text
+/etc/civic-orchestrator/custom-command-registry-v1.yaml
+/etc/civic-orchestrator/custom-command-help-v1.yaml
+```
+
+against their schemas and requires exact codename coverage.
+
+The generic invocation protocol is intentionally **not** deployed over the accepted production publication socket. Its reserved default socket is:
+
+```text
+/run/civic-orchestrator/custom-command.sock
+```
+
+No production systemd socket or Usermin mapping is created by this repository step. The existing `usermin-publication-upload` path remains unchanged until a separate acceptance step.

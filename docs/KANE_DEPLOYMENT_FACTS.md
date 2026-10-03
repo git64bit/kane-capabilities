@@ -1071,3 +1071,18 @@ Confirmed on live `witness-hubzilla`:
 explicitly includes the `commands` module in the normal Usermin ACL.
 
 The previously inspected `@civic-participants` rule in `/etc/usermin/usermin.mods` is subtractive and does not remove `commands`. Therefore `commands` passes both the normal ACL and participant-group module-restriction layers. Real-session visibility remains subject to later theme/licence vetoes and must be verified from the actual Usermin participant login.
+
+
+### Real Participant Custom Commands UI baseline — 2026-10-03
+
+Confirmed from the actual Usermin login for `sase25sep26a`.
+
+The **Custom Commands** module is visible and opens successfully. Usermin reports:
+
+```text
+No custom commands have been defined in Webmin or designated as available for running in Usermin.
+```
+
+This proves the `commands` module survives the current ACL, `usermin.mods`, theme, and licence visibility layers for the reference Participant, while also confirming the production command-definition set is empty.
+
+This is the live UI baseline immediately before U-004.

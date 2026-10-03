@@ -32,6 +32,11 @@ class StaticParticipantRegistry:
         )
 
 
+class StaticAccessPolicy:
+    def require_invoke(self, participant_id, codename):
+        return {"codename": codename, "discover": True, "invoke": True}
+
+
 class UserminCommandHelperTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -57,6 +62,7 @@ class UserminCommandHelperTests(unittest.TestCase):
         adapter = LocalCustomCommandAdapter(
             StaticParticipantRegistry(),
             self.registry,
+            StaticAccessPolicy(),
         )
 
         def serve_once():

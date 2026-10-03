@@ -187,6 +187,39 @@ class CustomCommandAccessPolicy:
 
         return grant
 
+    def discoverable_grants(
+        self,
+        participant_id: str,
+        *,
+        now: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        participant = self._participant(participant_id)
+        visible: list[dict[str, Any]] = []
+
+        for grant in participant["command_access"]:
+            if not grant["discover"]:
+                continue
+
+            expires_at = grant.get("expires_at")
+            if expires_at is not None:
+                current = now
+                if current is None:
+                    current = datetime.now(timezone.utc)
+                elif current.tzinfo is None:
+                    current = current.replace(tzinfo=timezone.utc)
+                else:
+                    current = current.astimezone(timezone.utc)
+
+                if current >= _parse_time(expires_at):
+                    continue
+
+            visible.append(grant)
+
+        return sorted(
+            visible,
+            key=lambda item: item["codename"],
+        )
+
     def require_discover(
         self,
         participant_id: str,

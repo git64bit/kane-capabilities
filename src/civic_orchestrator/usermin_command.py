@@ -38,7 +38,8 @@ class CommandClientError(ValueError):
 def send_command_to_broker(
     socket_path: Path,
     *,
-    codename: str,
+    request_kind: str,
+    codename: str | None,
     arguments: dict[str, Any],
     payload: bytes,
 ) -> dict[str, Any]:
@@ -49,7 +50,8 @@ def send_command_to_broker(
 
     metadata = json.dumps(
         {
-            "protocol_version": 1,
+            "protocol_version": 2,
+            "request_kind": request_kind,
             "codename": codename,
             "arguments": arguments,
         },
@@ -106,6 +108,7 @@ def invoke_water_ants(
     payload = read_owned_regular_file(file_path)
     return send_command_to_broker(
         socket_path,
+        request_kind="invoke",
         codename="water-ants",
         arguments={},
         payload=payload,
@@ -142,12 +145,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     listing = sub.add_parser(
         "list",
-        help="Show participant-discoverable Custom Commands",
+        help="Show Custom Commands discoverable to this Participant",
     )
     listing.add_argument(
-        "--all",
-        action="store_true",
-        help="Include declared future commands",
+        "--socket",
+        type=Path,
+        default=DEFAULT_SOCKET,
     )
 
     help_cmd = sub.add_parser(
@@ -155,6 +158,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show plain-language help for one Custom Command",
     )
     help_cmd.add_argument("codename")
+    help_cmd.add_argument(
+        "--socket",
+        type=Path,
+        default=DEFAULT_SOCKET,
+    )
 
     run = sub.add_parser(
         "run",
@@ -178,19 +186,65 @@ def main() -> None:
     args = build_parser().parse_args()
 
     try:
-        registry = load_registry(args)
-
         if args.action == "list":
-            print(
-                registry.render_catalog(
-                    include_declared=args.all,
-                )
+            result = send_command_to_broker(
+                args.socket,
+                request_kind="list",
+                codename=None,
+                arguments={},
+                payload=b"",
             )
+            if result.get("status") == "rejected":
+                raise CommandClientError(
+                    result.get("error", "Custom Command list rejected")
+                )
+            commands = result.get("commands")
+            if not isinstance(commands, list):
+                raise CommandClientError(
+                    "local Custom Command broker returned invalid catalog"
+                )
+            if not commands:
+                print("No Custom Commands are currently discoverable.")
+                return
+            print("Civic Custom Commands")
+            print()
+            for item in commands:
+                print(
+                    f"{item['display_name']} ({item['codename']}) "
+                    f"[{item['lifecycle']}]"
+                )
+                print(f"  {item['summary']}")
+                if item.get("available_to_run"):
+                    print("  Available to run: yes")
+                else:
+                    print("  Available to run: no")
             return
 
         if args.action == "help":
-            print(registry.render_help(args.codename))
+            result = send_command_to_broker(
+                args.socket,
+                request_kind="help",
+                codename=args.codename,
+                arguments={},
+                payload=b"",
+            )
+            if result.get("status") == "rejected":
+                raise CommandClientError(
+                    result.get("error", "Custom Command help rejected")
+                )
+            help_text = result.get("help")
+            if not isinstance(help_text, str):
+                raise CommandClientError(
+                    "local Custom Command broker returned invalid help"
+                )
+            print(help_text)
+            print(
+                "Available to run: "
+                + ("yes" if result.get("available_to_run") else "no")
+            )
             return
+
+        registry = load_registry(args)
 
         if args.codename != "water-ants":
             raise CommandClientError(

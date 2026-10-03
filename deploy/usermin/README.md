@@ -102,4 +102,33 @@ The generic invocation protocol is intentionally **not** deployed over the accep
 /run/civic-orchestrator/custom-command.sock
 ```
 
-No production systemd socket or Usermin mapping is created by this repository step. The existing `usermin-publication-upload` path remains unchanged until a separate acceptance step.
+The repository now includes a **parallel validation-only** socket/service pair:
+
+```text
+civic-custom-command-broker.socket
+civic-custom-command-broker.service
+```
+
+The socket is:
+
+```text
+/run/civic-orchestrator/custom-command.sock
+owner: civic-usermin-broker
+group: civic-participants
+mode: 0660
+```
+
+The generic service:
+
+- is restricted to `AF_UNIX`;
+- loads the stable participant registry plus the Custom Command registry and help catalog;
+- derives participant identity through the same `SO_PEERCRED` path;
+- has no Orchestrator URL option;
+- has no adapter credential;
+- has no remote publisher;
+- invokes only the repository-side `LocalCustomCommandAdapter`;
+- therefore cannot perform remote dispatch at this checkpoint.
+
+This is a repository deployment asset only. It does **not** replace `/run/civic-orchestrator/usermin.sock`, does not modify `usermin-publication-upload`, and does not change the current Usermin Custom Command mapping.
+
+A later production-host validation step may install and start this parallel socket/service and invoke it manually as the Participant account. Switching the visible Usermin Publish command remains a separate acceptance decision.

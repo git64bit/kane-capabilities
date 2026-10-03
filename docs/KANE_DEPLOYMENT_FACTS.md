@@ -1086,3 +1086,17 @@ No custom commands have been defined in Webmin or designated as available for ru
 This proves the `commands` module survives the current ACL, `usermin.mods`, theme, and licence visibility layers for the reference Participant, while also confirming the production command-definition set is empty.
 
 This is the live UI baseline immediately before U-004.
+
+
+### Webmin/Usermin Custom Command libraries identical — 2026-10-03
+
+Confirmed on live `witness-hubzilla`:
+
+```text
+cmp /usr/share/webmin/custom/custom-lib.pl /usr/share/usermin/commands/custom-lib.pl
+exit status: 0
+```
+
+The Webmin `custom` module therefore edits and persists the same command model that Usermin's `commands` module reads.
+
+Inspection of Webmin `save_cmd.cgi` also showed that commands marked for Usermin cannot be saved with remote cluster hosts selected. The local-host selection removes the `hosts` field. This provides a stock-implementation local-only guard for Usermin-visible Custom Commands, subject to live verification of the created definition during U-004.

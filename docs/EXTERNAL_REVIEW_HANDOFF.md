@@ -2,7 +2,7 @@
 
 ## Review point
 
-Repository state after the third independent review of the Phase 2/3 publication path.
+Repository state after the third independent review of the Phase 2/3 publication path. This file remains the external-review checkpoint; later live Usermin acceptance is summarized below and the current implementation handoff is `HANDOFF_U004_REMOTE_INTEGRATION.md`.
 
 Phase 1/1H remain closed. Phase 2 has one available bounded operation, `publication.publish`, routed to a validation-only publication service. Kubo/IPFS side effects remain disabled.
 
@@ -67,7 +67,7 @@ Phase 0    COMPLETE
 Phase 1    COMPLETE
 Phase 1H   COMPLETE
 Phase 2    publication validation path accepted
-Phase 3    U-001 accepted; U-002 repo implementation complete / production pending; U-003 CT105 ingress primitive implemented / integration and production pending; U-004 pending
+Phase 3    U-001/U-002/U-003 accepted; U-004 local real-Usermin -> generic-broker slice accepted; remote generic-broker -> authenticated Orchestrator integration pending
 Phase 4    gated; no Kubo side effects
 ```
 
@@ -100,6 +100,6 @@ Useful independent review targets now are:
 - stable participant-identity mapping;
 - publication-service authentication;
 - participant publication budget deployment values, live policy installation, and acceptance behavior;
-- preservation of thin-client semantics through U-002 production acceptance and U-003 broker integration/production acceptance.
+- preservation of thin-client semantics while connecting the accepted generic `water-ants` broker path to the already accepted authenticated U-003 Orchestrator transport, without enabling Kubo side effects.
 
 The next implementation step should not reopen the file-only publication model unless new evidence demonstrates a concrete defect.

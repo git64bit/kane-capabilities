@@ -2,17 +2,21 @@
 
 ## Status
 
-**PRODUCTION-HOST ACCEPTANCE PENDING**
+**PAUSED BEFORE FIRST PRODUCTION WRITE — CURATED ACCESS RESOLVER REQUIRED**
+
+Read-only Steps 0 through 2 were completed on 2026-10-03 and matched the expected live state. No generic Custom Command file, package, venv, socket, service, or Participant-home test artifact was written.
+
+The former deployment candidate `925c2ed7c366124dfde5d8078c7ec2a06bdd2162` is superseded for live validation because it does not enforce the newly frozen per-Participant Custom Command access policy.
+
+Do **not** execute Step 3 or later until:
+
+1. runtime access-policy loading is implemented;
+2. stable `participant_id` is resolved before discovery/invocation;
+3. default-deny discovery and invocation are enforced;
+4. `water-ants` is explicitly granted to the test Participant;
+5. the revised candidate passes CI and this runbook is repinned.
 
 This runbook validates the parallel generic Custom Command path on the current Kane Portal/Usermin host without changing the accepted publication-specific Usermin route.
-
-Deployment candidate revision:
-
-```text
-925c2ed7c366124dfde5d8078c7ec2a06bdd2162
-```
-
-Do not substitute `main` or another floating reference. If a later revision is selected, restart this acceptance procedure from repository/live-state comparison.
 
 ## Scope
 
@@ -142,6 +146,8 @@ test -e /opt/civic-custom-command-broker/venv/bin/python && \
 Unexpected pre-existing state is drift. Stop and classify it before writing.
 
 ## Step 3 — stage the exact repository archive
+
+**BLOCKED. Do not execute this step while the Status above is PAUSED.**
 
 Set shell variables; this changes no persistent state:
 

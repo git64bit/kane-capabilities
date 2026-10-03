@@ -19,6 +19,8 @@ from civic_orchestrator.usermin_adapter import ParticipantIdentity
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "contracts" / "custom-command-registry-v1.yaml"
 SCHEMA_PATH = ROOT / "schemas" / "custom-command-registry-v1.schema.json"
+HELP_PATH = ROOT / "contracts" / "custom-command-help-v1.yaml"
+HELP_SCHEMA_PATH = ROOT / "schemas" / "custom-command-help-v1.schema.json"
 
 
 class StaticParticipantRegistry:
@@ -32,7 +34,12 @@ class StaticParticipantRegistry:
 
 class CustomCommandTests(unittest.TestCase):
     def registry(self):
-        return CustomCommandRegistry.load(REGISTRY_PATH, SCHEMA_PATH)
+        return CustomCommandRegistry.load(
+            REGISTRY_PATH,
+            SCHEMA_PATH,
+            HELP_PATH,
+            HELP_SCHEMA_PATH,
+        )
 
     def test_registry_contract_loads_and_water_ants_is_only_stub(self):
         registry = self.registry()
@@ -46,6 +53,42 @@ class CustomCommandTests(unittest.TestCase):
             if item["lifecycle"] == "stub" and item["codename"] != "water-ants"
         ]
         self.assertEqual(other_stubbed, [])
+
+    def test_help_catalog_covers_every_registered_command(self):
+        registry = self.registry()
+        registered = {
+            item["codename"]
+            for item in registry.value["commands"]
+        }
+        helped = {
+            item["codename"]
+            for item in registry.help_value["commands"]
+        }
+        self.assertEqual(registered, helped)
+
+    def test_catalog_discovers_callable_commands_only_by_default(self):
+        registry = self.registry()
+        text = registry.render_catalog()
+        self.assertIn("Publish File (water-ants) [stub]", text)
+        self.assertNotIn("My Publications (navy-roots)", text)
+        expanded = registry.render_catalog(include_declared=True)
+        self.assertIn("My Publications (navy-roots) [declared]", expanded)
+
+    def test_water_ants_help_warns_about_effects_and_incidents(self):
+        text = self.registry().render_help("water-ants")
+        self.assertIn("Significant effects:", text)
+        self.assertIn("Consequences to understand:", text)
+        self.assertIn("If something goes wrong:", text)
+        self.assertIn("explicit acknowledgement is required", text)
+
+    def test_explicit_confirmation_is_required_for_water_ants(self):
+        registry = self.registry()
+        with self.assertRaisesRegex(
+            CustomCommandError,
+            "explicit participant confirmation",
+        ):
+            registry.require_confirmation("water-ants", False)
+        registry.require_confirmation("water-ants", True)
 
     def test_declared_command_is_not_callable(self):
         with self.assertRaisesRegex(
@@ -119,7 +162,12 @@ class CustomCommandTests(unittest.TestCase):
                 CustomCommandError,
                 "duplicate Custom Command codename",
             ):
-                CustomCommandRegistry.load(path, SCHEMA_PATH)
+                CustomCommandRegistry.load(
+                    path,
+                    SCHEMA_PATH,
+                    HELP_PATH,
+                    HELP_SCHEMA_PATH,
+                )
 
 
 if __name__ == "__main__":

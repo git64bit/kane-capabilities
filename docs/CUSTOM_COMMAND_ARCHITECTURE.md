@@ -79,6 +79,8 @@ navy-roots
 next-penny
 ```
 
+Every codename in one registry version must be unique. Registry validation must reject duplicate codenames even when the duplicate command objects differ in other fields.
+
 The codename:
 
 - is the canonical command identifier;

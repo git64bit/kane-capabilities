@@ -276,7 +276,7 @@ Before the first production Custom Command is enabled, Phase 3 must freeze a reu
 The command registry follows the same discipline as the Orchestrator operation registry:
 
 - declare the intended utility surface before implementing it;
-- default undeveloped commands to stub/no-side-effect behavior;
+- default undeveloped commands to declared/non-callable, no-side-effect behavior;
 - distinguish declared, stub, validation, available, disabled, and retired lifecycle states;
 - map each recognized command to a fixed bounded Orchestrator operation or other explicitly admitted Civic interface;
 - derive participant identity from the trusted local adapter path rather than command arguments;

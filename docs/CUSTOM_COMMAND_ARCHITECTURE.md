@@ -181,6 +181,52 @@ The command payload must never contain editable values that can widen:
 
 A future owner-operator or authority-facing command catalog may reuse this architecture with a different accepted authority profile. It must not silently widen the participant catalog.
 
+## Participant help and sanity-check system
+
+Every Custom Command has a companion plain-language help entry keyed by the same immutable codename.
+
+Help is intentionally separate from the operational command registry. This keeps execution semantics small and permits later localization or presentation changes without changing command identity, authority, or backend binding.
+
+The help catalog must cover every registered command exactly once. Registry loading fails closed if help is missing, duplicated, extra, or has a mismatched display name.
+
+This is not a man-page system and is not intended to teach Unix. It is a Participant sanity-check layer that answers, before action:
+
+- what the command does;
+- when it should be used;
+- what to check first;
+- the most significant side effects;
+- consequences that may remain afterward;
+- what to do when a result is uncertain or something goes wrong.
+
+Each help entry declares:
+
+```text
+summary
+use_when
+before_run
+significant_effects
+consequences
+incident_guidance
+attention
+confirmation
+```
+
+`attention` is `normal`, `caution`, or `high`.
+
+`confirmation` is:
+
+- `none` for informational/read-only behavior;
+- `review` when the interface should put the guidance in the Participant's path before invocation;
+- `explicit` when affirmative acknowledgement is required before invocation.
+
+Confirmation is a usability/safety barrier, not authorization. It never widens participant identity, standing, capability, or backend authority.
+
+Help is rendered locally from the validated registry/help pair. Reading help does not require the broker, Orchestrator, WireGuard, or any backend service.
+
+The ordinary Participant catalog shows callable commands only. Declared future commands may be shown only through an explicit expanded/development view.
+
+Authority: `../contracts/custom-command-help-v1.yaml`.
+
 ## Inputs
 
 Each registry entry declares an input profile.
@@ -415,3 +461,5 @@ side_effects = false
 ```
 
 The existing production Usermin publication mapping remains unchanged until a later explicit deployment step.
+
+The repository participant helper now supports local command discovery/help and a generic `water-ants` invocation path. `water-ants` is high-attention and requires explicit acknowledgement before the helper sends its frame. The acknowledgement is not transmitted as Civic authority or command data.

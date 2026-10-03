@@ -181,6 +181,85 @@ The command payload must never contain editable values that can widen:
 
 A future owner-operator or authority-facing command catalog may reuse this architecture with a different accepted authority profile. It must not silently widen the participant catalog.
 
+## Curated Participant access
+
+Membership in the Unix group `civic-participants` is only a coarse admission boundary to the local broker. It does **not** grant every Participant every Custom Command.
+
+Civic Infrastructure is intentionally small enough that explicit human curation is acceptable and desirable. A Participant may be known to operators, may hold several qualifications, and may have access to an expert pool of real people. The system does not need to imitate a global-scale platform by replacing that relationship with broad automatic role inheritance.
+
+The deployment-local Custom Command access policy therefore defaults to:
+
+```text
+discover = false
+invoke   = false
+```
+
+and records, for each stable `participant_id`:
+
+- human-curated qualifications;
+- qualification status and recording provenance;
+- explicit command discovery grants;
+- explicit command invocation grants;
+- who granted access;
+- when it was granted;
+- why it was granted;
+- optional expiration.
+
+Qualifications are **descriptive context only** in v1. They do not mechanically grant commands.
+
+For example:
+
+```text
+qualification: unit-owner
+        != automatic access to every owner-related command
+
+qualification: owner-operator
+        != automatic signing authority
+
+membership: civic-participants
+        != access to every Participant command
+```
+
+An explicit command grant is still not the final Civic authorization. Effective invocation is the intersection of:
+
+```text
+active Unix/Civic Participant mapping
+AND active deployment access record
+AND explicit invoke grant for the codename
+AND command lifecycle is callable
+AND command binding is accepted
+AND downstream Civic authorization/resource gates
+```
+
+Discovery is separately curated. A Participant may discover a command without being allowed to invoke it. Invocation implies discovery.
+
+The access file is deployment policy, not participant input. It is root/operator maintained and must not be writable by Participants.
+
+Stable contract:
+
+```text
+schemas/custom-command-access-v1.schema.json
+deploy/usermin/custom-command-access-v1.example.yaml
+```
+
+No automatic qualification-to-command mapping exists in v1.
+
+## Participant shell preservation
+
+The Participant's ordinary shell environment remains ordinary.
+
+Custom Command support must not require:
+
+- shell startup-file edits;
+- aliases;
+- PATH rewriting;
+- automatic agents;
+- standardized home-directory trees;
+- qualification-derived dotfiles;
+- per-command shell wrappers placed in the Participant home.
+
+Utility-specific working files may exist when the Participant intentionally creates or uploads them, but Civic Infrastructure does not reshape the shell account into a uniform managed workstation.
+
 ## Participant help and sanity-check system
 
 Every Custom Command has a companion plain-language help entry keyed by the same immutable codename.
@@ -221,9 +300,11 @@ confirmation
 
 Confirmation is a usability/safety barrier, not authorization. It never widens participant identity, standing, capability, or backend authority.
 
-Help is rendered locally from the validated registry/help pair. Reading help does not require the broker, Orchestrator, WireGuard, or any backend service.
+The static help catalog can be rendered locally and does not itself require the Orchestrator, WireGuard, or a backend service. Help text never proves entitlement.
 
-The ordinary Participant catalog shows callable commands only. Declared future commands may be shown only through an explicit expanded/development view.
+Participant-facing discovery must be access-resolved. The ordinary Participant catalog must show only commands granted as discoverable for that stable Participant identity and compatible with current command lifecycle. A development/operator view may inspect the wider inventory, but ordinary Participants are not given a uniform command menu.
+
+The current repository helper predates this access resolver and is therefore development-only until personalized discovery and invocation enforcement are implemented.
 
 Authority: `../contracts/custom-command-help-v1.yaml`.
 
@@ -424,17 +505,24 @@ When a desired utility appears to require one of these mechanisms, implementatio
 
 ## Initial acceptance sequence
 
-The first implementation sequence after this contract is accepted is:
+The implementation sequence is now:
 
 ```text
 1. registry/schema validation
-2. generic bounded Custom Command local frame
-3. broker command-registry lookup
-4. water-ants stub implementation
-5. real Usermin Publish File mapping to water-ants
-6. validation-only end-to-end acceptance
-7. only then evaluate the independent Phase 4 side-effect gate
+2. help-catalog validation
+3. curated access-policy schema and default-deny semantics
+4. generic bounded Custom Command local frame
+5. broker command-registry lookup
+6. stable Participant -> explicit discovery/invocation access resolution
+7. access-filtered discovery/help
+8. water-ants stub invocation under an explicit grant
+9. real-host local validation
+10. only then map the visible Usermin Publish File command
+11. validation-only end-to-end acceptance
+12. only then evaluate the independent Phase 4 side-effect gate
 ```
+
+The generic broker is not eligible for live installation until Step 6 is enforced in runtime code.
 
 No other initial utility advances beyond `declared` merely because it exists in the registry.
 

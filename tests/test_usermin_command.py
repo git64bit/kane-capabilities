@@ -33,6 +33,16 @@ class StaticParticipantRegistry:
 
 
 class StaticAccessPolicy:
+    def discoverable_grants(self, participant_id):
+        return [{
+            "codename": "water-ants",
+            "discover": True,
+            "invoke": True,
+        }]
+
+    def require_discover(self, participant_id, codename):
+        return {"codename": codename, "discover": True, "invoke": True}
+
     def require_invoke(self, participant_id, codename):
         return {"codename": codename, "discover": True, "invoke": True}
 
@@ -81,6 +91,7 @@ class UserminCommandHelperTests(unittest.TestCase):
         try:
             result = send_command_to_broker(
                 socket_path,
+                request_kind="invoke",
                 codename="water-ants",
                 arguments={},
                 payload=b"participant bytes",
@@ -92,6 +103,46 @@ class UserminCommandHelperTests(unittest.TestCase):
         self.assertEqual(result["command"], "water-ants")
         self.assertFalse(result["remote_dispatch"])
         self.assertFalse(result["side_effects"])
+
+    def test_list_is_broker_resolved_for_peer_participant(self):
+        socket_path = self.root / "command.sock"
+        thread = self.run_broker_once(socket_path)
+        try:
+            result = send_command_to_broker(
+                socket_path,
+                request_kind="list",
+                codename=None,
+                arguments={},
+                payload=b"",
+            )
+        finally:
+            thread.join(timeout=2)
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(
+            [item["codename"] for item in result["commands"]],
+            ["water-ants"],
+        )
+        self.assertTrue(result["commands"][0]["available_to_run"])
+
+    def test_help_is_broker_resolved_for_peer_participant(self):
+        socket_path = self.root / "command.sock"
+        thread = self.run_broker_once(socket_path)
+        try:
+            result = send_command_to_broker(
+                socket_path,
+                request_kind="help",
+                codename="water-ants",
+                arguments={},
+                payload=b"",
+            )
+        finally:
+            thread.join(timeout=2)
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["command"], "water-ants")
+        self.assertIn("Significant effects:", result["help"])
+        self.assertTrue(result["available_to_run"])
 
     def test_water_ants_requires_explicit_confirmation(self):
         path = self.root / "upload.pdf"

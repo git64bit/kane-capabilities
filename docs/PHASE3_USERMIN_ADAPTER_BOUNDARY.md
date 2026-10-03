@@ -370,6 +370,8 @@ This validation service is intentionally more constrained than U-003:
 
 Production-host acceptance of this parallel socket proves the generic framing and registry path only. It does not constitute U-004 and does not authorize switching the visible Usermin Custom Command.
 
+Kane reference procedure: `KANE_CUSTOM_COMMAND_VALIDATION_ACCEPTANCE.md`.
+
 ### U-004 — Validation-only end to end
 
 Required:

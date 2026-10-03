@@ -7,6 +7,7 @@ import unittest
 
 from civic_orchestrator.usermin_adapter import MAX_ARTIFACT_BYTES
 from civic_orchestrator.usermin_broker import (
+    handle_command_connection,
     handle_connection,
     recv_exact,
 )
@@ -33,6 +34,36 @@ def receive_json(conn):
     (length,) = _FRAME.unpack(header)
     body = recv_exact(conn, length)
     return json.loads(body.decode("utf-8"))
+
+
+class RecordingCommandAdapter:
+    def __init__(self):
+        self.calls = []
+
+    def handle(self, peer_uid, invocation):
+        self.calls.append((peer_uid, invocation))
+        return {
+            "status": "stub",
+            "remote_dispatch": False,
+            "side_effects": False,
+            "command": invocation.codename,
+            "size": len(invocation.payload),
+        }
+
+
+def command_frame(codename, payload=b"", arguments=None, version=1):
+    if arguments is None:
+        arguments = {}
+    metadata = json.dumps(
+        {
+            "protocol_version": version,
+            "codename": codename,
+            "arguments": arguments,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return struct.Struct("!II").pack(len(metadata), len(payload)) + metadata + payload
 
 
 class UserminBrokerTests(unittest.TestCase):
@@ -108,6 +139,83 @@ class UserminBrokerTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "rejected")
         self.assertIn("unexpected end", result["error"])
+        self.assertEqual(adapter.calls, [])
+
+    def test_generic_command_frame_carries_codename_not_identity(self):
+        adapter = RecordingCommandAdapter()
+        server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        thread = threading.Thread(
+            target=handle_command_connection,
+            args=(server, adapter),
+        )
+        thread.start()
+        try:
+            client.sendall(command_frame("water-ants", b"abc"))
+            result = receive_json(client)
+        finally:
+            client.close()
+            thread.join(timeout=2)
+            server.close()
+
+        self.assertEqual(result["status"], "stub")
+        self.assertEqual(result["command"], "water-ants")
+        self.assertEqual(len(adapter.calls), 1)
+        peer_uid, invocation = adapter.calls[0]
+        self.assertEqual(peer_uid, os.getuid())
+        self.assertEqual(invocation.codename, "water-ants")
+        self.assertEqual(invocation.arguments, {})
+        self.assertEqual(invocation.payload, b"abc")
+
+    def test_generic_command_frame_rejects_extra_metadata_fields(self):
+        metadata = json.dumps(
+            {
+                "protocol_version": 1,
+                "codename": "water-ants",
+                "arguments": {},
+                "participant_id": "participant:forged",
+            },
+            separators=(",", ":"),
+        ).encode("utf-8")
+        frame = struct.Struct("!II").pack(len(metadata), 0) + metadata
+        adapter = RecordingCommandAdapter()
+        server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        thread = threading.Thread(
+            target=handle_command_connection,
+            args=(server, adapter),
+        )
+        thread.start()
+        try:
+            client.sendall(frame)
+            result = receive_json(client)
+        finally:
+            client.close()
+            thread.join(timeout=2)
+            server.close()
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertFalse(result["remote_dispatch"])
+        self.assertFalse(result["side_effects"])
+        self.assertIn("metadata fields", result["error"])
+        self.assertEqual(adapter.calls, [])
+
+    def test_generic_command_frame_rejects_wrong_protocol_version(self):
+        adapter = RecordingCommandAdapter()
+        server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        thread = threading.Thread(
+            target=handle_command_connection,
+            args=(server, adapter),
+        )
+        thread.start()
+        try:
+            client.sendall(command_frame("water-ants", version=2))
+            result = receive_json(client)
+        finally:
+            client.close()
+            thread.join(timeout=2)
+            server.close()
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertIn("protocol version", result["error"])
         self.assertEqual(adapter.calls, [])
 
 

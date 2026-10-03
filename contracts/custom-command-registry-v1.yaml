@@ -13,7 +13,7 @@ commands:
     family: publication
     audience: [participant]
     authority_profile: authenticated-participant
-    lifecycle: declared
+    lifecycle: stub
     side_effects_enabled: false
     intended_effect_scope: external-bounded
     binding:

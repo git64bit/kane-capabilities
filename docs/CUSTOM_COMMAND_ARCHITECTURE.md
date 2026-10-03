@@ -4,7 +4,7 @@
 
 Initial contract baseline for the Civic Infrastructure Usermin Custom Command surface.
 
-This document freezes the command registry model and the first participant utility inventory. It does not implement a production command, enable a new Orchestrator operation, or enable any new external side effect.
+This document freezes the command registry model and the first participant utility inventory. The repository now contains the first generic local command stub for `water-ants` / Publish File. It does not change the production Usermin mapping, enable a new Orchestrator operation, or enable any new external side effect.
 
 The first command to advance from the declared inventory into a callable stub is:
 
@@ -391,3 +391,27 @@ The first implementation sequence after this contract is accepted is:
 ```
 
 No other initial utility advances beyond `declared` merely because it exists in the registry.
+
+### Repository stub checkpoint
+
+`water-ants` is now the only initial command with lifecycle `stub`.
+
+The generic local stub path is deliberately parallel to the accepted production publication helper. It introduces a versioned local frame carrying only:
+
+```text
+protocol_version
+codename
+arguments
+bounded byte payload
+```
+
+The frame carries no username, participant ID, caller/client identity, Orchestrator operation name, route, credential, host, service, or container selection.
+
+The broker derives the Unix peer identity through `SO_PEERCRED`, the trusted registry fixes `water-ants -> publication.publish`, and the stub returns deterministic artifact evidence with:
+
+```text
+remote_dispatch = false
+side_effects = false
+```
+
+The existing production Usermin publication mapping remains unchanged until a later explicit deployment step.

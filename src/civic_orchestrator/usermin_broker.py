@@ -7,6 +7,11 @@ import socket
 import struct
 from typing import Any
 
+from .custom_commands import (
+    CommandInvocation,
+    CustomCommandError,
+    LocalCustomCommandAdapter,
+)
 from .usermin_adapter import (
     LocalAdapterError,
     LocalPublicationAdapter,
@@ -20,6 +25,8 @@ from .usermin_remote import (
 
 
 _FRAME = struct.Struct("!I")
+_COMMAND_FRAME = struct.Struct("!II")
+MAX_COMMAND_METADATA_BYTES = 8_192
 MAX_RESPONSE_BYTES = 65_536
 
 
@@ -47,6 +54,43 @@ def recv_payload(conn: socket.socket) -> bytes:
             f"artifact exceeds {MAX_ARTIFACT_BYTES} byte publication limit"
         )
     return recv_exact(conn, length)
+
+
+def recv_command_invocation(conn: socket.socket) -> CommandInvocation:
+    header = recv_exact(conn, _COMMAND_FRAME.size)
+    metadata_length, payload_length = _COMMAND_FRAME.unpack(header)
+
+    if metadata_length < 2 or metadata_length > MAX_COMMAND_METADATA_BYTES:
+        raise BrokerProtocolError("Custom Command metadata length is invalid")
+    if payload_length > MAX_ARTIFACT_BYTES:
+        raise BrokerProtocolError(
+            f"Custom Command payload exceeds {MAX_ARTIFACT_BYTES} byte limit"
+        )
+
+    raw_metadata = recv_exact(conn, metadata_length)
+    payload = recv_exact(conn, payload_length)
+
+    try:
+        metadata = json.loads(raw_metadata.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise BrokerProtocolError("Custom Command metadata is invalid JSON") from exc
+
+    if not isinstance(metadata, dict):
+        raise BrokerProtocolError("Custom Command metadata must be an object")
+    if set(metadata) != {"protocol_version", "codename", "arguments"}:
+        raise BrokerProtocolError("Custom Command metadata fields are invalid")
+    if metadata["protocol_version"] != 1:
+        raise BrokerProtocolError("unsupported Custom Command protocol version")
+    if not isinstance(metadata["codename"], str):
+        raise BrokerProtocolError("Custom Command codename must be a string")
+    if not isinstance(metadata["arguments"], dict):
+        raise BrokerProtocolError("Custom Command arguments must be an object")
+
+    return CommandInvocation(
+        codename=metadata["codename"],
+        arguments=metadata["arguments"],
+        payload=payload,
+    )
 
 
 def send_json(conn: socket.socket, value: dict[str, Any]) -> None:
@@ -92,6 +136,32 @@ def handle_connection(
         response = {
             "status": "rejected",
             "remote_dispatch": False,
+            "error": "internal local broker error",
+        }
+
+    send_json(conn, response)
+
+
+def handle_command_connection(
+    conn: socket.socket,
+    adapter: LocalCustomCommandAdapter,
+) -> None:
+    try:
+        _pid, uid, _gid = peer_credentials(conn)
+        invocation = recv_command_invocation(conn)
+        response = adapter.handle(uid, invocation)
+    except (BrokerProtocolError, LocalAdapterError, CustomCommandError) as exc:
+        response = {
+            "status": "rejected",
+            "remote_dispatch": False,
+            "side_effects": False,
+            "error": str(exc)[:500],
+        }
+    except Exception:
+        response = {
+            "status": "rejected",
+            "remote_dispatch": False,
+            "side_effects": False,
             "error": "internal local broker error",
         }
 

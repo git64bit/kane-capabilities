@@ -24,9 +24,10 @@ class CustomCommandError(LocalAdapterError):
 
 @dataclass(frozen=True)
 class CommandInvocation:
-    codename: str
+    codename: str | None
     arguments: dict[str, Any]
     payload: bytes
+    request_kind: str = "invoke"
 
 
 class CustomCommandRegistry:
@@ -246,6 +247,13 @@ class CustomCommandRegistry:
                 f"explicit participant confirmation is required: {codename}"
             )
 
+    def is_callable(self, codename: str) -> bool:
+        command = self.lookup(codename)
+        return (
+            command["lifecycle"] in self.CALLABLE_LIFECYCLES
+            and command["binding"]["status"] == "bound"
+        )
+
     def require_callable(self, codename: str) -> dict[str, Any]:
         command = self.lookup(codename)
         if command["lifecycle"] not in self.CALLABLE_LIFECYCLES:
@@ -308,6 +316,70 @@ class LocalCustomCommandAdapter:
         invocation: CommandInvocation,
     ) -> dict[str, Any]:
         participant = self.participant_registry.resolve(peer_uid)
+
+        if invocation.request_kind == "list":
+            grants = self.access_policy.discoverable_grants(
+                participant.participant_id
+            )
+            commands: list[dict[str, Any]] = []
+            for grant in grants:
+                codename = grant["codename"]
+                command = self.command_registry.lookup(codename)
+                if command["lifecycle"] == "retired":
+                    continue
+                help_value = self.command_registry.help_for(codename)
+                commands.append({
+                    "codename": codename,
+                    "display_name": command["display_name"],
+                    "lifecycle": command["lifecycle"],
+                    "summary": help_value["summary"],
+                    "available_to_run": (
+                        grant["invoke"]
+                        and self.command_registry.is_callable(codename)
+                    ),
+                })
+            return {
+                "status": "ok",
+                "remote_dispatch": False,
+                "side_effects": False,
+                "participant_id": participant.participant_id,
+                "commands": sorted(
+                    commands,
+                    key=lambda item: item["display_name"].casefold(),
+                ),
+            }
+
+        if invocation.codename is None:
+            raise CustomCommandError(
+                "Custom Command codename is required"
+            )
+
+        if invocation.request_kind == "help":
+            grant = self.access_policy.require_discover(
+                participant.participant_id,
+                invocation.codename,
+            )
+            command = self.command_registry.lookup(invocation.codename)
+            return {
+                "status": "ok",
+                "remote_dispatch": False,
+                "side_effects": False,
+                "participant_id": participant.participant_id,
+                "command": invocation.codename,
+                "available_to_run": (
+                    grant["invoke"]
+                    and self.command_registry.is_callable(invocation.codename)
+                ),
+                "help": self.command_registry.render_help(
+                    invocation.codename
+                ),
+            }
+
+        if invocation.request_kind != "invoke":
+            raise CustomCommandError(
+                "unsupported Custom Command request kind"
+            )
+
         self.access_policy.require_invoke(
             participant.participant_id,
             invocation.codename,

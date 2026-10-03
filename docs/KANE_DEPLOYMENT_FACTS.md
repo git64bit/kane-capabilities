@@ -953,3 +953,29 @@ Safety conditions require:
 Successful reconciliation leaves the workflow waiting, records `side_effects=false` with certainty `known`, changes the existing hold to `reserved`, and appends `civic.operation.reconciled` audit evidence.
 
 GitHub Actions run 37135078489 passed the complete unit suite on Python 3.11, 3.12, and 3.13.
+
+
+### First Usermin workflow explicitly reconciled — 2026-10-03
+
+Workflow `wf:e1a11128-ca42-423d-bfab-879831967cb2` was explicitly reconciled after direct operator evidence proved the original failed CT106 dispatch could not have produced a publication side effect.
+
+Verified post-reconciliation state:
+
+```text
+workflow:
+  state=waiting
+  side_effects=0
+  side_effects_certainty=known
+
+publication budget hold:
+  size_bytes=41
+  hold_state=reserved
+
+latest audit event:
+  sequence=5
+  event_type=civic.operation.reconciled
+  actor=operator:publication-recovery
+  resolution=no-external-side-effect
+```
+
+The original reservation is preserved; no second publication workflow or budget slot was created.

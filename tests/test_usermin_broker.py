@@ -51,12 +51,19 @@ class RecordingCommandAdapter:
         }
 
 
-def command_frame(codename, payload=b"", arguments=None, version=1):
+def command_frame(
+    codename="water-ants",
+    payload=b"",
+    arguments=None,
+    version=2,
+    request_kind="invoke",
+):
     if arguments is None:
         arguments = {}
     metadata = json.dumps(
         {
             "protocol_version": version,
+            "request_kind": request_kind,
             "codename": codename,
             "arguments": arguments,
         },
@@ -165,11 +172,13 @@ class UserminBrokerTests(unittest.TestCase):
         self.assertEqual(invocation.codename, "water-ants")
         self.assertEqual(invocation.arguments, {})
         self.assertEqual(invocation.payload, b"abc")
+        self.assertEqual(invocation.request_kind, "invoke")
 
     def test_generic_command_frame_rejects_extra_metadata_fields(self):
         metadata = json.dumps(
             {
-                "protocol_version": 1,
+                "protocol_version": 2,
+                "request_kind": "invoke",
                 "codename": "water-ants",
                 "arguments": {},
                 "participant_id": "participant:forged",
@@ -198,6 +207,62 @@ class UserminBrokerTests(unittest.TestCase):
         self.assertIn("metadata fields", result["error"])
         self.assertEqual(adapter.calls, [])
 
+    def test_generic_list_frame_has_no_participant_identity(self):
+        adapter = RecordingCommandAdapter()
+        server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        thread = threading.Thread(
+            target=handle_command_connection,
+            args=(server, adapter),
+        )
+        thread.start()
+        try:
+            client.sendall(
+                command_frame(
+                    codename=None,
+                    request_kind="list",
+                )
+            )
+            result = receive_json(client)
+        finally:
+            client.close()
+            thread.join(timeout=2)
+            server.close()
+
+        self.assertEqual(result["status"], "stub")
+        self.assertEqual(len(adapter.calls), 1)
+        peer_uid, invocation = adapter.calls[0]
+        self.assertEqual(peer_uid, os.getuid())
+        self.assertEqual(invocation.request_kind, "list")
+        self.assertIsNone(invocation.codename)
+        self.assertEqual(invocation.arguments, {})
+        self.assertEqual(invocation.payload, b"")
+
+    def test_generic_list_frame_rejects_payload(self):
+        adapter = RecordingCommandAdapter()
+        server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        thread = threading.Thread(
+            target=handle_command_connection,
+            args=(server, adapter),
+        )
+        thread.start()
+        try:
+            client.sendall(
+                command_frame(
+                    codename=None,
+                    request_kind="list",
+                    payload=b"x",
+                )
+            )
+            result = receive_json(client)
+        finally:
+            client.close()
+            thread.join(timeout=2)
+            server.close()
+
+        self.assertEqual(result["status"], "rejected")
+        self.assertIn("do not accept a payload", result["error"])
+        self.assertEqual(adapter.calls, [])
+
     def test_generic_command_frame_rejects_wrong_protocol_version(self):
         adapter = RecordingCommandAdapter()
         server, client = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -207,7 +272,7 @@ class UserminBrokerTests(unittest.TestCase):
         )
         thread.start()
         try:
-            client.sendall(command_frame("water-ants", version=2))
+            client.sendall(command_frame("water-ants", version=1))
             result = receive_json(client)
         finally:
             client.close()

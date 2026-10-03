@@ -2,7 +2,7 @@
 
 ## Status
 
-**U-001 ACCEPTED — U-002 ACCEPTED on production Portal/Usermin host — U-003 ACCEPTED in production — U-004 pending**
+**U-001 ACCEPTED — U-002 ACCEPTED on production Portal/Usermin host — U-003 ACCEPTED in production — U-004 local Participant/Usermin slice ACCEPTED; remote generic-broker integration pending**
 
 This document records the production Usermin discovery completed on 2026-10-01/02 and the participant-facing adapter boundary together with its staged repository implementation and production-acceptance state.
 
@@ -149,8 +149,17 @@ Required configuration:
 Visible in Usermin: YES
 Run as user:        *
 Use su mode:        NO
-Access:             @civic-participants
+Module admission:   @civic-participants (coarse only)
+Command ACL:        explicit per-Participant grant, default deny
 ```
+
+The live first-command ACL is deliberately narrower than group membership:
+
+```text
+access=sase25sep26a: 1791060803
+```
+
+The `civic-participants` group admits the Participant to the local Civic mechanism; it does not grant every Civic Custom Command.
 
 Arguments:
 
@@ -194,19 +203,17 @@ This is real Unix credential switching, but it is not a login-shell reconstructi
 
 The shared `other_groups()` implementation enumerates the system group database and returns groups that explicitly list the username. For the reference participant this preserves the supplementary `civic-participants` membership needed to reach the Civic AF_UNIX socket.
 
-The shared `tempname_dir()` implementation prefers:
+The shared `tempname_dir()` implementation can select a participant-home temporary directory or a configured/shared temporary base depending on runtime context. Do not treat either pathname as part of the Civic contract.
+
+The authoritative real-Usermin U-004 tests staged uploaded payloads under:
 
 ```text
-$HOME/.tmp
+/tmp/.webmin/<uploaded-name>
 ```
 
-when `remote_user_info` identifies a writable participant home and `nohometemp` is not set. Otherwise it falls back to a configured/shared temp base with a user-specific suffix. This explains the observed Usermin upload staging under the participant home.
+for both the rejected and confirmed `water-ants` runs. In both cases Usermin removed the staged payload after execution. Earlier shell/source observations involving participant-home temporary paths remain useful implementation evidence, but they are not the authoritative path for the real Custom Command form.
 
-Participant homes use a non-world-traversable parent directory and private primary group. The observed participant home was mode `0750`, so unrelated local accounts cannot traverse into the participant's `.tmp` directory even when the file itself is `0644`.
-
-This deployment invariant must be preserved for participant accounts.
-
-The observed `upload.*` files under `$HOME/.tmp` are upload-progress tracker records, not retained payload files. They contain progress metadata written by `read_parse_mime_callback`.
+The Civic invariant is therefore path-independent: Usermin creates the temporary upload, the command executes under the Participant's Unix credentials, the Participant-side helper opens and reads that temporary file, the privileged broker receives bounded bytes rather than opening a Participant-supplied path, and Usermin cleans the staged upload after the run.
 
 ## Shell quoting rule
 

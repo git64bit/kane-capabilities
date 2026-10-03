@@ -33,8 +33,13 @@ class CustomCommandRegistry:
 
     CALLABLE_LIFECYCLES = {"stub", "validation", "available"}
 
-    def __init__(self, value: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        value: dict[str, Any],
+        help_value: dict[str, Any],
+    ) -> None:
         self.value = value
+        self.help_value = help_value
         commands = value["commands"]
         seen: set[str] = set()
         indexed: dict[str, dict[str, Any]] = {}
@@ -65,11 +70,39 @@ class CustomCommandRegistry:
 
         self._commands = indexed
 
+        help_seen: set[str] = set()
+        help_indexed: dict[str, dict[str, Any]] = {}
+        for item in help_value["commands"]:
+            codename = item["codename"]
+            if codename in help_seen:
+                raise CustomCommandError(
+                    f"duplicate Custom Command help codename: {codename}"
+                )
+            help_seen.add(codename)
+            help_indexed[codename] = item
+
+        if set(help_indexed) != set(indexed):
+            missing = sorted(set(indexed) - set(help_indexed))
+            extra = sorted(set(help_indexed) - set(indexed))
+            raise CustomCommandError(
+                f"Custom Command help coverage mismatch: missing={missing} extra={extra}"
+            )
+
+        for codename, command in indexed.items():
+            if help_indexed[codename]["display_name"] != command["display_name"]:
+                raise CustomCommandError(
+                    f"Custom Command help display name mismatch: {codename}"
+                )
+
+        self._help = help_indexed
+
     @classmethod
     def load(
         cls,
         registry_path: Path,
         schema_path: Path,
+        help_path: Path,
+        help_schema_path: Path,
     ) -> "CustomCommandRegistry":
         try:
             registry_value = yaml.safe_load(
@@ -78,23 +111,33 @@ class CustomCommandRegistry:
             schema_value = json.loads(
                 Path(schema_path).read_text(encoding="utf-8")
             )
+            help_value = yaml.safe_load(
+                Path(help_path).read_text(encoding="utf-8")
+            )
+            help_schema_value = json.loads(
+                Path(help_schema_path).read_text(encoding="utf-8")
+            )
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, yaml.YAMLError) as exc:
             raise CustomCommandError(
-                f"Custom Command registry cannot be loaded: {exc}"
+                f"Custom Command contracts cannot be loaded: {exc}"
             ) from exc
 
         if not isinstance(registry_value, dict):
             raise CustomCommandError("Custom Command registry must be an object")
+        if not isinstance(help_value, dict):
+            raise CustomCommandError("Custom Command help catalog must be an object")
 
         try:
             Draft202012Validator.check_schema(schema_value)
             Draft202012Validator(schema_value).validate(registry_value)
+            Draft202012Validator.check_schema(help_schema_value)
+            Draft202012Validator(help_schema_value).validate(help_value)
         except Exception as exc:
             raise CustomCommandError(
-                f"Custom Command registry contract is invalid: {exc}"
+                f"Custom Command contract is invalid: {exc}"
             ) from exc
 
-        return cls(registry_value)
+        return cls(registry_value, help_value)
 
     def lookup(self, codename: str) -> dict[str, Any]:
         try:
@@ -103,6 +146,100 @@ class CustomCommandRegistry:
             raise CustomCommandError(
                 f"unknown Custom Command codename: {codename}"
             ) from exc
+
+    def participant_commands(
+        self,
+        *,
+        include_declared: bool = False,
+    ) -> list[dict[str, Any]]:
+        commands = [
+            command
+            for command in self._commands.values()
+            if "participant" in command["audience"]
+            and command["lifecycle"] != "retired"
+        ]
+        if not include_declared:
+            commands = [
+                command
+                for command in commands
+                if command["lifecycle"] in self.CALLABLE_LIFECYCLES
+            ]
+        return sorted(
+            commands,
+            key=lambda item: item["display_name"].casefold(),
+        )
+
+    def help_for(self, codename: str) -> dict[str, Any]:
+        self.lookup(codename)
+        return self._help[codename]
+
+    def render_catalog(self, *, include_declared: bool = False) -> str:
+        commands = self.participant_commands(
+            include_declared=include_declared
+        )
+        if not commands:
+            return "No Custom Commands are currently discoverable."
+
+        lines = ["Civic Custom Commands", ""]
+        for command in commands:
+            help_value = self._help[command["codename"]]
+            lines.append(
+                f"{command['display_name']} ({command['codename']}) "
+                f"[{command['lifecycle']}]"
+            )
+            lines.append(f"  {help_value['summary']}")
+        return "\n".join(lines)
+
+    def render_help(self, codename: str) -> str:
+        command = self.lookup(codename)
+        help_value = self.help_for(codename)
+        status_text = {
+            "declared": "Not available yet. Reserved for a future bounded capability.",
+            "stub": "Repository stub only. No remote dispatch or external side effect occurs.",
+            "validation": "Validation path. External side effects remain disabled.",
+            "available": "Available. Review the guidance below before running it.",
+            "disabled": "Known command, but disabled by current policy or deployment.",
+            "retired": "Retired. Historical identity is preserved; new invocation is rejected.",
+        }[command["lifecycle"]]
+
+        lines = [
+            f"{command['display_name']} ({codename})",
+            f"Status: {command['lifecycle']} — {status_text}",
+            f"Attention: {help_value['attention']}",
+            "",
+            help_value["summary"],
+        ]
+        sections = [
+            ("Use this when", help_value["use_when"]),
+            ("Before you run it", help_value["before_run"]),
+            ("Significant effects", help_value["significant_effects"]),
+            ("Consequences to understand", help_value["consequences"]),
+            ("If something goes wrong", help_value["incident_guidance"]),
+        ]
+        for title, entries in sections:
+            if entries:
+                lines.extend(["", f"{title}:"])
+                lines.extend(f"- {entry}" for entry in entries)
+
+        confirmation = help_value["confirmation"]
+        if confirmation == "explicit":
+            lines.extend([
+                "",
+                "Confirmation: explicit acknowledgement is required before invocation.",
+            ])
+        elif confirmation == "review":
+            lines.extend([
+                "",
+                "Confirmation: review this guidance before invocation.",
+            ])
+        return "\n".join(lines)
+
+    def require_confirmation(self, codename: str, confirmed: bool) -> None:
+        help_value = self.help_for(codename)
+        if help_value["confirmation"] == "explicit" and not confirmed:
+            raise CustomCommandError(
+                f"explicit participant confirmation is required: {codename}"
+            )
 
     def require_callable(self, codename: str) -> dict[str, Any]:
         command = self.lookup(codename)

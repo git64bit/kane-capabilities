@@ -1114,3 +1114,44 @@ The first Civic Custom Command, **Publish File** / `water-ants`, successfully ex
 Usermin cleaned its `/tmp/.webmin/` staged upload after both failed and successful executions.
 
 The local Participant-facing Usermin -> generic broker path is therefore accepted. No Usermin Perl changes were required. Remote Orchestrator dispatch and IPFS publication are not part of this acceptance.
+
+
+### Live first Civic Usermin command configuration — 2026-10-03
+
+The first real Civic Usermin Custom Command is:
+
+```text
+/etc/webmin/custom/1791060803.cmd
+```
+
+with the participant-facing command:
+
+```text
+/usr/local/bin/civic-custom-command run water-ants --file $file $confirm
+```
+
+and effective metadata:
+
+```text
+user=*
+raw=0
+su=0
+order=0
+noshow=0
+usermin=1
+timeout=0
+clear=0
+format=-
+```
+
+Parameters are a required quoted upload (`file`, type 10), an acknowledgement option that emits `--confirm` only when selected (`confirm`, type 7), and a command-specific **Publish** submit button (`publish`, type 16).
+
+No `1791060803.hosts` file exists. The Usermin command ACL is:
+
+```text
+access=sase25sep26a: 1791060803
+```
+
+This is intentionally narrower than membership in `civic-participants`. The group remains a coarse local-admission boundary; Civic command discovery/invocation remains explicitly curated.
+
+The real Usermin tests staged payloads under `/tmp/.webmin/` and verified cleanup after both rejected and successful local-stub executions.

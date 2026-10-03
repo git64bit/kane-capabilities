@@ -6,6 +6,11 @@ from pathlib import Path
 import yaml
 from jsonschema import Draft202012Validator, ValidationError
 
+from civic_orchestrator.custom_command_access import (
+    CustomCommandAccessError,
+    CustomCommandAccessPolicy,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "schemas" / "custom-command-access-v1.schema.json"
@@ -49,6 +54,39 @@ class CustomCommandAccessContractTests(unittest.TestCase):
                 schema,
                 format_checker=Draft202012Validator.FORMAT_CHECKER,
             ).validate(broken)
+
+    def test_runtime_default_deny_and_explicit_grant(self):
+        policy = CustomCommandAccessPolicy.load(
+            EXAMPLE,
+            SCHEMA,
+            require_secure_file=False,
+        )
+        grant = policy.require_invoke(
+            "participant:550e8400-e29b-41d4-a716-446655440000",
+            "water-ants",
+        )
+        self.assertTrue(grant["invoke"])
+
+        with self.assertRaisesRegex(
+            CustomCommandAccessError,
+            "not granted",
+        ):
+            policy.require_invoke(
+                "participant:11111111-2222-3333-4444-555555555555",
+                "water-ants",
+            )
+
+    def test_unknown_granted_codename_fails_registry_validation(self):
+        policy = CustomCommandAccessPolicy.load(
+            EXAMPLE,
+            SCHEMA,
+            require_secure_file=False,
+        )
+        with self.assertRaisesRegex(
+            CustomCommandAccessError,
+            "unknown codename",
+        ):
+            policy.validate_codenames({"navy-roots"})
 
     def test_qualification_does_not_create_command_access(self):
         _, value = self.values()

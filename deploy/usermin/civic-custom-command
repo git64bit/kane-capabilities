@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-exec /opt/civic-usermin-broker/venv/bin/python -m civic_orchestrator.usermin_command \
+exec /opt/civic-custom-command-broker/venv/bin/python -m civic_orchestrator.usermin_command \
   --registry /etc/civic-orchestrator/custom-command-registry-v1.yaml \
   --schema /etc/civic-orchestrator/custom-command-registry-v1.schema.json \
   --help-catalog /etc/civic-orchestrator/custom-command-help-v1.yaml \

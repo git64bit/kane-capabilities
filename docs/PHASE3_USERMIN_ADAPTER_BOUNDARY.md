@@ -597,3 +597,52 @@ Relevant editor/save semantics:
 - argument records persist type, options, quoting, required/optional state, and human description.
 
 This representation is sufficiently simple to verify byte-for-byte after U-004 creation. Before creating the first Civic command, the available stock argument types must be checked to determine whether the explicit participant acknowledgement can be represented without modifying the Perl module.
+
+
+### U-004 Usermin local-path acceptance — 2026-10-03
+
+The first real Civic Usermin Custom Command was accepted through the actual Participant session for `sase25sep26a`.
+
+Accepted UI behavior:
+
+- **Publish File** is visible in Usermin;
+- required upload control renders correctly;
+- explicit acknowledgement renders as Yes/No with **No** as the default;
+- the command-specific **Publish** submit button replaces the generic Execute button;
+- no backend routing, credential, path-selection, Orchestrator-operation, Kubo, or other privileged controls are exposed.
+
+Accepted negative path:
+
+- Participant uploaded a disposable file;
+- acknowledgement remained **No**;
+- `water-ants` rejected the request with `explicit participant confirmation is required: water-ants`;
+- response reported `remote_dispatch=false` and `side_effects=false`;
+- Usermin removed the staged upload from `/tmp/.webmin/` after the failed run.
+
+Accepted positive path:
+
+- Participant selected **Yes** and pressed **Publish**;
+- `water-ants` returned the stable Participant ID `participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536`;
+- semantic binding was `publication.publish`;
+- artifact metadata reported size 57 bytes and SHA-256 `b5dc7bac3d3e60d4029436c4e4b9340238aa56fd8b5ebb144ef0fbb4c32e9264`;
+- response reported `status=stub`, `remote_dispatch=false`, and `side_effects=false`;
+- Usermin removed the staged upload from `/tmp/.webmin/` after the successful run.
+
+Therefore the stock Usermin Custom Commands implementation is sufficient for the first Civic command. No Perl modification is required for U-004's local Participant-facing path.
+
+This accepts the boundary:
+
+```text
+real Usermin Participant
+  -> stock Custom Commands form
+  -> Participant Unix execution context
+  -> civic-custom-command helper
+  -> generic local broker
+  -> SO_PEERCRED -> stable Participant identity
+  -> curated Civic command access
+  -> explicit acknowledgement
+  -> water-ants semantic binding
+  -> local validation stub
+```
+
+Remote Orchestrator dispatch and real publication remain outside this acceptance.

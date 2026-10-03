@@ -519,3 +519,25 @@ user: at changepass chfn commands cron cshrc fetchmail filemin filter forward gn
 Therefore the normal Usermin ACL explicitly includes the `commands` module.
 
 Combined with the separately verified `usermin.mods` subtraction rule for `@civic-participants`, which does not list `commands`, the module survives both of those access-control layers for the reference participant. Effective visibility must still be verified through the real Usermin session because theme or licence vetoes are applied afterward.
+
+
+### Real Participant Usermin visibility baseline — 2026-10-03
+
+Verified through the actual Usermin session as the reference Participant `sase25sep26a`, without root impersonation or a synthetic shell.
+
+The **Custom Commands** module is visible and opens successfully. With the current zero-command production state, Usermin displays:
+
+```text
+No custom commands have been defined in Webmin or designated as available for running in Usermin.
+```
+
+This proves that the `commands` module survives the complete current visibility chain for this Participant:
+
+```text
+normal Usermin ACL
+  -> civic-participants usermin.mods subtraction
+  -> theme/licence visibility
+  -> actual Participant UI
+```
+
+It also independently confirms that no Usermin-visible Custom Command definition exists at this checkpoint. This is the authoritative UI baseline immediately before U-004 creates the first Civic Custom Command.

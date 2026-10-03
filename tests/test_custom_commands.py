@@ -32,6 +32,18 @@ class StaticParticipantRegistry:
         )
 
 
+class StaticAccessPolicy:
+    def __init__(self, allowed=True):
+        self.allowed = allowed
+        self.calls = []
+
+    def require_invoke(self, participant_id, codename):
+        self.calls.append((participant_id, codename))
+        if not self.allowed:
+            raise CustomCommandError("Custom Command invocation is not granted")
+        return {"codename": codename, "discover": True, "invoke": True}
+
+
 class CustomCommandTests(unittest.TestCase):
     def registry(self):
         return CustomCommandRegistry.load(
@@ -109,6 +121,7 @@ class CustomCommandTests(unittest.TestCase):
         adapter = LocalCustomCommandAdapter(
             StaticParticipantRegistry(),
             self.registry(),
+            StaticAccessPolicy(),
         )
 
         result = adapter.handle(
@@ -131,10 +144,37 @@ class CustomCommandTests(unittest.TestCase):
             hashlib.sha256(payload).hexdigest(),
         )
 
+    def test_water_ants_requires_explicit_participant_grant(self):
+        access = StaticAccessPolicy(allowed=False)
+        adapter = LocalCustomCommandAdapter(
+            StaticParticipantRegistry(),
+            self.registry(),
+            access,
+        )
+
+        with self.assertRaisesRegex(
+            CustomCommandError,
+            "invocation is not granted",
+        ):
+            adapter.handle(
+                1002,
+                CommandInvocation(
+                    codename="water-ants",
+                    arguments={},
+                    payload=b"x",
+                ),
+            )
+
+        self.assertEqual(
+            access.calls,
+            [("participant:test-stable", "water-ants")],
+        )
+
     def test_water_ants_rejects_typed_arguments(self):
         adapter = LocalCustomCommandAdapter(
             StaticParticipantRegistry(),
             self.registry(),
+            StaticAccessPolicy(),
         )
         with self.assertRaisesRegex(
             CustomCommandError,

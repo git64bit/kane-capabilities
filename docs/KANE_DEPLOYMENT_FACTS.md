@@ -1058,3 +1058,16 @@ was the only regular file in `/etc/webmin/custom`, and no `*.cmd` files existed 
 Therefore the production host had the Usermin Custom Commands implementation installed, but **no Custom Command definitions were configured**. There was no existing visible Civic publication command to switch.
 
 U-004 should be approached as the first real Usermin Custom Command definition and participant-facing UI deployment, while preserving the already accepted broker and Orchestrator paths.
+
+
+### Usermin `commands` module ACL confirmed — 2026-10-03
+
+Confirmed on live `witness-hubzilla`:
+
+```text
+/etc/usermin/webmin.acl
+```
+
+explicitly includes the `commands` module in the normal Usermin ACL.
+
+The previously inspected `@civic-participants` rule in `/etc/usermin/usermin.mods` is subtractive and does not remove `commands`. Therefore `commands` passes both the normal ACL and participant-group module-restriction layers. Real-session visibility remains subject to later theme/licence vetoes and must be verified from the actual Usermin participant login.

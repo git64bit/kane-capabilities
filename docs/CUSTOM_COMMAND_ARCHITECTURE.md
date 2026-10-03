@@ -304,7 +304,7 @@ The static help catalog can be rendered locally and does not itself require the 
 
 Participant-facing discovery must be access-resolved. The ordinary Participant catalog must show only commands granted as discoverable for that stable Participant identity and compatible with current command lifecycle. A development/operator view may inspect the wider inventory, but ordinary Participants are not given a uniform command menu.
 
-The current repository helper predates this access resolver and is therefore development-only until personalized discovery and invocation enforcement are implemented.
+The repository helper now resolves ordinary Participant `list` and `help` requests through the AF_UNIX broker. The broker derives the stable Participant identity through `SO_PEERCRED`, applies the curated discovery grants, and returns only that Participant's discoverable commands/help. Invocation is separately checked against the explicit invoke grant.
 
 Authority: `../contracts/custom-command-help-v1.yaml`.
 
@@ -522,7 +522,7 @@ The implementation sequence is now:
 12. only then evaluate the independent Phase 4 side-effect gate
 ```
 
-The generic broker is not eligible for live installation until Step 6 is enforced in runtime code.
+Steps 6 and 7 are now enforced in repository runtime code. Live validation still requires an explicit deployment-local access policy for the test Participant and remains separate from Usermin mapping or remote dispatch.
 
 No other initial utility advances beyond `declared` merely because it exists in the registry.
 
@@ -533,7 +533,8 @@ No other initial utility advances beyond `declared` merely because it exists in 
 The generic local stub path is deliberately parallel to the accepted production publication helper. It introduces a versioned local frame carrying only:
 
 ```text
-protocol_version
+protocol_version = 2
+request_kind = list | help | invoke
 codename
 arguments
 bounded byte payload
@@ -550,4 +551,4 @@ side_effects = false
 
 The existing production Usermin publication mapping remains unchanged until a later explicit deployment step.
 
-The repository participant helper now supports local command discovery/help and a generic `water-ants` invocation path. `water-ants` is high-attention and requires explicit acknowledgement before the helper sends its frame. The acknowledgement is not transmitted as Civic authority or command data.
+The repository participant helper now obtains ordinary command discovery/help through the peer-credential broker and supports the generic `water-ants` invocation path. `water-ants` is high-attention and requires explicit acknowledgement before the helper sends its invocation frame. The acknowledgement is not transmitted as Civic authority or command data.

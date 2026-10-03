@@ -687,6 +687,120 @@ class StateStore:
             conn.execute("BEGIN IMMEDIATE")
             self._release_publication_budget_hold_conn(conn, workflow_id)
 
+    def reconcile_publication_no_effect(
+        self,
+        workflow_id: str,
+        *,
+        actor: str,
+        reason: str,
+        validate_contract: Callable[[str, Any], None],
+    ) -> str:
+        if not actor or len(actor) > 160:
+            raise ValueError("reconciliation actor is invalid")
+        if not reason or len(reason) > 1000:
+            raise ValueError("reconciliation reason is invalid")
+
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute("BEGIN IMMEDIATE")
+
+            workflow = conn.execute(
+                """
+                SELECT operation, state, side_effects, side_effects_certainty
+                  FROM workflows
+                 WHERE workflow_id=?
+                """,
+                (workflow_id,),
+            ).fetchone()
+            if workflow is None:
+                raise ValueError(f"unknown workflow: {workflow_id}")
+            if workflow["operation"] != "publication.publish":
+                raise ValueError("workflow is not publication.publish")
+            if workflow["state"] != "waiting":
+                raise ValueError("publication workflow is not waiting")
+            if not bool(workflow["side_effects"]):
+                raise ValueError("publication workflow is not marked side-effecting")
+            if workflow["side_effects_certainty"] != "unknown":
+                raise ValueError("publication workflow certainty is not unknown")
+
+            hold = conn.execute(
+                """
+                SELECT hold_state
+                  FROM publication_budget_holds
+                 WHERE workflow_id=?
+                """,
+                (workflow_id,),
+            ).fetchone()
+            if hold is None or hold["hold_state"] != "uncertain":
+                raise ValueError("publication workflow has no uncertain budget hold")
+
+            publication = conn.execute(
+                "SELECT 1 FROM publications WHERE workflow_id=?",
+                (workflow_id,),
+            ).fetchone()
+            if publication is not None:
+                raise ValueError("publication workflow already has publication evidence")
+
+            now = utc_now()
+            conn.execute(
+                """
+                UPDATE workflows
+                   SET side_effects=0,
+                       side_effects_certainty='known',
+                       updated_at=?
+                 WHERE workflow_id=?
+                """,
+                (now, workflow_id),
+            )
+            self._mark_publication_budget_hold_conn(
+                conn,
+                workflow_id,
+                "reserved",
+            )
+
+            sequence = int(
+                conn.execute(
+                    "SELECT COALESCE(MAX(sequence),0)+1 "
+                    "FROM audit_events WHERE workflow_id=?",
+                    (workflow_id,),
+                ).fetchone()[0]
+            )
+            data = {
+                "resolution": "no-external-side-effect",
+                "reason": reason,
+                "prior_side_effects": True,
+                "prior_side_effects_certainty": "unknown",
+                "budget_hold": "reserved",
+            }
+            event = {
+                "event_id": f"evt:{uuid.uuid4()}",
+                "workflow_id": workflow_id,
+                "sequence": sequence,
+                "event_type": "civic.operation.reconciled",
+                "recorded_at": now,
+                "actor": actor,
+                "data": data,
+            }
+            validate_contract("audit-event-v1.schema.json", event)
+            conn.execute(
+                """
+                INSERT INTO audit_events
+                    (event_id, workflow_id, sequence, event_type,
+                     recorded_at, actor, data_json)
+                VALUES (?,?,?,?,?,?,?)
+                """,
+                (
+                    event["event_id"],
+                    event["workflow_id"],
+                    event["sequence"],
+                    event["event_type"],
+                    event["recorded_at"],
+                    event["actor"],
+                    canonical_json(data),
+                ),
+            )
+            return event["event_id"]
+
     @staticmethod
     def request_fingerprint(request: dict[str, Any]) -> str:
         semantic_request = {

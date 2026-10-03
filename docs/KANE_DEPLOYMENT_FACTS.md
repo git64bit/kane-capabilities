@@ -979,3 +979,29 @@ latest audit event:
 ```
 
 The original reservation is preserved; no second publication workflow or budget slot was created.
+
+
+### U-003 authenticated transport accepted — 2026-10-03
+
+The reconciled workflow `wf:e1a11128-ca42-423d-bfab-879831967cb2` was resumed with the original semantic request and original request ID after CT106 authentication was provisioned.
+
+Observed result:
+
+```text
+HTTP 503
+failure_class=backend-unavailable
+service_failure_class=service-unavailable
+message="publication bytes validated; Kubo publication is not enabled yet"
+retryable=true
+side_effects=false
+side_effects_certainty=known
+workflow_state=waiting
+workflow_id=wf:e1a11128-ca42-423d-bfab-879831967cb2
+SAME_WORKFLOW=True
+```
+
+This is the intended validation-only backend result. It proves the authenticated chain from participant broker through CT105 and onward to authenticated CT106 while preserving the same workflow and producing no Kubo side effect.
+
+**U-003 production status: ACCEPTED.**
+
+U-004 remains pending and requires the real Usermin Custom Command surface.

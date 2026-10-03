@@ -280,7 +280,10 @@ The command registry follows the same discipline as the Orchestrator operation r
 - distinguish declared, stub, validation, available, disabled, and retired lifecycle states;
 - map each recognized command to a fixed bounded Orchestrator operation or other explicitly admitted Civic interface;
 - derive participant identity from the trusted local adapter path rather than command arguments;
-- keep backend topology, credentials, service names, URLs, container identities, and private-network details out of participant-controlled input.
+- keep backend topology, credentials, service names, URLs, container identities, and private-network details out of participant-controlled input;
+- require companion plain-language help for every registered command, covering preflight checks, significant effects, consequences, and incident guidance;
+- keep help locally readable without the broker or Civic network;
+- allow high-consequence commands to require explicit acknowledgement as a usability barrier, never as authorization.
 
 Custom Command identifiers are **non-serialized codenames**. The canonical identifier is two lowercase alphabetic tokens separated by one hyphen:
 

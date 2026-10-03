@@ -310,7 +310,7 @@ The initial registry must reserve bounded utilities in these families as declare
 | Firmware | Show authorized firmware; request authorized edge update; inspect update/rollback state |
 | Departure continuity | Pre-departure continuity audit and final active-participation synchronization |
 
-The first implemented Custom Command remains **Publish File**. The v1 registry freezes its canonical codename as `water-ants`; it is not assigned a serial such as `CC-001`. Repository status: `water-ants` has advanced to a generic local `stub`; the production Usermin mapping has not yet been switched to that path.
+The first implemented Custom Command remains **Publish File**. The v1 registry freezes its canonical codename as `water-ants`; it is not assigned a serial such as `CC-001`. Repository status: `water-ants` has advanced to a generic local `stub`, and a separate AF_UNIX-only validation socket/service is now defined for the generic protocol. The production Usermin mapping has not yet been switched to that path.
 
 Publish File remains deliberately minimal:
 

@@ -1005,3 +1005,31 @@ This is the intended validation-only backend result. It proves the authenticated
 **U-003 production status: ACCEPTED.**
 
 U-004 remains pending and requires the real Usermin Custom Command surface.
+
+
+### Usermin Custom Commands implementation located — 2026-10-03
+
+Confirmed on live production container `witness-hubzilla` from a root shell.
+
+The Usermin-facing **Custom Commands** implementation is the Usermin `commands` module:
+
+```text
+/usr/share/usermin/commands/module.info
+/usr/share/usermin/commands/custom-lib.pl
+/usr/share/usermin/commands/form.cgi
+/usr/share/usermin/commands/index.cgi
+```
+
+The similarly named path:
+
+```text
+/usr/share/usermin/gray-theme/custom
+```
+
+is a theme asset, not the functional module.
+
+No Custom Commands implementation or definition was found under `/etc/usermin`. At this checkpoint the only Civic-specific Usermin configuration observed there was the `@civic-participants` module-access entry in `/etc/usermin/usermin.mods`.
+
+The Webmin-side command definitions remain associated with `/etc/webmin/custom`, while the Usermin execution/UI Perl implementation is under `/usr/share/usermin/commands`.
+
+Future U-004 work or any narrowly bounded Perl extension to Custom Commands should begin with these confirmed paths rather than repeating filesystem discovery.

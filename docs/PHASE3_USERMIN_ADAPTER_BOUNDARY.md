@@ -2,7 +2,7 @@
 
 ## Status
 
-**U-001 ACCEPTED — U-002 ACCEPTED on production Portal/Usermin host — U-003 repository implementation complete, production routing/credential acceptance pending — U-004 pending**
+**U-001 ACCEPTED — U-002 ACCEPTED on production Portal/Usermin host — U-003 ACCEPTED in production — U-004 pending**
 
 This document records the production Usermin discovery completed on 2026-10-01/02 and the participant-facing adapter boundary together with its staged repository implementation and production-acceptance state.
 
@@ -336,7 +336,7 @@ Required:
 - authenticated adapter identity is bound to the resulting request provenance;
 - contradictory body claims are rejected with a diagnostic.
 
-**Repository status:** CT105 authenticated ingress and the Usermin broker remote publisher are implemented and regression-tested. The broker remains local-only unless its U-003 overlay explicitly supplies an Orchestrator endpoint and protected adapter credential. **Production status:** route selection, protected credential provisioning, deployment, and live acceptance remain pending.
+**Repository status:** CT105 authenticated ingress and the Usermin broker remote publisher are implemented and regression-tested. The broker remains local-only unless its U-003 overlay explicitly supplies an Orchestrator endpoint and protected adapter credential. **Production status:** ACCEPTED on 2026-10-03. The participant broker produced `remote_dispatch=true`; direct participant API bypass was rejected with HTTP 401; the broker credential, WireGuard/host-network route, CT105 private ingress, and fixed server-side adapter binding were verified live. A correlated retry of the same accepted workflow reached authenticated CT106 validation-only service and returned known no-side-effect `service-unavailable` because Kubo remains disabled.
 
 ### U-004 — Validation-only end to end
 

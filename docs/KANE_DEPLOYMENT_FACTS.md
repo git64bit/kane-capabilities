@@ -909,3 +909,29 @@ GET /healthz:
 ```
 
 The CT106 publication service is now running with its protected publication-service credential while remaining explicitly validation-only; Kubo and swarm are still disabled.
+
+
+### First authenticated Usermin workflow persisted in recovery state — 2026-10-02
+
+CT105 read-only state for workflow `wf:e1a11128-ca42-423d-bfab-879831967cb2`:
+
+```text
+request_id=req:usermin:a7b7e2231db04a01b07936f1b1777454
+operation=publication.publish
+state=waiting
+side_effects=1
+side_effects_certainty=unknown
+
+publication budget hold:
+  participant_id=participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
+  size_bytes=41
+  hold_state=uncertain
+```
+
+Audit sequence confirms:
+1. civic.authorization.allowed
+2. civic.operation.accepted
+3. civic.service.selected
+4. civic.operation.waiting due to the then-unconfigured CT106 publication authentication boundary.
+
+This workflow must be resumed or explicitly reconciled; a second independent participant publication must not be used to bypass the conservative budget hold.

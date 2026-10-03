@@ -506,3 +506,16 @@ empty  replace the current module set with the listed modules
 `get_available_module_infos()` first applies normal Usermin ACL and operating-system/readonly checks, then calls `available_usermods()`, and only afterward applies theme and licence vetoes. Therefore the `-` rule above removes the listed modules from the participant's otherwise-authorized Usermin module set; it does not itself grant all unlisted modules.
 
 The `commands` module is not in the subtraction list, so `usermin.mods` does not remove it. Whether a participant can actually use `commands` still depends on the normal Usermin ACL and later visibility vetoes. U-004 must verify effective module availability rather than inferring access from `usermin.mods` alone.
+
+
+### Usermin `commands` module ACL state — 2026-10-03
+
+Live inspection of `/etc/usermin/webmin.acl` showed the default Usermin ACL entry:
+
+```text
+user: at changepass chfn commands cron cshrc fetchmail filemin filter forward gnupg htaccess-htpasswd htaccess language mailbox mailcap man mysql plan postgresql proc procmail quota schedule shell spam ssh theme tunnel twofactor updown usermount xterm
+```
+
+Therefore the normal Usermin ACL explicitly includes the `commands` module.
+
+Combined with the separately verified `usermin.mods` subtraction rule for `@civic-participants`, which does not list `commands`, the module survives both of those access-control layers for the reference participant. Effective visibility must still be verified through the real Usermin session because theme or licence vetoes are applied afterward.

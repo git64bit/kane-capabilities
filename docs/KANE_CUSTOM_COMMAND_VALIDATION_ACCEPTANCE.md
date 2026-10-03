@@ -2,21 +2,27 @@
 
 ## Status
 
-**PAUSED BEFORE FIRST PRODUCTION WRITE — CURATED ACCESS RESOLVER REQUIRED**
+**READY TO RESUME LOCAL VALIDATION — ACCESS-RESOLVED CANDIDATE**
 
-Read-only Steps 0 through 2 were completed on 2026-10-03 and matched the expected live state. No generic Custom Command file, package, venv, socket, service, or Participant-home test artifact was written.
+Read-only Steps 0 through 2 were completed on 2026-10-03 and matched the expected live state. No generic Custom Command file, package, venv, socket, service, or Participant-home test artifact has been written.
 
-The former deployment candidate `925c2ed7c366124dfde5d8078c7ec2a06bdd2162` is superseded for live validation because it does not enforce the newly frozen per-Participant Custom Command access policy.
+Deployment candidate revision:
 
-Do **not** execute Step 3 or later until:
+```text
+4f201166f77cd104eb53625d0794e75c895ce16b
+```
 
-1. runtime access-policy loading is implemented;
-2. stable `participant_id` is resolved before discovery/invocation;
-3. default-deny discovery and invocation are enforced;
-4. `water-ants` is explicitly granted to the test Participant;
-5. the revised candidate passes CI and this runbook is repinned.
+This candidate passed the complete unit suite on Python 3.11, 3.12, and 3.13. It adds:
 
-This runbook validates the parallel generic Custom Command path on the current Kane Portal/Usermin host without changing the accepted publication-specific Usermin route.
+- default-deny deployment-local Custom Command access policy;
+- explicit per-Participant discover/invoke grants;
+- broker enforcement of invoke grants;
+- access-resolved Participant `list` and `help`;
+- generic local protocol version 2.
+
+The live validation policy will grant only `water-ants` to the existing test Participant. It will record no qualifications, because none are required for this acceptance and qualifications must not be inferred.
+
+Do not substitute `main` or another floating reference.
 
 ## Scope
 
@@ -147,12 +153,10 @@ Unexpected pre-existing state is drift. Stop and classify it before writing.
 
 ## Step 3 — stage the exact repository archive
 
-**BLOCKED. Do not execute this step while the Status above is PAUSED.**
-
 Set shell variables; this changes no persistent state:
 
 ```sh
-REV='925c2ed7c366124dfde5d8078c7ec2a06bdd2162'
+REV='4f201166f77cd104eb53625d0794e75c895ce16b'
 ARCHIVE="/tmp/kane-capabilities-${REV}.tar.gz"
 SRC="/tmp/kane-capabilities-${REV}"
 ```
@@ -195,10 +199,11 @@ Verify:
 test -f "$SRC/pyproject.toml" && echo SOURCE_OK
 test -f "$SRC/contracts/custom-command-registry-v1.yaml" && echo REGISTRY_OK
 test -f "$SRC/contracts/custom-command-help-v1.yaml" && echo HELP_OK
+test -f "$SRC/schemas/custom-command-access-v1.schema.json" && echo ACCESS_SCHEMA_OK
 test -f "$SRC/deploy/usermin/civic-custom-command-broker.service" && echo SERVICE_OK
 ```
 
-All four markers are required.
+All five markers are required.
 
 ## Step 4 — create the isolated Python environment
 
@@ -295,6 +300,66 @@ install -o root -g root -m 0644 \
 
 Verify with `cmp`.
 
+### Write 5E — access-policy schema
+
+```sh
+install -o root -g root -m 0644 \
+  "$SRC/schemas/custom-command-access-v1.schema.json" \
+  /etc/civic-orchestrator/custom-command-access-v1.schema.json
+```
+
+Verify with `cmp`.
+
+### Write 5F — manually curate the validation grant
+
+This policy intentionally contains **no qualification claims**. It grants only discovery and invocation of `water-ants` to the already-provisioned stable Participant identity.
+
+One persistent write:
+
+```sh
+NOW="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+cat <<EOF | install -o root -g civic-usermin-broker -m 0640 \
+  /dev/stdin /etc/civic-orchestrator/custom-command-access-v1.yaml
+contract_version: 1
+policy: civic-custom-command-access
+
+defaults:
+  discover: false
+  invoke: false
+
+qualification_semantics:
+  descriptive_only: true
+  automatic_grants: false
+
+participants:
+  - participant_id: participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536
+    active: true
+    qualifications: []
+    command_access:
+      - codename: water-ants
+        discover: true
+        invoke: true
+        granted_by: operator:manual-deployment-acceptance
+        granted_at: "$NOW"
+        expires_at: null
+        reason: "Local validation of the bounded water-ants stub; no production side effect."
+EOF
+```
+
+Verify metadata only:
+
+```sh
+stat -Lc '%n %U:%G %a %s' \
+  /etc/civic-orchestrator/custom-command-access-v1.yaml
+```
+
+Required owner/group/mode:
+
+```text
+root:civic-usermin-broker 640
+```
+
 ## Step 6 — validate contracts before installing systemd units
 
 Read only:
@@ -302,6 +367,7 @@ Read only:
 ```sh
 /opt/civic-custom-command-broker/venv/bin/python - <<'PY'
 from pathlib import Path
+from civic_orchestrator.custom_command_access import CustomCommandAccessPolicy
 from civic_orchestrator.custom_commands import CustomCommandRegistry
 
 registry = CustomCommandRegistry.load(
@@ -314,6 +380,23 @@ print("commands", len(registry.value["commands"]))
 print("water-ants", registry.lookup("water-ants")["lifecycle"])
 print("binding", registry.lookup("water-ants")["binding"])
 print("confirmation", registry.help_for("water-ants")["confirmation"])
+
+access = CustomCommandAccessPolicy.load(
+    Path("/etc/civic-orchestrator/custom-command-access-v1.yaml"),
+    Path("/etc/civic-orchestrator/custom-command-access-v1.schema.json"),
+)
+access.validate_codenames(registry.codenames)
+grant = access.require_invoke(
+    "participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536",
+    "water-ants",
+)
+print("access", grant["codename"], grant["discover"], grant["invoke"])
+print(
+    "qualifications",
+    len(access.qualifications(
+        "participant:f58aeb92-f8fd-49f4-b314-d77c2b3e8536"
+    )),
+)
 PY
 ```
 
@@ -324,6 +407,8 @@ commands 26
 water-ants stub
 binding ... publication.publish
 confirmation explicit
+access water-ants True True
+qualifications 0
 ```
 
 ## Step 7 — install the participant helper wrapper
@@ -336,19 +421,14 @@ install -o root -g root -m 0755 \
   /usr/local/bin/civic-custom-command
 ```
 
-Verify without broker access:
+Verify the wrapper itself without invoking it yet:
 
 ```sh
-runuser -u sase25sep26a -- \
-  /usr/local/bin/civic-custom-command list
-
-runuser -u sase25sep26a -- \
-  /usr/local/bin/civic-custom-command help water-ants
+stat -Lc '%n %U:%G %a %s' /usr/local/bin/civic-custom-command
+head -1 /usr/local/bin/civic-custom-command
 ```
 
-Expected discovery shows `Publish File (water-ants) [stub]`.
-
-Help must visibly include significant effects, consequences, incident guidance, and explicit acknowledgement.
+Participant `list` and `help` are intentionally deferred until the broker socket is active because they are access-resolved through `SO_PEERCRED`.
 
 ## Step 8 — install the parallel systemd socket and service
 
@@ -454,6 +534,28 @@ mode=0660
 ```
 
 The service may remain inactive until first use.
+
+### Step 11B — prove personalized discovery and help
+
+Run as the Participant:
+
+```sh
+runuser -u sase25sep26a -- \
+  /usr/local/bin/civic-custom-command list
+
+runuser -u sase25sep26a -- \
+  /usr/local/bin/civic-custom-command help water-ants
+```
+
+Required discovery:
+
+- exactly the explicitly discoverable `water-ants` command;
+- `Publish File (water-ants) [stub]`;
+- `Available to run: yes`.
+
+The help output must include significant effects, consequences, incident guidance, and explicit acknowledgement.
+
+This check also socket-activates the generic broker and proves that Participant-facing discovery is broker-resolved rather than a global local catalog.
 
 ## Step 12 — create one bounded Participant test file
 
@@ -573,10 +675,11 @@ If all evidence matches, this establishes only:
 
 ```text
 generic local frame                  accepted on real host
-generic contract/help loading        accepted on real host
+generic command/help/access loading accepted on real host
 SO_PEERCRED participant binding      accepted on real host
+explicit water-ants access grant     accepted on real host
 water-ants registry binding          accepted on real host
-help discovery                       accepted on real host
+personalized list/help discovery     accepted on real host
 explicit acknowledgement barrier     accepted on real host
 remote_dispatch=false                proven
 side_effects=false                   proven

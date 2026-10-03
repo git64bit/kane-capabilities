@@ -33,9 +33,27 @@ class StaticParticipantRegistry:
 
 
 class StaticAccessPolicy:
-    def __init__(self, allowed=True):
+    def __init__(self, allowed=True, discoverable=None):
         self.allowed = allowed
         self.calls = []
+        self.discoverable = discoverable or [
+            {
+                "codename": "water-ants",
+                "discover": True,
+                "invoke": allowed,
+            }
+        ]
+
+    def discoverable_grants(self, participant_id):
+        self.calls.append((participant_id, "list"))
+        return list(self.discoverable)
+
+    def require_discover(self, participant_id, codename):
+        self.calls.append((participant_id, f"help:{codename}"))
+        for grant in self.discoverable:
+            if grant["codename"] == codename and grant["discover"]:
+                return grant
+        raise CustomCommandError("Custom Command discovery is not granted")
 
     def require_invoke(self, participant_id, codename):
         self.calls.append((participant_id, codename))
@@ -115,6 +133,65 @@ class CustomCommandTests(unittest.TestCase):
             "unknown Custom Command",
         ):
             self.registry().require_callable("fake-name")
+
+    def test_participant_list_is_access_resolved(self):
+        access = StaticAccessPolicy(
+            allowed=False,
+            discoverable=[
+                {
+                    "codename": "water-ants",
+                    "discover": True,
+                    "invoke": False,
+                }
+            ],
+        )
+        adapter = LocalCustomCommandAdapter(
+            StaticParticipantRegistry(),
+            self.registry(),
+            access,
+        )
+        result = adapter.handle(
+            1002,
+            CommandInvocation(
+                codename=None,
+                arguments={},
+                payload=b"",
+                request_kind="list",
+            ),
+        )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(len(result["commands"]), 1)
+        self.assertEqual(
+            result["commands"][0]["codename"],
+            "water-ants",
+        )
+        self.assertFalse(
+            result["commands"][0]["available_to_run"]
+        )
+
+    def test_participant_help_requires_discovery_grant(self):
+        access = StaticAccessPolicy(
+            discoverable=[],
+        )
+        adapter = LocalCustomCommandAdapter(
+            StaticParticipantRegistry(),
+            self.registry(),
+            access,
+        )
+        with self.assertRaisesRegex(
+            CustomCommandError,
+            "discovery is not granted",
+        ):
+            adapter.handle(
+                1002,
+                CommandInvocation(
+                    codename="water-ants",
+                    arguments={},
+                    payload=b"",
+                    request_kind="help",
+                ),
+            )
 
     def test_water_ants_stub_binds_participant_and_derives_evidence(self):
         payload = b"bounded publication bytes"

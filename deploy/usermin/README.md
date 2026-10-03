@@ -140,3 +140,14 @@ The generic service:
 This is a repository deployment asset only. It does **not** replace `/run/civic-orchestrator/usermin.sock`, does not modify `usermin-publication-upload`, and does not change the current Usermin Custom Command mapping.
 
 A later production-host validation step may install and start this parallel socket/service and invoke it manually as the Participant account. Switching the visible Usermin Publish command remains a separate acceptance decision.
+
+
+## Kane production-host validation
+
+The one-host, one-write-at-a-time acceptance procedure for the parallel generic socket is:
+
+```text
+docs/KANE_CUSTOM_COMMAND_VALIDATION_ACCEPTANCE.md
+```
+
+That runbook pins an exact repository revision, preserves the accepted publication broker process and venv, and stops before any Usermin mapping or remote Orchestrator dispatch is enabled.

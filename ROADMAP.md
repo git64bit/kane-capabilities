@@ -264,8 +264,93 @@ Production discovery of stock Usermin Custom Commands is complete. U-001 is acce
 Next gates:
 
 - **U-002:** ACCEPTED on 2026-10-02 on the production Portal/Usermin host (`witness-hubzilla`). The local peer-credential broker received participant-owned bytes over AF_UNIX, derived the real Unix UID through `SO_PEERCRED`, mapped it to the stable Civic participant ID, and returned validation-only evidence with `remote_dispatch=false`.
-- **U-003:** CT105-side authenticated ingress and server-side binding of client/authentication provenance and subject namespace are implemented and regression-tested in the repository; complete the broker's authenticated remote publisher, protected credential provisioning, production routing, and acceptance.
-- **U-004:** validation-only end to end through the real Usermin Custom Command.
+- **U-003:** ACCEPTED on 2026-10-03 in production. The broker-to-Orchestrator route now uses protected adapter credentials, server-side fixed client/authentication provenance, private routing, and rejection of direct participant API bypass.
+- **U-004:** validation-only end to end through the real Usermin Custom Command remains pending.
+
+### Custom Command architecture and initial utility registry
+
+Usermin Custom Commands are a bounded participant control surface, not a second application server and not a generic remote-execution facility.
+
+Before the first production Custom Command is enabled, Phase 3 must freeze a reusable Custom Command contract that can be shared by independent Civic Infrastructure owner-operators.
+
+The command registry follows the same discipline as the Orchestrator operation registry:
+
+- declare the intended utility surface before implementing it;
+- default undeveloped commands to stub/no-side-effect behavior;
+- distinguish declared, stub, validation, available, disabled, and retired lifecycle states;
+- map each recognized command to a fixed bounded Orchestrator operation or other explicitly admitted Civic interface;
+- derive participant identity from the trusted local adapter path rather than command arguments;
+- keep backend topology, credentials, service names, URLs, container identities, and private-network details out of participant-controlled input.
+
+Custom Command identifiers are **non-serialized codenames**. The canonical identifier is two lowercase alphabetic tokens separated by one hyphen:
+
+```text
+[token 1: 1-5 letters]-[token 2: 1-5 letters]
+```
+
+Examples of the identifier shape include `water-ants`, `navy-roots`, and `next-penny`.
+
+The codename is opaque and must not encode authority, order, implementation technology, deployment location, or lifecycle state. Once assigned, a codename is never recycled for a different command. A later serial/index may be added for documentation or presentation, but it does not replace the canonical codename.
+
+The initial registry must reserve bounded utilities in these families while leaving them stubbed until their own contracts and authority gates are accepted:
+
+| Family | Initial participant utility candidates |
+|---|---|
+| Publication | Publish File; My Publications |
+| Logical File Namespace | Bind Logical File Name; Browse Logical File Namespace; later explicit rebind/unbind |
+| Publication retention | Request participant-controlled pin; request unpin; inspect desired/observed pin state |
+| Attestation | My Attestation Timeline; register/submit an attestation record; verify a historical resource |
+| Edge continuity | My Attestation Device; synchronize attestation state; continuity check; resolve historical resource |
+| Witness/Hubzilla | Register Witness image evidence/reference; inspect nomadic-continuity state |
+| Public verification material | Publish public verification material; inspect public-key/signature history; place public verification material on an authorized edge |
+| Signing | Request only a specifically authorized signature operation; inspect resulting signed-object evidence |
+| Firmware | Show authorized firmware; request authorized edge update; inspect update/rollback state |
+| Departure continuity | Pre-departure continuity audit and final active-participation synchronization |
+
+The first implemented Custom Command remains **Publish File**. Its codename is frozen when the command registry contract is created; it is not assigned a serial such as `CC-001`.
+
+Publish File remains deliberately minimal:
+
+```text
+Choose file
+Publish
+```
+
+Its first implementation exercises the Custom Command registry, local participant broker, authenticated Orchestrator transport, and the existing `publication.publish` workflow in stub/validation mode before any new side effect is enabled.
+
+The wider command inventory does not expand the Publish File form with logical paths, retention, pinning, attestation, edge destination, title, or version intent. Those remain separate bounded operations.
+
+#### Custom Command non-goals and prohibited escape hatches
+
+The Custom Command framework must not implement or expose:
+
+- arbitrary shell or command execution;
+- arbitrary SSH;
+- arbitrary HTTP proxy/fetch behavior;
+- arbitrary SQL;
+- direct Kubo/IPFS RPC;
+- caller-selected service, host, container, socket, or network destination;
+- caller-selected Orchestrator operation names;
+- arbitrary signing or caller-supplied private-key material;
+- privileged opening of participant-supplied filesystem paths;
+- direct mutation of another participant's namespace, publication catalog, pin state, edge state, or attestation history;
+- a replacement implementation of Hubzilla nomadic identity, email storage, ordinary Usermin file management, or IPFS itself.
+
+When a requested utility would require one of these behaviors, implementation stops at the architecture boundary until a new bounded semantic operation and explicit authority/resource model are designed.
+
+### Participant storage and continuity backplanes
+
+The participant-facing architecture deliberately separates several backplanes:
+
+- Usermin `/home` is quota-bounded participant working storage and may contain ordinary participant files of any type;
+- Virtual Email Boxes are a separate email backplane; participants are encouraged to forward mail they want to retain to their own main email account;
+- Hubzilla/Witness is the social and witness surface and permits visible image uploads rather than arbitrary PDF/archive/general-binary storage;
+- IPFS is the content-addressed publication backplane for approved inspectable publication classes; compressed/archive containers are not publication artifacts merely because Usermin can store them;
+- the Attestation Device is not bulk storage. It is a participant-controlled continuity, attestation, resolution, and verification endpoint that retains enough authenticated state to locate and verify historical resources across surviving backplanes.
+
+The Attestation Device contract is platform-neutral. ESP32-S3 is a reference device, not the definition of the role.
+
+A participant who leaves the Kane authority domain may lose current Portal/Witness authorization and the ability to create new Kane Civic Attestation Records, while retaining historical records, public verification material, resource identities, signatures, timeline context, and the ability to resolve publicly available resources. Continuity must not require continued Kane Portal login or continued access to a Kane private network.
 
 ### Publication/document catalog
 
@@ -281,7 +366,7 @@ The same CID may have multiple publication records.
 
 Do not infer document/version/supersession relationships from filenames, chronology, or content similarity.
 
-Store the immutable publication fact atomically with terminal workflow evidence in the Orchestrator SQLite state. Use PostgreSQL as a rebuildable publication/document catalog projection and later as authority for mutable document-management semantics. POSIX-like paths are logical catalog paths, not proof of physical filesystem placement.
+Store the immutable publication fact atomically with terminal workflow evidence in the Orchestrator SQLite state. Use PostgreSQL as a rebuildable publication/document catalog projection and later as authority for mutable document-management semantics. The **Logical File Namespace** uses a deliberately restricted forward-slash path notation for participant organization. Its POSIX-like appearance describes syntax only: it is not a filesystem, carries no symlink/hardlink/mount/device/permission semantics, and is not proof of physical filesystem placement.
 
 A future `document.*` namespace may be admitted only after its contract is frozen.
 
@@ -401,26 +486,37 @@ Usermin, Hubzilla, Kane Fabric, and later clients must use the same orchestratio
 
 ---
 
-## Phase 7 — ESP32-S3 lifecycle and signing integration
+## Phase 7 — Attestation edge lifecycle, continuity, and signing integration
 
-This phase governs **Orchestrator integration** of edge lifecycle and signing. It does not delay independent construction or testing of the signing authority.
+This phase governs **Orchestrator integration** of participant Attestation Device lifecycle, edge continuity, firmware lifecycle, and signing. It does not delay independent construction or testing of signing authority or platform-specific edge implementations.
 
-Treat publication custody and firmware trust as separate planes.
+ESP32-S3 remains the current reference implementation only. The durable role is a replaceable participant-controlled Attestation Device that can operate through the participant's ordinary network path and may use direct WireGuard or owner-operator proxies where available.
+
+Treat publication custody, attestation/history semantics, edge continuity, transport, and firmware trust as separate planes.
 
 The orchestrator may coordinate:
 
-- device/edge enrollment;
+- edge enrollment and replacement;
+- logical edge-placement intent;
+- attestation-record submission and verification;
+- synchronization of authenticated participant timeline state;
+- resolution/availability observations for historical resources;
 - artifact synchronization;
 - firmware candidate selection;
 - signing requests;
 - signed release manifests;
 - update authorization;
 - rollout status;
-- recovery/replacement workflows.
+- recovery/replacement workflows;
+- pre-departure continuity verification while participation remains active.
 
-The orchestrator must not hold the firmware signing private key.
+The Attestation Device must not become a bulk backup device, permanent participant identity, Kane-only hardware root, or substitute storage authority. Loss or replacement of the physical device must not erase the participant's historical Civic meaning.
 
-The signing authority must independently validate enough request context to reject unauthorized signing even if CT105 is compromised.
+Historical verification must remain useful after current Kane participation ends. Continued Portal/Witness login, a Kane hostname, a Kane private address, or access to one Kane WireGuard network must not be required merely to interpret already-authenticated historical records.
+
+The orchestrator must not hold firmware-signing or Civic-signing private keys.
+
+Each signing authority must independently validate enough request context to reject unauthorized signing even if CT105 is compromised.
 
 ---
 

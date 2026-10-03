@@ -935,3 +935,21 @@ Audit sequence confirms:
 4. civic.operation.waiting due to the then-unconfigured CT106 publication authentication boundary.
 
 This workflow must be resumed or explicitly reconciled; a second independent participant publication must not be used to bypass the conservative budget hold.
+
+
+### Explicit publication reconciliation primitive verified — 2026-10-03
+
+The repository now contains an operator-only no-effect reconciliation path for a waiting publication workflow whose prior dispatch was conservatively recorded as uncertain.
+
+Safety conditions require:
+
+- operation is `publication.publish`;
+- workflow state is `waiting`;
+- prior `side_effects=true`;
+- prior `side_effects_certainty=unknown`;
+- budget hold is `uncertain`;
+- no publication record exists for the workflow.
+
+Successful reconciliation leaves the workflow waiting, records `side_effects=false` with certainty `known`, changes the existing hold to `reserved`, and appends `civic.operation.reconciled` audit evidence.
+
+GitHub Actions run 37135078489 passed the complete unit suite on Python 3.11, 3.12, and 3.13.

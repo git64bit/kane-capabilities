@@ -541,3 +541,27 @@ normal Usermin ACL
 ```
 
 It also independently confirms that no Usermin-visible Custom Command definition exists at this checkpoint. This is the authoritative UI baseline immediately before U-004 creates the first Civic Custom Command.
+
+
+### Webmin/Usermin Custom Command definition implementation identity — 2026-10-03
+
+Live comparison on `witness-hubzilla` established that:
+
+```text
+/usr/share/webmin/custom/custom-lib.pl
+/usr/share/usermin/commands/custom-lib.pl
+```
+
+are byte-identical.
+
+The Webmin `custom` module owns the command editor and persistence UI, including `edit_cmd.cgi` and `save_cmd.cgi`. Usermin's `commands` module consumes the same serialized command model.
+
+Source inspection of `save_cmd.cgi` established these relevant behaviors:
+
+- the default execution-user selection serializes as `user=*`, meaning the authenticated Usermin account at execution time;
+- the `su` flag is stored explicitly;
+- the Usermin-visible flag is stored explicitly;
+- an empty/local host selection removes the `hosts` field;
+- when remote hosts are selected, `save_cmd.cgi` rejects the command if it is also marked for Usermin.
+
+Therefore the stock Webmin editor already enforces an important Civic invariant: a command designated for Usermin cannot simultaneously be configured for Webmin cluster-host execution. U-004 should still verify the resulting `.cmd` and absence of a `.hosts` file after creation.

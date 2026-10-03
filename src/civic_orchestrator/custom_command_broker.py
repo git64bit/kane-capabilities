@@ -4,6 +4,7 @@ import argparse
 import socket
 from pathlib import Path
 
+from .custom_command_access import CustomCommandAccessPolicy
 from .custom_commands import (
     CustomCommandRegistry,
     LocalCustomCommandAdapter,
@@ -33,6 +34,9 @@ def build_adapter(
     command_schema_path: Path,
     help_catalog_path: Path,
     help_schema_path: Path,
+    access_policy_path: Path,
+    access_schema_path: Path,
+    require_secure_access_file: bool = True,
 ) -> LocalCustomCommandAdapter:
     participants = ParticipantRegistry(
         participant_registry_path,
@@ -44,9 +48,16 @@ def build_adapter(
         help_catalog_path,
         help_schema_path,
     )
+    access = CustomCommandAccessPolicy.load(
+        access_policy_path,
+        access_schema_path,
+        require_secure_file=require_secure_access_file,
+    )
+    access.validate_codenames(commands.codenames)
     return LocalCustomCommandAdapter(
         participants,
         commands,
+        access,
     )
 
 
@@ -86,6 +97,16 @@ def main() -> None:
         type=Path,
         required=True,
     )
+    parser.add_argument(
+        "--access-policy",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument(
+        "--access-schema",
+        type=Path,
+        required=True,
+    )
     args = parser.parse_args()
 
     adapter = build_adapter(
@@ -95,6 +116,8 @@ def main() -> None:
         command_schema_path=args.command_schema,
         help_catalog_path=args.help_catalog,
         help_schema_path=args.help_schema,
+        access_policy_path=args.access_policy,
+        access_schema_path=args.access_schema,
     )
 
     listener = systemd_listener()

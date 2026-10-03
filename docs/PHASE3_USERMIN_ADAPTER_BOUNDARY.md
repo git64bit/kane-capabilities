@@ -338,6 +338,38 @@ Required:
 
 **Repository status:** CT105 authenticated ingress and the Usermin broker remote publisher are implemented and regression-tested. The broker remains local-only unless its U-003 overlay explicitly supplies an Orchestrator endpoint and protected adapter credential. **Production status:** ACCEPTED on 2026-10-03. The participant broker produced `remote_dispatch=true`; direct participant API bypass was rejected with HTTP 401; the broker credential, WireGuard/host-network route, CT105 private ingress, and fixed server-side adapter binding were verified live. A correlated retry of the same accepted workflow reached authenticated CT106 validation-only service and returned known no-side-effect `service-unavailable` because Kubo remains disabled.
 
+### Generic Custom Command validation socket
+
+Before the visible Usermin Publish command is switched from the accepted publication-specific helper, the generic Custom Command framing receives its own parallel local acceptance step.
+
+Repository assets:
+
+```text
+src/civic_orchestrator/custom_command_broker.py
+deploy/usermin/civic-custom-command-broker.socket
+deploy/usermin/civic-custom-command-broker.service
+deploy/usermin/civic-custom-command
+```
+
+Reserved socket:
+
+```text
+/run/civic-orchestrator/custom-command.sock
+```
+
+This validation service is intentionally more constrained than U-003:
+
+- AF_UNIX only;
+- no Orchestrator endpoint;
+- no adapter credential;
+- no remote publisher;
+- command/help contracts must validate before service startup;
+- participant identity still comes from kernel peer credentials;
+- only registry-callable commands can reach a local command handler;
+- `water-ants` remains a stub returning `remote_dispatch=false` and `side_effects=false`.
+
+Production-host acceptance of this parallel socket proves the generic framing and registry path only. It does not constitute U-004 and does not authorize switching the visible Usermin Custom Command.
+
 ### U-004 — Validation-only end to end
 
 Required:
